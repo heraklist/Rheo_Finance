@@ -1,0 +1,45 @@
+import path from "node:path";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+const host = process.env.TAURI_DEV_HOST;
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: react(),
+
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+
+  // Tauri expects a fixed port; fail if not available instead of trying others
+  clearScreen: false,
+  server: {
+    port: 1420,
+    strictPort: true,
+    host: host || false,
+    hmr: host
+      ? {
+          protocol: "ws",
+          host,
+          port: 1421,
+        }
+      : undefined,
+    watch: {
+      // Tell vite to ignore Rust source files
+      ignored: ["**/src-tauri/**"],
+    },
+  },
+
+  // Env vars prefix that Tauri exposes to the frontend
+  envPrefix: ["VITE_", "TAURI_ENV_*"],
+
+  build: {
+    // Tauri uses Chromium on Win/Linux and WebKit on macOS/iOS
+    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
+    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+  },
+});

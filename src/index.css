@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Design tokens as CSS variables (Claude Design output, ported) === */
+@layer base {
+  :root {
+    --charcoal: #1a1818;
+    --charcoal-soft: #2d2a26;
+    --gold: #b8860b;
+    --gold-soft: #c9a86a;
+
+    --cream: #faf8f2;
+    --sand: #f0ebdd;
+
+    --border-light: #e5e0d5;
+    --border-mid: #c9c2b0;
+
+    --income: #2d6a4f;
+    --income-light: #b7e4c7;
+    --expense: #9a2a2a;
+    --expense-light: #f5c7c7;
+    --neutral: #5c6b47;
+    --warning: #c68b17;
+
+    --text-primary: #1a1818;
+    --text-secondary: #6b6258;
+    --text-muted: #9c9385;
+    --text-on-dark: #faf8f2;
+
+    --accent: var(--gold);
+    --radius: 8px;
+
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-cream text-text-primary antialiased;
+    font-family: Inter, Aptos, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* tabular-nums on all numeric elements via class */
+  .num,
+  .num-xl,
+  .num-lg,
+  .num-md {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* === Custom components that have brand-identity shape === */
+@layer components {
+  /* KPI tile — signature component with gold accent line */
+  .kpi-tile {
+    @apply relative flex flex-col gap-2.5 overflow-hidden;
+    @apply bg-cream border border-border-light rounded-md;
+    @apply px-4 pt-4 pb-3.5 min-h-[100px];
+  }
+
+  .kpi-tile::after {
+    content: "";
+    @apply absolute left-0 right-0 bottom-0 h-0.5;
+    background: var(--accent);
+  }
+
+  .kpi-tile.is-sand {
+    @apply bg-sand;
+  }
+
+  .kpi-value {
+    @apply text-num-xl text-text-primary leading-none;
+  }
+
+  .kpi-tile.is-income .kpi-value {
+    color: var(--income);
+  }
+
+  .kpi-tile.is-expense .kpi-value {
+    color: var(--expense);
+  }
+
+  /* Sync pill */
+  .sync-pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1;
+    @apply rounded-full text-[11px] font-semibold tracking-wide;
+  }
+
+  .sync-pill .dot {
+    @apply w-1.5 h-1.5 rounded-full bg-current;
+  }
+
+  .sync-pill.synced {
+    background: rgba(45, 106, 79, 0.1);
+    color: var(--income);
+  }
+  .sync-pill.syncing {
+    background: rgba(92, 107, 71, 0.12);
+    color: var(--neutral);
+  }
+  .sync-pill.offline {
+    background: rgba(198, 139, 23, 0.12);
+    color: var(--warning);
+  }
+  .sync-pill.error {
+    background: rgba(154, 42, 42, 0.1);
+    color: var(--expense);
+  }
+
+  /* Transaction row */
+  .tx-row {
+    @apply flex items-center gap-3 px-3.5 py-3;
+    @apply border-b border-border-light last:border-b-0;
+  }
+
+  .tx-thumb {
+    @apply w-8 h-8 rounded-full flex items-center justify-center;
+    @apply bg-sand border border-border-light text-text-muted;
+    @apply flex-shrink-0 overflow-hidden;
+  }
+
+  .tx-amount {
+    @apply text-sm font-semibold whitespace-nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tx-amount.pos {
+    color: var(--income);
+  }
+  .tx-amount.neg {
+    color: var(--expense);
+  }
+
+  /* Skeleton shimmer */
+  .skel {
+    background: linear-gradient(90deg, var(--sand) 0%, var(--border-light) 50%, var(--sand) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-sm;
+  }
+
+  /* FAB */
+  .fab {
+    @apply fixed right-4 bottom-4 w-[52px] h-[52px] rounded-full z-50;
+    @apply bg-charcoal text-text-on-dark border-0 cursor-pointer;
+    @apply flex items-center justify-center shadow-soft;
+    @apply transition-transform duration-150 hover:-translate-y-px;
+  }
+
+  /* Brand mark */
+  .brand-mark {
+    @apply text-base font-bold tracking-tight;
+  }
+
+  .brand-mark .diamond {
+    color: var(--gold);
+    @apply mx-1 text-[10px];
+  }
+
+  /* Topbar */
+  .topbar {
+    @apply flex items-center justify-between px-4 py-3.5;
+    @apply border-b border-border-light bg-cream;
+  }
+
+  /* Form labels (uppercase with letter spacing) */
+  .form-label {
+    @apply text-label uppercase text-text-muted block mb-1.5;
+  }
+
+  /* Chip / segmented controls */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1.5;
+    @apply text-xs font-medium;
+    @apply bg-cream border border-border-light rounded-sm;
+    @apply text-text-secondary cursor-pointer transition-colors;
+  }
+
+  .chip:hover {
+    @apply bg-sand;
+  }
+
+  .chip.active {
+    @apply bg-charcoal text-text-on-dark border-charcoal;
+  }
+}

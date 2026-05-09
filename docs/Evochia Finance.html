@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <title>Evochia Finance — Design</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="tokens.css" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #f0eee9; font-family: 'Inter', system-ui, sans-serif; }
+    #root { width: 100vw; height: 100vh; }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="screens.jsx"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "viewport": "desktop",
+      "accent": "gold",
+      "syncStatus": "synced",
+      "showStates": true
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAKS_DEFAULTS);
+      const ACCENT_MAP = { gold: '#B8860B', olive: '#5C6B47', terracotta: '#9A2A2A' };
+      const showAll = t.viewport === 'all';
+      const showM = t.viewport === 'mobile' || showAll;
+      const showT = t.viewport === 'tablet' || showAll;
+      const showD = t.viewport === 'desktop' || showAll;
+      const showStates = t.showStates;
+
+      return (
+        <>
+          <style>{`.evo, .design-canvas { --accent: ${ACCENT_MAP[t.accent] || ACCENT_MAP.gold}; }`}</style>
+          <DesignCanvas>
+            {/* ─── Brand ────────────────────────────────────────── */}
+            <DCSection id="brand" title="Brand expression" subtitle="Cream + charcoal + gold. Sans-only.">
+              <DCArtboard id="palette" label="Palette · system tokens" width={520} height={520}>
+                <PalettePoster />
+              </DCArtboard>
+              <DCArtboard id="type" label="Type scale" width={520} height={520}>
+                <TypePoster />
+              </DCArtboard>
+              <DCArtboard id="components" label="Component anatomy" width={520} height={520}>
+                <ComponentPoster />
+              </DCArtboard>
+            </DCSection>
+
+            {/* ─── Login ─────────────────────────────────────────── */}
+            <DCSection id="login" title="01 · Login" subtitle="Magic-link entry, brand moment first impression">
+              {showM && <DCArtboard id="login-mobile" label="Mobile · 375" width={375} height={780}><LoginScreen /></DCArtboard>}
+              {showStates && showM && <DCArtboard id="login-sent" label="Mobile · email sent" width={375} height={780}><LoginScreen sent /></DCArtboard>}
+              {showD && <DCArtboard id="login-desktop" label="Desktop · 1024" width={1024} height={720}>
+                <LoginDesktop />
+              </DCArtboard>}
+            </DCSection>
+
+            {/* ─── Dashboard ─────────────────────────────────────── */}
+            <DCSection id="dashboard" title="02 · Dashboard" subtitle="At-a-glance overview · 4 KPIs · chart · recent · FAB">
+              {showM && <DCArtboard id="dash-375" label="Mobile · 375" width={375} height={780}><DashboardMobile syncStatus={t.syncStatus} /></DCArtboard>}
+              {showM && <DCArtboard id="dash-414" label="Mobile · 414" width={414} height={820}><DashboardMobile w={414} h={820} syncStatus={t.syncStatus} /></DCArtboard>}
+              {showT && <DCArtboard id="dash-768" label="Tablet · 768" width={768} height={780}>
+                <PlainScreen w={768} h={780}>
+                  <div className="topbar" style={{ padding: '14px 24px' }}>
+                    <BrandMark />
+                    <div className="row" style={{ gap: 12 }}>
+                      <button className="chip active"><Icon name="calendar" size={12} /> Μάιος 2026 <Icon name="chevronDown" size={12} /></button>
+                      <button className="chip">Επαγγελματικά <Icon name="chevronDown" size={12} /></button>
+                      <SyncPill status={t.syncStatus} />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+                      <KPI label="Έσοδα" value="4.500 €" accent="income" />
+                      <KPI label="Έξοδα" value="1.180 €" accent="expense" />
+                      <KPI label="Καθαρό" value="3.320 €" sand />
+                      <KPI label="ΦΠΑ" value="412 €" sand />
+                    </div>
+                    <div className="card" style={{ padding: 18, marginBottom: 18 }}>
+                      <div className="t-h3" style={{ marginBottom: 12 }}>Έσοδα vs Έξοδα · 12 μήνες</div>
+                      <BarChart data={[
+                        { m: 'Ιούν', inc: 3200, exp: 2100 },{ m: 'Ιούλ', inc: 4800, exp: 2400 },
+                        { m: 'Αύγ', inc: 5200, exp: 2800 },{ m: 'Σεπ', inc: 3800, exp: 2200 },
+                        { m: 'Οκτ', inc: 3100, exp: 1900 },{ m: 'Νοέ', inc: 4400, exp: 2300 },
+                        { m: 'Δεκ', inc: 6200, exp: 3100 },{ m: 'Ιαν', inc: 2800, exp: 2100 },
+                        { m: 'Φεβ', inc: 3600, exp: 2050 },{ m: 'Μαρ', inc: 4100, exp: 2200 },
+                        { m: 'Απρ', inc: 5400, exp: 2400 },{ m: 'Μαΐ', inc: 4500, exp: 1180 },
+                      ]} height={160} />
+                    </div>
+                  </div>
+                </PlainScreen>
+              </DCArtboard>}
+              {showD && <DCArtboard id="dash-1024" label="Desktop · 1024" width={1024} height={720}><DashboardDesktop /></DCArtboard>}
+            </DCSection>
+
+            {showStates && (
+              <DCSection id="dashboard-states" title="02b · Dashboard states" subtitle="Empty · Loading · Offline">
+                {showM && <DCArtboard id="dash-empty" label="Empty · first-time user" width={375} height={780}><DashboardMobile state="empty" /></DCArtboard>}
+                {showM && <DCArtboard id="dash-loading" label="Loading · skeletons" width={375} height={780}><DashboardMobile state="loading" /></DCArtboard>}
+                {showM && <DCArtboard id="dash-offline" label="Offline · pending sync" width={375} height={780}><DashboardMobile syncStatus="offline" /></DCArtboard>}
+                {showD && <DCArtboard id="dash-empty-1024" label="Desktop · empty" width={1024} height={720}><DashboardDesktopState state="empty" /></DCArtboard>}
+                {showD && <DCArtboard id="dash-loading-1024" label="Desktop · loading" width={1024} height={720}><DashboardDesktopState state="loading" /></DCArtboard>}
+                {showD && <DCArtboard id="dash-offline-1024" label="Desktop · offline" width={1024} height={720}><DashboardDesktopState state="offline" /></DCArtboard>}
+              </DCSection>
+            )}
+
+            {/* ─── Add Transaction ────────────────────────────────── */}
+            <DCSection id="add" title="03 · Add Transaction" subtitle="The most-used screen · target <30s entry">
+              {showM && <DCArtboard id="add-375" label="Mobile · 375" width={375} height={780}><AddTransactionScreen /></DCArtboard>}
+              {showM && <DCArtboard id="add-414" label="Mobile · 414" width={414} height={820}><AddTransactionScreen w={414} h={820} /></DCArtboard>}
+              {showD && <DCArtboard id="add-1024" label="Desktop · 1024" width={1024} height={720}><AddTransactionDesktop /></DCArtboard>}
+            </DCSection>
+
+            {/* ─── Transactions list ──────────────────────────────── */}
+            <DCSection id="list" title="04 · Transactions List" subtitle="Search, filter, group by date">
+              {showM && <DCArtboard id="list-375" label="Mobile · populated" width={375} height={780}><TransactionsListScreen /></DCArtboard>}
+              {showStates && showM && <DCArtboard id="list-empty" label="Empty state" width={375} height={780}><TransactionsListScreen state="empty" /></DCArtboard>}
+              {showStates && showM && <DCArtboard id="list-noresults" label="No results" width={375} height={780}><TransactionsListScreen state="no-results" /></DCArtboard>}
+              {showM && <DCArtboard id="detail-375" label="Detail / Edit" width={375} height={780}><TransactionDetailScreen /></DCArtboard>}
+              {showD && <DCArtboard id="list-1024" label="Desktop · 1024 · table" width={1024} height={720}><TransactionsListDesktop /></DCArtboard>}
+            </DCSection>
+
+            {/* ─── Recurring ──────────────────────────────────────── */}
+            <DCSection id="recurring" title="05 · Recurring Templates" subtitle="Πάγια — αυτόματες εγγραφές">
+              {showM && <DCArtboard id="rec-375" label="Mobile · 375" width={375} height={780}><RecurringScreen /></DCArtboard>}
+              {showD && <DCArtboard id="rec-1024" label="Desktop · 1024" width={1024} height={720}><RecurringDesktop /></DCArtboard>}
+            </DCSection>
+
+            {/* ─── VAT ────────────────────────────────────────────── */}
+            <DCSection id="vat" title="06 · VAT Summary" subtitle="Quarterly breakdown · for accountant">
+              {showT && <DCArtboard id="vat-768" label="Tablet · 768" width={768} height={780}><VATScreen /></DCArtboard>}
+              {showD && <DCArtboard id="vat-1024" label="Desktop · 1024" width={1024} height={720}><VATDesktop /></DCArtboard>}
+            </DCSection>
+
+            {/* ─── Forecast ───────────────────────────────────────── */}
+            <DCSection id="forecast" title="07 · Forecast" subtitle="12-month cashflow projection">
+              {showD && <DCArtboard id="forecast-1024" label="Desktop · 1024" width={1024} height={720}><ForecastScreen /></DCArtboard>}
+            </DCSection>
+
+            {/* ─── Settings ───────────────────────────────────────── */}
+            <DCSection id="settings" title="08 · Settings" subtitle="Account · sync · backup · preferences">
+              {showM && <DCArtboard id="set-375" label="Mobile · 375" width={375} height={780}><SettingsScreen /></DCArtboard>}
+              {showD && <DCArtboard id="set-1024" label="Desktop · 1024" width={1024} height={720}><SettingsDesktop /></DCArtboard>}
+            </DCSection>
+          </DesignCanvas>
+
+          <TweaksPanel title="Tweaks">
+            <TweakSection label="Viewport" />
+            <TweakRadio label="Show" value={t.viewport}
+              options={['all', 'mobile', 'desktop']}
+              onChange={(v) => setTweak('viewport', v)} />
+
+            <TweakSection label="Accent color" />
+            <TweakColor label="Accent" value={ACCENT_MAP[t.accent] || ACCENT_MAP.gold}
+              options={['#B8860B', '#5C6B47', '#9A2A2A']}
+              onChange={(v) => {
+                const k = Object.keys(ACCENT_MAP).find(k => ACCENT_MAP[k] === v) || 'gold';
+                setTweak('accent', k);
+              }} />
+
+            <TweakSection label="Sync status" />
+            <TweakSelect label="Header pill" value={t.syncStatus}
+              options={['synced', 'syncing', 'offline', 'error']}
+              onChange={(v) => setTweak('syncStatus', v)} />
+
+            <TweakSection label="State variants" />
+            <TweakToggle label="Empty / loading / no-results" value={t.showStates}
+              onChange={(v) => setTweak('showStates', v)} />
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    // ─── Brand poster artboards (palette / type / components) ───
+    function PalettePoster() {
+      const swatch = (name, val, fg = '#1A1818') => (
+        <div style={{ background: val, color: fg, padding: '14px 14px 12px', borderRadius: 4, border: '1px solid rgba(0,0,0,0.06)', minHeight: 70 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.7 }}>{name}</div>
+          <div style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, fontWeight: 500, marginTop: 8 }}>{val}</div>
+        </div>
+      );
+      return (
+        <div className="evo" style={{ width: '100%', height: '100%', padding: 32, background: 'var(--cream)', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div>
+            <div className="t-label">Palette</div>
+            <div className="t-h1" style={{ marginTop: 4 }}>Cream + charcoal + gold</div>
+            <div className="t-caption" style={{ marginTop: 6 }}>Mediterranean warmth, Japanese restraint.</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {swatch('Cream / bg', '#FAF8F2')}
+            {swatch('Sand / card', '#F0EBDD')}
+            {swatch('Charcoal', '#1A1818', '#FAF8F2')}
+            {swatch('Gold accent', '#B8860B', '#FAF8F2')}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {swatch('Income', '#2D6A4F', '#FAF8F2')}
+            {swatch('Expense', '#9A2A2A', '#FAF8F2')}
+            {swatch('Olive', '#5C6B47', '#FAF8F2')}
+            {swatch('Warning', '#C68B17', '#FAF8F2')}
+          </div>
+          <div className="gold-rule" />
+          <div className="t-caption">Greens/reds appear ONLY on numeric values, never on UI chrome.</div>
+        </div>
+      );
+    }
+
+    function TypePoster() {
+      return (
+        <div className="evo" style={{ width: '100%', height: '100%', padding: 32, background: 'var(--cream)', display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden' }}>
+          <div>
+            <div className="t-label">Typography</div>
+            <div className="t-h1" style={{ marginTop: 4 }}>Inter · sans only</div>
+          </div>
+          <div className="stack-12">
+            <div><span className="t-label muted">display · 32 / 700</span><div className="t-display">Καλωσήρθες</div></div>
+            <div><span className="t-label muted">h1 · 24 / 700</span><div className="t-h1">Πρόσφατες συναλλαγές</div></div>
+            <div><span className="t-label muted">h2 · 18 / 600</span><div className="t-h2">Έσοδα vs Έξοδα</div></div>
+            <div><span className="t-label muted">body · 14 / 400</span><div className="t-body">Λαχανικά εποχής για το pop-up στο Cold Kitchen.</div></div>
+            <div><span className="t-label muted">label · 11 / 600 / uppercase</span><div className="t-label">Καθαρό ΦΠΑ</div></div>
+            <div><span className="t-label muted">numeric-xl · 28 / 700 / tabular</span><div className="num-xl">12.450,00 €</div></div>
+            <div><span className="t-label muted">numeric · 14 / 500 / tabular</span><div className="num-md pos">+2.500,00 €</div></div>
+          </div>
+        </div>
+      );
+    }
+
+    function ComponentPoster() {
+      return (
+        <div className="evo" style={{ width: '100%', height: '100%', padding: 28, background: 'var(--cream)', display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden' }}>
+          <div>
+            <div className="t-label">Components</div>
+            <div className="t-h1" style={{ marginTop: 4 }}>Building blocks</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <KPI label="Έσοδα Μαΐου" value="4.500 €" accent="income" />
+            <KPI label="ΦΠΑ" value="412 €" sand />
+          </div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" style={{ minHeight: 36, padding: '8px 14px' }}>Καταχώρηση</button>
+            <button className="btn btn-secondary" style={{ minHeight: 36, padding: '8px 14px' }}>Ακύρωση</button>
+            <button className="btn btn-ghost">Δες όλες →</button>
+          </div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <SyncPill status="synced" />
+            <SyncPill status="syncing" />
+            <SyncPill status="offline" />
+          </div>
+          <div className="segmented" style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <button>Έσοδο</button><button className="active">Έξοδο</button><button>Άλλο</button>
+          </div>
+          <div className="list" style={{ marginTop: 'auto' }}>
+            <TxRow desc="Catering γάμος Σύρος" amount="2.500,00 €" type="income" cat="Catering" account="Τράπεζα" date="04 Μαΐ" />
+            <TxRow desc="Ψώνια λαχαναγορά" amount="145,20 €" type="expense" cat="Πρώτες ύλες" account="Ταμείο" date="03 Μαΐ" photo />
+          </div>
+        </div>
+      );
+    }
+
+    function LoginDesktop() {
+      return (
+        <div className="evo" style={{ width: 1024, height: 720, display: 'grid', gridTemplateColumns: '1.1fr 1fr', background: 'var(--cream)' }}>
+          <div style={{ background: 'var(--charcoal)', color: 'var(--text-on-dark)', padding: 56, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold-soft)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>◆ Evochia</div>
+            <div>
+              <div style={{ fontSize: 56, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}>Finance</div>
+              <div style={{ fontSize: 18, color: 'rgba(250,248,242,0.65)', marginTop: 12, maxWidth: 360 }}>Διαχείριση οικονομικών για ελεύθερους επαγγελματίες της εστίασης.</div>
+              <div style={{ height: 2, width: 48, background: 'var(--gold-soft)', marginTop: 24 }} />
+            </div>
+            <div className="t-caption" style={{ color: 'rgba(250,248,242,0.5)' }}>v1.0 · Native desktop · Tauri</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 64 }}>
+            <div style={{ width: '100%', maxWidth: 360 }}>
+              <div className="t-label" style={{ marginBottom: 12 }}>Σύνδεση</div>
+              <div className="t-h1" style={{ marginBottom: 8 }}>Καλωσήρθες πίσω</div>
+              <div className="t-body secondary" style={{ marginBottom: 32 }}>Θα σου στείλουμε magic link στο email.</div>
+              <div className="stack-16">
+                <div className="field">
+                  <label>Email</label>
+                  <input className="input" defaultValue="heraklis@evochia.gr" />
+                </div>
+                <button className="btn btn-primary btn-block btn-lg">Αποστολή magic link</button>
+                <div className="t-caption" style={{ textAlign: 'center' }}>Ο σύνδεσμος ισχύει για 15 λεπτά.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
