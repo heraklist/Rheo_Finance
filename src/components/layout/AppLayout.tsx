@@ -9,8 +9,8 @@ export function AppLayout() {
   // Phase 2 will wire this to real sync state
   const [syncStatus] = useState<SyncState>("synced");
 
-  // Hide FAB on the add-transaction page itself
-  const showFab = location.pathname !== "/add";
+  // Hide FAB where a focused transaction flow owns the bottom action area.
+  const showFab = location.pathname !== "/add" && !location.pathname.startsWith("/transactions/");
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">

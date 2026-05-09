@@ -58,7 +58,7 @@ Output σε `src-tauri/target/release/bundle/`.
 ```
 ┌──────────────────────────────────────────┐
 │   React UI (src/)                        │
-│   - Pages: Dashboard, AddTransaction     │
+│   - Pages: Dashboard, Transactions CRUD  │
 │   - Components: KPITile, TxRow, etc.     │
 │   - Routing: react-router-dom            │
 └────────────┬─────────────────────────────┘
@@ -110,6 +110,8 @@ evochia_finance/
 │   ├── pages/                      # Routed pages
 │   │   ├── Dashboard.tsx           # Main KPIs + recent
 │   │   ├── AddTransaction.tsx      # Form για νέες εγγραφές
+│   │   ├── TransactionsList.tsx    # Full list grouped by date
+│   │   ├── TransactionDetail.tsx   # Detail, edit, delete
 │   │   └── Placeholder.tsx         # Stub για unbuilt routes
 │   ├── lib/                        # Business logic
 │   │   ├── db.ts                   # SQLite client
@@ -140,6 +142,8 @@ evochia_finance/
 - ✅ Default data seeded (books, accounts, all Greek categories)
 - ✅ Dashboard renders KPI tiles + chart + recent transactions
 - ✅ Add Transaction form με smart defaults, computes VAT auto
+- ✅ Transactions list grouped by date
+- ✅ Transaction detail με edit/delete
 - ✅ Saves to local SQLite
 - ✅ Greek copy throughout
 - ✅ Brand identity applied (charcoal + gold + cream palette)
@@ -148,7 +152,7 @@ evochia_finance/
 
 ## What's stubbed (placeholder pages)
 
-- `/transactions` — full list με search/filter
+- `/transactions` — search/filter controls
 - `/recurring` — recurring templates management
 - `/vat` — quarterly VAT summary
 - `/forecast` — 12-month projection
@@ -160,7 +164,6 @@ evochia_finance/
 - Magic link auth
 - Outbox-based sync engine
 - Receipt photo upload (camera + Supabase Storage)
-- Transaction edit/delete
 - Cascading category dropdowns
 
 ---

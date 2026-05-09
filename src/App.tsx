@@ -2,6 +2,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AddTransaction } from "@/pages/AddTransaction";
 import { Dashboard } from "@/pages/Dashboard";
 import { Placeholder } from "@/pages/Placeholder";
+import { TransactionDetail } from "@/pages/TransactionDetail";
+import { TransactionsList } from "@/pages/TransactionsList";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const router = createBrowserRouter([
@@ -11,15 +13,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "add", element: <AddTransaction /> },
-      {
-        path: "transactions",
-        element: (
-          <Placeholder
-            title="Συναλλαγές"
-            description="Λίστα όλων των συναλλαγών — υπό κατασκευή."
-          />
-        ),
-      },
+      { path: "transactions", element: <TransactionsList /> },
+      { path: "transactions/:id", element: <TransactionDetail /> },
       {
         path: "recurring",
         element: (

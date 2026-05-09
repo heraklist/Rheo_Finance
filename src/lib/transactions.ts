@@ -4,6 +4,19 @@ import { computeVat } from "@/lib/utils";
 
 // === READ ===
 
+const TRANSACTION_SELECT = `SELECT
+       t.*,
+       b.name AS book_name,
+       a.name AS account_name,
+       c.name AS category_name,
+       c.type AS category_type,
+       tg.name AS tag_name
+     FROM transactions t
+     LEFT JOIN books b ON t.book_id = b.id
+     LEFT JOIN accounts a ON t.account_id = a.id
+     LEFT JOIN categories c ON t.category_id = c.id
+     LEFT JOIN tags tg ON t.tag_id = tg.id`;
+
 /**
  * List transactions with joined display fields, ordered by date desc.
  */
@@ -38,18 +51,7 @@ export async function listTransactions(
   const offset = opts.offset ?? 0;
 
   const rows = await db.select<TransactionWithRelations[]>(
-    `SELECT
-       t.*,
-       b.name AS book_name,
-       a.name AS account_name,
-       c.name AS category_name,
-       c.type AS category_type,
-       tg.name AS tag_name
-     FROM transactions t
-     LEFT JOIN books b ON t.book_id = b.id
-     LEFT JOIN accounts a ON t.account_id = a.id
-     LEFT JOIN categories c ON t.category_id = c.id
-     LEFT JOIN tags tg ON t.tag_id = tg.id
+    `${TRANSACTION_SELECT}
      ${whereClause}
      ORDER BY t.date DESC, t.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -57,6 +59,21 @@ export async function listTransactions(
   );
 
   return rows;
+}
+
+/**
+ * Load one transaction with joined display fields.
+ */
+export async function getTransaction(id: string): Promise<TransactionWithRelations | null> {
+  const db = await getDb();
+  const rows = await db.select<TransactionWithRelations[]>(
+    `${TRANSACTION_SELECT}
+     WHERE t.id = ?
+     LIMIT 1`,
+    [id],
+  );
+
+  return rows[0] ?? null;
 }
 
 /**
@@ -127,6 +144,10 @@ export interface NewTransactionInput {
   vat_rate: number;
   receipt_photo_path?: string | null;
   notes?: string | null;
+}
+
+export interface UpdateTransactionInput extends NewTransactionInput {
+  id: string;
 }
 
 /**
@@ -201,4 +222,123 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
   );
 
   return tx;
+}
+
+/**
+ * Update an existing transaction. Recomputes VAT and queues an outbox update.
+ */
+export async function updateTransaction(input: UpdateTransactionInput): Promise<Transaction> {
+  const db = await getDb();
+  const existing = await getTransaction(input.id);
+
+  if (!existing) {
+    throw new Error("Transaction not found");
+  }
+
+  const ts = now();
+  const { vat: amount_vat, net: amount_net } = computeVat(input.amount_gross, input.vat_rate);
+
+  const tx: Transaction = {
+    id: input.id,
+    date: input.date,
+    description: input.description,
+    book_id: input.book_id,
+    account_id: input.account_id,
+    category_id: input.category_id,
+    tag_id: input.tag_id ?? null,
+    payment_method: input.payment_method,
+    amount_gross: input.amount_gross,
+    vat_rate: input.vat_rate,
+    amount_vat,
+    amount_net,
+    receipt_photo_path: input.receipt_photo_path ?? existing.receipt_photo_path,
+    recurring_template_id: existing.recurring_template_id,
+    notes: input.notes ?? null,
+    created_at: existing.created_at,
+    updated_at: ts,
+    sync_status: "pending",
+    local_updated_at: ts,
+    server_updated_at: null,
+  };
+
+  await db.execute(
+    `UPDATE transactions
+     SET date = ?,
+         description = ?,
+         book_id = ?,
+         account_id = ?,
+         category_id = ?,
+         tag_id = ?,
+         payment_method = ?,
+         amount_gross = ?,
+         vat_rate = ?,
+         amount_vat = ?,
+         amount_net = ?,
+         receipt_photo_path = ?,
+         notes = ?,
+         updated_at = ?,
+         sync_status = ?,
+         local_updated_at = ?,
+         server_updated_at = ?
+     WHERE id = ?`,
+    [
+      tx.date,
+      tx.description,
+      tx.book_id,
+      tx.account_id,
+      tx.category_id,
+      tx.tag_id,
+      tx.payment_method,
+      tx.amount_gross,
+      tx.vat_rate,
+      tx.amount_vat,
+      tx.amount_net,
+      tx.receipt_photo_path,
+      tx.notes,
+      tx.updated_at,
+      tx.sync_status,
+      tx.local_updated_at,
+      tx.server_updated_at,
+      tx.id,
+    ],
+  );
+
+  await db.execute(
+    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    ["transaction", tx.id, "update", JSON.stringify(tx), ts],
+  );
+
+  return tx;
+}
+
+/**
+ * Delete a transaction and queue an outbox delete.
+ */
+export async function deleteTransaction(id: string): Promise<void> {
+  const db = await getDb();
+  const existing = await getTransaction(id);
+
+  if (!existing) {
+    throw new Error("Transaction not found");
+  }
+
+  const ts = now();
+
+  await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
+
+  await db.execute(
+    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      "transaction",
+      id,
+      "delete",
+      JSON.stringify({
+        ...existing,
+        deleted_at: ts,
+      }),
+      ts,
+    ],
+  );
 }

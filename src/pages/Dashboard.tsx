@@ -5,6 +5,7 @@ import { getTotals, listTransactions } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
 import { Calendar, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const MONTHS_GR = [
   "Ιανουάριος",
@@ -44,6 +45,7 @@ interface Totals {
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [recent, setRecent] = useState<TransactionWithRelations[]>([]);
@@ -159,9 +161,9 @@ export function Dashboard() {
       <section>
         <div className="flex items-center justify-between mb-2.5">
           <h2 className="text-h3">Πρόσφατες συναλλαγές</h2>
-          <a href="/transactions" className="text-gold text-sm font-medium">
+          <Link to="/transactions" className="text-gold text-sm font-medium">
             Δες όλες →
-          </a>
+          </Link>
         </div>
 
         {isEmpty ? (
@@ -179,7 +181,11 @@ export function Dashboard() {
         ) : (
           <div className="bg-cream border border-border-light rounded-md overflow-hidden">
             {recent.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} />
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                onClick={() => navigate(`/transactions/${tx.id}`)}
+              />
             ))}
           </div>
         )}
