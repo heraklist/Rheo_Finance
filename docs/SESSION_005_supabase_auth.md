@@ -1,6 +1,6 @@
 # Session 005 — Supabase setup + Auth (Phase 2 entry)
 
-> Prerequisite: Sessions 002-004 complete. **Heraklis πρέπει να έχει**: Supabase project URL + anon key + service_role key.
+> Prerequisite: Sessions 002-004 complete. **Heraklis πρέπει να έχει**: Supabase project URL + anon key. Το `service_role` μένει μόνο σε password manager και δεν δίνεται στον agent.
 
 ---
 
@@ -24,7 +24,7 @@
 2. **Πάρε credentials** (Project Settings → API):
    - Project URL: `https://xxxxx.supabase.co`
    - `anon` public key (safe to commit)
-   - `service_role` secret key (NEVER commit, NEVER δίνεις στο agent)
+   - `service_role` secret key (στο password manager μόνο — NEVER commit, NEVER δίνεις στο agent)
 
 3. **Δημιούργησε `.env.local` στο project root**:
    ```env
