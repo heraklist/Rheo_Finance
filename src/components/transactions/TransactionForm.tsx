@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
@@ -198,36 +205,35 @@ export function TransactionForm({
             <label className="form-label" htmlFor="tx-category">
               Κατηγορία
             </label>
-            <select
-              id="tx-category"
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal appearance-none"
-            >
-              <option value="">— Επίλεξε —</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger id="tx-category" className="bg-cream border-border-light">
+                <SelectValue placeholder="— Επίλεξε —" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="form-label" htmlFor="tx-account">
               Λογαριασμός
             </label>
-            <select
-              id="tx-account"
-              value={accountId}
-              onChange={(event) => setAccountId(event.target.value)}
-              className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal appearance-none"
-            >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger id="tx-account" className="bg-cream border-border-light">
+                <SelectValue placeholder="— Επίλεξε —" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -265,18 +271,21 @@ export function TransactionForm({
           <label className="form-label" htmlFor="tx-payment-method">
             Τρόπος Πληρωμής
           </label>
-          <select
-            id="tx-payment-method"
+          <Select
             value={paymentMethod}
-            onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-            className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal appearance-none"
+            onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
           >
-            {PAYMENT_METHODS.map((method) => (
-              <option key={method} value={method}>
-                {method}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="tx-payment-method" className="bg-cream border-border-light">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_METHODS.map((method) => (
+                <SelectItem key={method} value={method}>
+                  {method}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>

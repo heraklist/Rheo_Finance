@@ -1,14 +1,36 @@
 import { TransactionRow, TransactionRowSkeleton } from "@/components/ui/TransactionRow";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useDebounce } from "@/hooks/useDebounce";
+import { listCategories } from "@/lib/reference";
 import { listTransactions } from "@/lib/transactions";
-import type { TransactionWithRelations } from "@/lib/types";
+import type { Category, TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
-import { AlertCircle, Plus, ReceiptText } from "lucide-react";
+import { AlertCircle, Filter, Plus, ReceiptText, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+const CURRENT_BOOK_ID = "book-business";
+const ALL_CATEGORIES = "all";
 
 interface TransactionGroup {
   date: string;
   transactions: TransactionWithRelations[];
+}
+
+interface TransactionFilters {
+  fromDate?: string;
+  toDate?: string;
+  categoryId?: string;
+  minAmount?: number;
+  maxAmount?: number;
 }
 
 function groupByDate(transactions: TransactionWithRelations[]): TransactionGroup[] {
@@ -36,19 +58,53 @@ function groupTotal(transactions: TransactionWithRelations[]): number {
   return transactions.reduce((total, tx) => total + signedAmount(tx), 0);
 }
 
+function parseAmountFilter(value: string): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseFloat(value.replace(",", "."));
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 export function TransactionsList() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([]);
+  const debouncedSearch = useDebounce(search, 250);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCategories() {
+      try {
+        const rows = await listCategories({ bookId: CURRENT_BOOK_ID });
+        if (!cancelled) setCategories(rows);
+      } catch (err) {
+        console.error("Failed to load transaction filters:", err);
+      }
+    }
+
+    void loadCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
+        setLoading(true);
         setError("");
-        const rows = await listTransactions({ bookId: "book-business", limit: 200 });
+        const rows = await listTransactions({
+          bookId: CURRENT_BOOK_ID,
+          limit: 200,
+          search: debouncedSearch,
+          ...filters,
+        });
         if (!cancelled) setTransactions(rows);
       } catch (err) {
         console.error("Failed to load transactions:", err);
@@ -62,9 +118,14 @@ export function TransactionsList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [debouncedSearch, filters]);
 
   const groups = groupByDate(transactions);
+  const hasSearch = debouncedSearch.trim().length > 0;
+  const activeFilterCount = Object.values(filters).filter(
+    (value) => value !== undefined && value !== "",
+  ).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <div className="px-4 pb-24 pt-4">
@@ -82,6 +143,157 @@ export function TransactionsList() {
         </Link>
       </div>
 
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <Input
+            type="text"
+            placeholder="Αναζήτηση συναλλαγών…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9 bg-cream border-border-light"
+          />
+        </div>
+
+        <Sheet>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="relative inline-flex items-center justify-center w-10 h-10 rounded-md border border-border-light text-charcoal hover:bg-sand transition-colors"
+              aria-label="Φίλτρα"
+            >
+              <Filter className="w-4 h-4" strokeWidth={1.7} />
+              {activeFilterCount > 0 ? (
+                <span className="absolute -top-1 -right-1 bg-charcoal text-text-on-dark text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="bg-cream max-h-[80vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Φίλτρα</SheetTitle>
+            </SheetHeader>
+
+            <div className="space-y-5 mt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label" htmlFor="filter-from-date">
+                    Από ημερομηνία
+                  </label>
+                  <Input
+                    id="filter-from-date"
+                    type="date"
+                    value={filters.fromDate ?? ""}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        fromDate: event.target.value || undefined,
+                      }))
+                    }
+                    className="bg-cream border-border-light"
+                  />
+                </div>
+                <div>
+                  <label className="form-label" htmlFor="filter-to-date">
+                    Έως ημερομηνία
+                  </label>
+                  <Input
+                    id="filter-to-date"
+                    type="date"
+                    value={filters.toDate ?? ""}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        toDate: event.target.value || undefined,
+                      }))
+                    }
+                    className="bg-cream border-border-light"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label" htmlFor="filter-category">
+                  Κατηγορία
+                </label>
+                <Select
+                  value={filters.categoryId ?? ALL_CATEGORIES}
+                  onValueChange={(value) =>
+                    setFilters((current) => ({
+                      ...current,
+                      categoryId: value === ALL_CATEGORIES ? undefined : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger id="filter-category" className="bg-cream border-border-light">
+                    <SelectValue placeholder="— Όλες —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_CATEGORIES}>— Όλες —</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label" htmlFor="filter-min-amount">
+                    Ελάχιστο €
+                  </label>
+                  <Input
+                    id="filter-min-amount"
+                    type="number"
+                    step="0.01"
+                    value={filters.minAmount ?? ""}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        minAmount: parseAmountFilter(event.target.value),
+                      }))
+                    }
+                    className="bg-cream border-border-light"
+                  />
+                </div>
+                <div>
+                  <label className="form-label" htmlFor="filter-max-amount">
+                    Μέγιστο €
+                  </label>
+                  <Input
+                    id="filter-max-amount"
+                    type="number"
+                    step="0.01"
+                    value={filters.maxAmount ?? ""}
+                    onChange={(event) =>
+                      setFilters((current) => ({
+                        ...current,
+                        maxAmount: parseAmountFilter(event.target.value),
+                      }))
+                    }
+                    className="bg-cream border-border-light"
+                  />
+                </div>
+              </div>
+
+              {hasActiveFilters ? (
+                <button
+                  type="button"
+                  onClick={() => setFilters({})}
+                  className="w-full flex items-center justify-center gap-2 text-expense text-sm font-medium py-2 border border-expense rounded-md hover:bg-expense-light/30 transition-colors"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.7} />
+                  Καθαρισμός φίλτρων
+                </button>
+              ) : null}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
       {error ? (
         <div className="bg-cream border border-expense-light rounded-md p-4 text-expense flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={1.7} />
@@ -94,6 +306,14 @@ export function TransactionsList() {
           {[0, 1, 2, 3, 4, 5].map((item) => (
             <TransactionRowSkeleton key={item} isLast={item === 5} />
           ))}
+        </div>
+      ) : transactions.length === 0 && !error && (hasSearch || hasActiveFilters) ? (
+        <div className="bg-cream border border-border-light rounded-md p-7 text-center">
+          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-sand border border-border-light flex items-center justify-center text-text-muted">
+            <Search className="w-5 h-5" strokeWidth={1.5} />
+          </div>
+          <p className="text-body mb-1">Δεν βρέθηκαν αποτελέσματα</p>
+          <p className="text-caption">Δοκίμασε άλλη αναζήτηση ή καθάρισε τα φίλτρα.</p>
         </div>
       ) : transactions.length === 0 && !error ? (
         <div className="bg-cream border border-border-light rounded-md p-7 text-center">

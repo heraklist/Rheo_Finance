@@ -27,6 +27,10 @@ export async function listTransactions(
     offset?: number;
     fromDate?: string;
     toDate?: string;
+    search?: string;
+    categoryId?: string;
+    minAmount?: number;
+    maxAmount?: number;
   } = {},
 ): Promise<TransactionWithRelations[]> {
   const db = await getDb();
@@ -44,6 +48,25 @@ export async function listTransactions(
   if (opts.toDate) {
     conditions.push("t.date <= ?");
     params.push(opts.toDate);
+  }
+  if (opts.categoryId) {
+    conditions.push("t.category_id = ?");
+    params.push(opts.categoryId);
+  }
+  if (opts.minAmount !== undefined) {
+    conditions.push("t.amount_gross >= ?");
+    params.push(opts.minAmount);
+  }
+  if (opts.maxAmount !== undefined) {
+    conditions.push("t.amount_gross <= ?");
+    params.push(opts.maxAmount);
+  }
+  if (opts.search?.trim()) {
+    const q = `%${opts.search.trim().toLowerCase()}%`;
+    conditions.push(
+      "(LOWER(t.description) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(tg.name) LIKE ?)",
+    );
+    params.push(q, q, q);
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";

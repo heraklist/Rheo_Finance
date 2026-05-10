@@ -143,7 +143,9 @@ evochia_finance/
 - ✅ Dashboard renders KPI tiles + chart + recent transactions
 - ✅ Add Transaction form με smart defaults, computes VAT auto
 - ✅ Transactions list grouped by date
+- ✅ Transactions search + filters (date range, category, amount range)
 - ✅ Transaction detail με edit/delete
+- ✅ shadcn/ui primitives installed for forms/sheets/popovers/calendar
 - ✅ Saves to local SQLite
 - ✅ Greek copy throughout
 - ✅ Brand identity applied (charcoal + gold + cream palette)
@@ -152,7 +154,6 @@ evochia_finance/
 
 ## What's stubbed (placeholder pages)
 
-- `/transactions` — search/filter controls
 - `/recurring` — recurring templates management
 - `/vat` — quarterly VAT summary
 - `/forecast` — 12-month projection
