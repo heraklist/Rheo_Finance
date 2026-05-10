@@ -4,6 +4,7 @@ export type SyncStatus = "pending" | "synced" | "error";
 
 export interface SyncableEntity {
   id: string;
+  user_id?: string;
   sync_status: SyncStatus;
   local_updated_at: string;
   server_updated_at?: string | null;

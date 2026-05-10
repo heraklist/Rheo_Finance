@@ -146,6 +146,9 @@ evochia_finance/
 - ✅ Transactions search + filters (date range, category, amount range)
 - ✅ Transaction detail με edit/delete
 - ✅ shadcn/ui primitives installed for forms/sheets/popovers/calendar
+- ✅ Supabase schema + RLS migration files
+- ✅ Supabase magic link auth flow
+- ✅ Protected app routes + minimal Settings sign out
 - ✅ Saves to local SQLite
 - ✅ Greek copy throughout
 - ✅ Brand identity applied (charcoal + gold + cream palette)
@@ -161,8 +164,6 @@ evochia_finance/
 
 ## What's coming in Phase 2
 
-- Supabase project integration
-- Magic link auth
 - Outbox-based sync engine
 - Receipt photo upload (camera + Supabase Storage)
 - Cascading category dropdowns
