@@ -120,17 +120,19 @@ export function TransactionForm({
     setFormError("");
 
     const grossNum = Number.parseFloat(amount.replace(",", "."));
-    if (!grossNum || grossNum <= 0 || !description.trim() || !accountId || !categoryId) {
-      setFormError("Συμπλήρωσε ποσό, περιγραφή, κατηγορία και λογαριασμό.");
+    if (!grossNum || grossNum <= 0 || !accountId || !categoryId) {
+      setFormError("Συμπλήρωσε ποσό, κατηγορία και λογαριασμό.");
       return;
     }
 
     setSubmitting(true);
     try {
       const tag = await findOrCreateTag(tagName);
+      const fallbackDescription =
+        categories.find((category) => category.id === categoryId)?.name ?? "Χωρίς περιγραφή";
       await onSubmit({
         date,
-        description: description.trim(),
+        description: description.trim() || fallbackDescription,
         book_id: bookId,
         account_id: accountId,
         category_id: categoryId,
@@ -149,7 +151,7 @@ export function TransactionForm({
 
   return (
     <>
-      <div className="flex-1 overflow-auto p-4 pb-24 space-y-4">
+      <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
         <div>
           <label className="form-label" htmlFor="tx-amount">
             Ποσό
@@ -188,7 +190,7 @@ export function TransactionForm({
 
         <div>
           <label className="form-label" htmlFor="tx-description">
-            Περιγραφή
+            Περιγραφή (προαιρετικό)
           </label>
           <input
             id="tx-description"
@@ -330,7 +332,7 @@ export function TransactionForm({
         ) : null}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-cream via-cream to-cream/0 border-t border-border-light">
+      <div className="shrink-0 p-4 bg-cream border-t border-border-light">
         <button
           type="button"
           onClick={handleSubmit}

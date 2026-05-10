@@ -1,5 +1,6 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { AddTransaction } from "@/pages/AddTransaction";
@@ -51,10 +52,38 @@ const router = createBrowserRouter([
 ]);
 
 export function App() {
-  const { setAuth, setAuthLoading } = useAppStore();
+  const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
+  useSyncWorker();
 
   useEffect(() => {
     let cancelled = false;
+
+    async function updateMfaStatus(hasSession: boolean) {
+      if (!hasSession) {
+        setMfaStatus(false, false);
+        return;
+      }
+
+      setMfaStatus(false, true);
+      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to check MFA status:", error);
+        setMfaStatus(false, false);
+        return;
+      }
+
+      setMfaStatus(data.nextLevel === "aal2" && data.currentLevel !== "aal2", false);
+    }
+
+    async function applySession(
+      session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"],
+    ) {
+      setAuth(session?.user ?? null, session);
+      await updateMfaStatus(Boolean(session));
+    }
 
     async function initializeAuth() {
       setAuthLoading(true);
@@ -65,23 +94,25 @@ export function App() {
       if (error) {
         console.error("Failed to initialize auth:", error);
         setAuth(null, null);
+        setMfaStatus(false, false);
         return;
       }
 
-      setAuth(data.session?.user ?? null, data.session);
+      await applySession(data.session);
     }
 
     void initializeAuth();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuth(session?.user ?? null, session);
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
+      void applySession(session);
     });
 
     return () => {
       cancelled = true;
       subscription.subscription.unsubscribe();
     };
-  }, [setAuth, setAuthLoading]);
+  }, [setAuth, setAuthLoading, setMfaStatus]);
 
   return <RouterProvider router={router} />;
 }

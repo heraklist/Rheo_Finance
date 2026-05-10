@@ -144,7 +144,9 @@ pnpm tauri:dev
 ⚠️ **Πρώτα ζήτα από τον Heraklis το Supabase Project URL + Anon key**. Δεν δουλεύεις χωρίς αυτά.
 
 - Δημιούργησε `src/lib/supabase.ts` με τον Supabase client
-- Δημιούργησε `src/pages/Login.tsx` με magic link form
+- Δημιούργησε `src/pages/Login.tsx` με email/password form
+- Πρόσθεσε TOTP MFA challenge όταν Supabase AAL χρειάζεται upgrade σε `aal2`
+- Πρόσθεσε Settings panel για Microsoft Authenticator / TOTP enrollment
 - Δημιούργησε `src/lib/auth.ts` με sign in / sign out / session helpers
 - Token storage σε OS keychain via `tauri-plugin-stronghold` ή plain localStorage για αρχή
 - Protect routes — αν δεν υπάρχει session, redirect σε /login
@@ -233,7 +235,7 @@ pnpm tauri:dev
 
 ### Architecture pivots
 - **ΠΟΤΕ μην προτείνεις** "ίσως καλύτερα Next.js αντί Vite" ή "ίσως PowerSync αντί custom" ή "ας πάμε σε Electron". Έχουμε ξοδέψει ώρες σε αυτές τις αποφάσεις. Είναι κλειδωμένες.
-- Το ίδιο για Tauri 2, Supabase EU, magic link auth, custom sync layer.
+- Το ίδιο για Tauri 2, Supabase EU, password + TOTP auth, custom sync layer.
 - Αν αληθινά νομίζεις ότι κάτι χρειάζεται αλλαγή, **ρώτα τον Heraklis με concrete reasoning** — μην προχωρήσεις μόνος σου.
 
 ### Scope creep
@@ -323,7 +325,7 @@ pnpm tauri:dev
 | Component library | shadcn/ui hybrid (forms primitives) + custom (KPI/TxRow/SyncPill) |
 | Backend | Supabase EU/Frankfurt |
 | Sync | Custom Option A (outbox pattern) |
-| Auth | Magic link |
+| Auth | Email/password + TOTP MFA |
 | Local DB | SQLite via tauri-plugin-sql |
 | Domain | finance.evochia.gr |
 | Repo | heraklist/evochia_finance (private) |

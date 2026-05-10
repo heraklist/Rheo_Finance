@@ -96,7 +96,7 @@ Native app που:
 
 - **Supabase EU (Frankfurt)**
   - Postgres 15 — sync target
-  - Auth (magic link)
+  - Auth (email/password + TOTP MFA)
   - Storage για receipt photos
   - Edge Functions για scheduled jobs (server-side recurring generation as backup)
 - **Custom sync layer** — outbox pattern, pull/push, conflict resolution per single-user simplifications
@@ -164,7 +164,7 @@ graph TB
     end
 
     subgraph Supabase["🇪🇺 Supabase EU - Frankfurt"]
-        Auth[Auth - magic link]
+        Auth[Auth - email/password + TOTP MFA]
         Postgres[(Postgres + RLS)]
         Storage[Storage - receipt photos]
     end
@@ -179,8 +179,8 @@ graph TB
     AndroidSync <-->|HTTPS| Storage
     DesktopUI -.->|check updates| Updater
     AndroidUI -.->|check updates| Updater
-    DesktopSync -->|magic link auth| Auth
-    AndroidSync -->|magic link auth| Auth
+    DesktopSync -->|password + TOTP auth| Auth
+    AndroidSync -->|password + TOTP auth| Auth
 ```
 
 ### Local-first data flow — προσθήκη συναλλαγής
@@ -365,7 +365,8 @@ CREATE INDEX idx_outbox_pending ON sync_outbox(created_at);
 - Local file διαγράφεται μετά από 30 μέρες (cache cleanup)
 
 **Initial sync (first install):**
-- Login με magic link
+- Login με email/password
+- MFA challenge με authenticator όταν υπάρχει enrolled TOTP factor
 - Pull όλο το σύνολο δεδομένων από Postgres → SQLite
 - Mark `last_synced_at`
 - App ready
@@ -442,7 +443,7 @@ Tap home icon (Android)
 
 | # | Screen | Route (logical) | Priority |
 |---|---|---|---|
-| 1 | Login (magic link) | `/login` | P0 |
+| 1 | Login (email/password + MFA) | `/login` | P0 |
 | 2 | Dashboard / Home | `/` | P0 |
 | 3 | Add Transaction | `/add` | P0 |
 | 4 | Transactions list | `/transactions` | P0 |
@@ -490,7 +491,7 @@ Detailed visual design είναι σε ξεχωριστό **Claude Design Brief*
 **Στόχος:** Cross-device functional.
 
 - [ ] Supabase project setup + RLS policies
-- [ ] Magic link auth integration στο Tauri
+- [ ] Password auth + TOTP MFA integration στο Tauri
 - [ ] Outbox table + write hooks
 - [ ] Background sync engine (push + pull)
 - [ ] Conflict resolution logic
@@ -548,7 +549,8 @@ Detailed visual design είναι σε ξεχωριστό **Claude Design Brief*
 
 ### Authentication
 
-- Magic link μέσω email (Supabase Auth)
+- Email/password μέσω Supabase Auth
+- TOTP MFA μέσω Microsoft Authenticator ή συμβατού authenticator app
 - Token stored in OS keychain (macOS Keychain / Windows Credential Manager / Android Keystore) μέσω `tauri-plugin-stronghold` ή native APIs
 - Session 30 μέρες, auto-renewal
 - 2FA: enforce σε Supabase + GitHub + email

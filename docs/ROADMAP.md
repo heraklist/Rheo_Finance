@@ -11,10 +11,10 @@
 | Day 1 | Initial scaffolding | ✅ Done |
 | 001 (Audit) | Έλεγχος Day 1 baseline | ✅ Done — `docs/AUDIT-2026-05-08.md` |
 | 002 | Git init + bug fixes + biome + verify run | ⏳ Pending |
-| 003 | Transactions CRUD completion | ⏳ Pending |
-| 004 | Search + filters + shadcn polish | ⏳ Pending |
-| 005 | Supabase setup + auth | ⏳ Pending |
-| 006 | Sync engine | ⏳ Pending |
+| 003 | Transactions CRUD completion | ✅ Done — `817b028` |
+| 004 | Search + filters + shadcn polish | ✅ Done — `6c91886` |
+| 005 | Supabase setup + auth | ✅ Done — `3bd500e` |
+| 006 | Sync engine | ✅ Done — password + TOTP, outbox sync |
 | 007 | Receipt photos | 📋 Skeleton |
 | 008 | Recurring templates | 📋 Skeleton |
 | 009 | VAT summary + Forecast | 📋 Skeleton |

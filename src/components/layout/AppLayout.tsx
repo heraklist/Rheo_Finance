@@ -1,13 +1,12 @@
 import { BrandMark } from "@/components/ui/BrandMark";
-import { SyncPill, type SyncState } from "@/components/ui/SyncPill";
+import { SyncPill } from "@/components/ui/SyncPill";
+import { useAppStore } from "@/lib/store";
 import { Plus, Settings } from "lucide-react";
-import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
   const location = useLocation();
-  // Phase 2 will wire this to real sync state
-  const [syncStatus] = useState<SyncState>("synced");
+  const { syncState, pendingCount } = useAppStore();
 
   // Hide FAB where a focused transaction flow owns the bottom action area.
   const showFab = location.pathname !== "/add" && !location.pathname.startsWith("/transactions/");
@@ -19,7 +18,7 @@ export function AppLayout() {
           <BrandMark />
         </Link>
         <div className="flex items-center gap-2">
-          <SyncPill status={syncStatus} />
+          <SyncPill status={syncState} pendingCount={pendingCount} />
           <Link
             to="/settings"
             className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
