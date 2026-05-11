@@ -1,4 +1,5 @@
 import { getDb, now, uuid } from "@/lib/db";
+import { deleteLocalReceiptPhoto, saveReceiptPhotoForTransaction } from "@/lib/receipts";
 import type { PaymentMethod, Transaction, TransactionWithRelations } from "@/lib/types";
 import { computeVat } from "@/lib/utils";
 
@@ -166,6 +167,8 @@ export interface NewTransactionInput {
   amount_gross: number;
   vat_rate: number;
   receipt_photo_path?: string | null;
+  receipt_photo_bytes?: Uint8Array | null;
+  remove_receipt_photo?: boolean;
   notes?: string | null;
 }
 
@@ -182,6 +185,9 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
   const id = uuid();
   const ts = now();
   const { vat: amount_vat, net: amount_net } = computeVat(input.amount_gross, input.vat_rate);
+  const receiptPhotoPath = input.receipt_photo_bytes
+    ? await saveReceiptPhotoForTransaction(id, input.receipt_photo_bytes)
+    : (input.receipt_photo_path ?? null);
 
   const tx: Transaction = {
     id,
@@ -196,7 +202,7 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
     vat_rate: input.vat_rate,
     amount_vat,
     amount_net,
-    receipt_photo_path: input.receipt_photo_path ?? null,
+    receipt_photo_path: receiptPhotoPath,
     recurring_template_id: null,
     notes: input.notes ?? null,
     created_at: ts,
@@ -260,6 +266,16 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
 
   const ts = now();
   const { vat: amount_vat, net: amount_net } = computeVat(input.amount_gross, input.vat_rate);
+  let receiptPhotoPath = existing.receipt_photo_path;
+
+  if (input.remove_receipt_photo) {
+    await deleteLocalReceiptPhoto(existing.receipt_photo_path);
+    receiptPhotoPath = null;
+  } else if (input.receipt_photo_bytes) {
+    receiptPhotoPath = await saveReceiptPhotoForTransaction(input.id, input.receipt_photo_bytes);
+  } else if (input.receipt_photo_path !== undefined) {
+    receiptPhotoPath = input.receipt_photo_path;
+  }
 
   const tx: Transaction = {
     id: input.id,
@@ -274,7 +290,7 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
     vat_rate: input.vat_rate,
     amount_vat,
     amount_net,
-    receipt_photo_path: input.receipt_photo_path ?? existing.receipt_photo_path,
+    receipt_photo_path: receiptPhotoPath,
     recurring_template_id: existing.recurring_template_id,
     notes: input.notes ?? null,
     created_at: existing.created_at,
@@ -364,4 +380,10 @@ export async function deleteTransaction(id: string): Promise<void> {
       ts,
     ],
   );
+
+  try {
+    await deleteLocalReceiptPhoto(existing.receipt_photo_path);
+  } catch (err) {
+    console.error("Failed to delete local receipt photo:", err);
+  }
 }

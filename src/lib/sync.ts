@@ -1,4 +1,5 @@
 import { getDb, now } from "@/lib/db";
+import { deleteRemoteReceiptPhoto, downloadReceiptPhoto, uploadReceiptPhoto } from "@/lib/receipts";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 
@@ -246,6 +247,43 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
   return remoteRow;
 }
 
+async function prepareRemoteRowForPush(
+  entityType: SyncEntityType,
+  row: SyncRow,
+  userId: string,
+  entityId: string,
+): Promise<SyncRow> {
+  const remoteRow = toRemoteRow(entityType, row, userId);
+
+  if (entityType !== "transaction") return remoteRow;
+
+  const receiptPath = row.receipt_photo_path;
+  if (typeof receiptPath === "string" && receiptPath.length > 0) {
+    remoteRow.receipt_photo_path = await uploadReceiptPhoto(userId, entityId, receiptPath);
+  } else if (receiptPath === null) {
+    remoteRow.receipt_photo_path = null;
+    await deleteRemoteReceiptPhoto(userId, entityId);
+  }
+
+  return remoteRow;
+}
+
+async function preparePulledRowForLocal(
+  entityType: SyncEntityType,
+  row: SyncRow,
+): Promise<SyncRow> {
+  if (entityType !== "transaction") return row;
+
+  const receiptPath = row.receipt_photo_path;
+  if (typeof receiptPath !== "string" || receiptPath.length === 0) return row;
+
+  const localPath = await downloadReceiptPhoto(receiptPath, String(row.id));
+  return {
+    ...row,
+    receipt_photo_path: localPath,
+  };
+}
+
 function toLocalRow(entityType: SyncEntityType, row: SyncRow): SyncRow {
   const config = SYNC_TABLES[entityType];
   const localRow: SyncRow = {};
@@ -346,10 +384,22 @@ export async function pushChanges(): Promise<number> {
 
       if (entry.operation === "create" || entry.operation === "update") {
         const payload = parsePayload(entry.payload);
-        const remoteRow = toRemoteRow(entry.entity_type, payload, user.id);
+        const remoteRow = await prepareRemoteRowForPush(
+          entry.entity_type,
+          payload,
+          user.id,
+          entry.entity_id,
+        );
         const { error } = await supabase.from(config.table).upsert(remoteRow);
         if (error) throw error;
       } else if (entry.operation === "delete") {
+        if (entry.entity_type === "transaction") {
+          const payload = parsePayload(entry.payload);
+          if (payload.receipt_photo_path) {
+            await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
+          }
+        }
+
         const { error } = await supabase.from(config.table).delete().eq("id", entry.entity_id);
         if (error) throw error;
       }
@@ -413,7 +463,8 @@ export async function pullChanges(): Promise<number> {
     }
 
     for (const row of data ?? []) {
-      await upsertLocal(entityType, row as SyncRow);
+      const localRow = await preparePulledRowForLocal(entityType, row as SyncRow);
+      await upsertLocal(entityType, localRow);
       total++;
     }
   }

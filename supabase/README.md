@@ -11,6 +11,9 @@ Run these files manually in the Supabase SQL Editor before continuing `SESSION_0
 5. New query
 6. Paste `supabase/migrations/002_rls_policies.sql`
 7. Run
+8. New query
+9. Paste `supabase/migrations/003_storage_receipts.sql`
+10. Run
 
 ## Verify
 
@@ -24,6 +27,12 @@ In Table Editor you should see 6 application tables:
 - `transactions`
 
 For each table, RLS must be enabled.
+
+Storage must also have a private bucket named `receipts`. Receipt files are stored as:
+
+```text
+{user_id}/{transaction_id}.jpg
+```
 
 ## Notes
 

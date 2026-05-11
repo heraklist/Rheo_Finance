@@ -1,3 +1,4 @@
+import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
 import { Receipt } from "lucide-react";
@@ -12,6 +13,7 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
   const isExpense = tx.category_type === "expense";
   const sign = isIncome ? "+" : isExpense ? "−" : "";
   const amountClass = isIncome ? "pos" : isExpense ? "neg" : "";
+  const receiptUrl = useReceiptPhotoUrl(tx.receipt_photo_path, tx.id);
 
   return (
     <button
@@ -20,8 +22,8 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
       className="tx-row w-full text-left hover:bg-sand/40 transition-colors"
     >
       <div className="tx-thumb">
-        {tx.receipt_photo_path ? (
-          <img src={tx.receipt_photo_path} alt="" className="w-full h-full object-cover" />
+        {receiptUrl ? (
+          <img src={receiptUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <Receipt className="w-3.5 h-3.5" strokeWidth={1.5} />
         )}

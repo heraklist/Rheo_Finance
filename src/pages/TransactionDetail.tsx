@@ -2,6 +2,7 @@ import {
   TransactionForm,
   type TransactionFormValues,
 } from "@/components/transactions/TransactionForm";
+import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { deleteTransaction, getTransaction, updateTransaction } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
@@ -54,7 +55,9 @@ export function TransactionDetail() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [error, setError] = useState("");
+  const receiptUrl = useReceiptPhotoUrl(transaction?.receipt_photo_path, transaction?.id);
 
   useEffect(() => {
     let cancelled = false;
@@ -185,6 +188,7 @@ export function TransactionDetail() {
             paymentMethod: transaction.payment_method,
             tagName: transaction.tag_name ?? "",
             notes: transaction.notes ?? "",
+            receiptPhotoPath: transaction.receipt_photo_path,
           }}
           submitLabel="Αποθήκευση αλλαγών"
           submittingLabel="Αποθήκευση…"
@@ -268,20 +272,65 @@ export function TransactionDetail() {
         </section>
       ) : null}
 
-      <section className="bg-cream border border-border-light rounded-md p-4 flex items-center gap-3 text-text-muted">
-        <div className="w-9 h-9 rounded-full bg-sand border border-border-light flex items-center justify-center">
-          <ReceiptText className="w-4.5 h-4.5" strokeWidth={1.5} />
+      <section className="bg-cream border border-border-light rounded-md p-4 text-text-muted">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-sand border border-border-light flex items-center justify-center">
+            <ReceiptText className="w-4.5 h-4.5" strokeWidth={1.5} />
+          </div>
+          <div>
+            <p className="text-sm text-text-primary">
+              {transaction.receipt_photo_path ? "Υπάρχει απόδειξη" : "Χωρίς απόδειξη"}
+            </p>
+            <p className="text-caption">
+              {transaction.receipt_photo_path
+                ? "Η φωτογραφία αποθηκεύτηκε τοπικά και συγχρονίζεται με το cloud."
+                : "Δεν έχει συνδεθεί φωτογραφία απόδειξης."}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm text-text-primary">
-            {transaction.receipt_photo_path ? "Υπάρχει απόδειξη" : "Χωρίς απόδειξη"}
-          </p>
-          <p className="text-caption">
-            {transaction.receipt_photo_path ??
-              "Η φωτογραφία απόδειξης θα συνδεθεί σε επόμενο βήμα."}
-          </p>
-        </div>
+
+        {transaction.receipt_photo_path ? (
+          <button
+            type="button"
+            onClick={() => receiptUrl && setReceiptOpen(true)}
+            disabled={!receiptUrl}
+            className="mt-3 block w-full overflow-hidden rounded-md border border-border-light bg-sand disabled:opacity-70"
+          >
+            {receiptUrl ? (
+              <img src={receiptUrl} alt="" className="max-h-[420px] w-full object-contain" />
+            ) : (
+              <div className="flex h-36 items-center justify-center text-caption text-text-muted">
+                Φόρτωση απόδειξης...
+              </div>
+            )}
+          </button>
+        ) : null}
       </section>
+
+      {receiptOpen && receiptUrl ? (
+        <dialog
+          open
+          className="fixed inset-0 z-50 m-0 h-full w-full max-w-none border-0 bg-transparent p-4"
+        >
+          <button
+            type="button"
+            aria-label="Κλείσιμο προβολής απόδειξης"
+            onClick={() => setReceiptOpen(false)}
+            className="absolute inset-0 bg-charcoal/90"
+          />
+          <button
+            type="button"
+            onClick={() => setReceiptOpen(false)}
+            aria-label="Κλείσιμο"
+            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-cream text-charcoal"
+          >
+            <X className="h-5 w-5" strokeWidth={1.7} />
+          </button>
+          <div className="relative z-0 flex h-full items-center justify-center">
+            <img src={receiptUrl} alt="" className="max-h-full max-w-full object-contain" />
+          </div>
+        </dialog>
+      ) : null}
     </div>
   );
 }

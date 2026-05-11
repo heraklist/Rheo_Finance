@@ -5,10 +5,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
+import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const VAT_RATES = [
@@ -32,6 +34,8 @@ export interface TransactionFormValues {
   payment_method: PaymentMethod;
   amount_gross: number;
   vat_rate: number;
+  receipt_photo_bytes?: Uint8Array | null;
+  remove_receipt_photo?: boolean;
   notes?: string | null;
 }
 
@@ -48,6 +52,7 @@ interface TransactionFormProps {
     paymentMethod: PaymentMethod;
     tagName: string;
     notes: string;
+    receiptPhotoPath?: string | null;
   };
   submitLabel: string;
   submittingLabel: string;
@@ -68,6 +73,7 @@ function defaultValues(): NonNullable<TransactionFormProps["initialValues"]> {
     paymentMethod: "Μετρητά",
     tagName: "",
     notes: "",
+    receiptPhotoPath: null,
   };
 }
 
@@ -94,7 +100,11 @@ export function TransactionForm({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(defaults.paymentMethod);
   const [tagName, setTagName] = useState(defaults.tagName);
   const [notes, setNotes] = useState(defaults.notes);
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptPhotoDraft | null>(null);
+  const [receiptRemoved, setReceiptRemoved] = useState(false);
   const [formError, setFormError] = useState("");
+  const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
+  const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
 
   useEffect(() => {
     void (async () => {
@@ -114,6 +124,34 @@ export function TransactionForm({
       });
     })();
   }, [type, bookId]);
+
+  useEffect(() => {
+    return () => {
+      if (receiptDraft?.previewUrl) {
+        URL.revokeObjectURL(receiptDraft.previewUrl);
+      }
+    };
+  }, [receiptDraft?.previewUrl]);
+
+  async function handlePickReceipt() {
+    setFormError("");
+
+    try {
+      const draft = await pickReceiptPhoto();
+      if (!draft) return;
+
+      setReceiptDraft(draft);
+      setReceiptRemoved(false);
+    } catch (err) {
+      console.error("Failed to select receipt photo:", err);
+      setFormError("Δεν φορτώθηκε η φωτογραφία απόδειξης. Δοκίμασε άλλη εικόνα.");
+    }
+  }
+
+  function handleRemoveReceipt() {
+    setReceiptDraft(null);
+    setReceiptRemoved(true);
+  }
 
   async function handleSubmit() {
     if (submitting) return;
@@ -140,6 +178,8 @@ export function TransactionForm({
         payment_method: paymentMethod,
         amount_gross: grossNum,
         vat_rate: vatRate,
+        receipt_photo_bytes: receiptDraft?.bytes ?? null,
+        remove_receipt_photo: receiptRemoved,
         notes: notes.trim() || null,
       });
     } catch (err) {
@@ -304,13 +344,36 @@ export function TransactionForm({
           />
         </div>
 
-        <button
-          type="button"
-          className="w-full flex items-center gap-2.5 bg-cream border border-border-mid text-charcoal rounded-md py-2.5 px-3.5 text-sm font-medium hover:bg-sand transition-colors"
-        >
-          <Camera className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          Φωτογραφία απόδειξης
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={handlePickReceipt}
+            disabled={submitting}
+            className="w-full flex items-center gap-2.5 bg-cream border border-border-mid text-charcoal rounded-md py-2.5 px-3.5 text-sm font-medium hover:bg-sand disabled:opacity-50 transition-colors"
+          >
+            <Camera className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            {receiptPreviewUrl ? "Αλλαγή φωτογραφίας απόδειξης" : "Φωτογραφία απόδειξης"}
+          </button>
+
+          {receiptPreviewUrl ? (
+            <div className="relative overflow-hidden rounded-md border border-border-light bg-sand">
+              <img src={receiptPreviewUrl} alt="" className="h-36 w-full object-cover" />
+              <button
+                type="button"
+                onClick={handleRemoveReceipt}
+                disabled={submitting}
+                aria-label="Αφαίρεση απόδειξης"
+                className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-charcoal text-text-on-dark disabled:opacity-50"
+              >
+                <X className="h-4 w-4" strokeWidth={1.7} />
+              </button>
+            </div>
+          ) : null}
+
+          {receiptRemoved && defaults.receiptPhotoPath ? (
+            <p className="text-caption text-text-muted">Η υπάρχουσα απόδειξη θα αφαιρεθεί.</p>
+          ) : null}
+        </div>
 
         <div>
           <label className="form-label" htmlFor="tx-notes">

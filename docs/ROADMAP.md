@@ -15,7 +15,7 @@
 | 004 | Search + filters + shadcn polish | ✅ Done — `6c91886` |
 | 005 | Supabase setup + auth | ✅ Done — `3bd500e` |
 | 006 | Sync engine | ✅ Done — password + TOTP, outbox sync |
-| 007 | Receipt photos | 📋 Skeleton |
+| 007 | Receipt photos | ✅ Done — local picker + storage sync |
 | 008 | Recurring templates | 📋 Skeleton |
 | 009 | VAT summary + Forecast | 📋 Skeleton |
 | 010 | Settings + Excel export + production polish | 📋 Skeleton |
