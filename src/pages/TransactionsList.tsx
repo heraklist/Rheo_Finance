@@ -15,7 +15,7 @@ import type { Category, TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
 import { AlertCircle, Filter, Plus, ReceiptText, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 const CURRENT_BOOK_ID = "book-business";
 const ALL_CATEGORIES = "all";
@@ -64,15 +64,32 @@ function parseAmountFilter(value: string): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
+function filtersFromSearchParams(searchParams: URLSearchParams): TransactionFilters {
+  return {
+    fromDate: searchParams.get("fromDate") || undefined,
+    toDate: searchParams.get("toDate") || undefined,
+    categoryId: searchParams.get("categoryId") || undefined,
+    minAmount: parseAmountFilter(searchParams.get("minAmount") ?? ""),
+    maxAmount: parseAmountFilter(searchParams.get("maxAmount") ?? ""),
+  };
+}
+
 export function TransactionsList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [filters, setFilters] = useState<TransactionFilters>(() =>
+    filtersFromSearchParams(searchParams),
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([]);
   const debouncedSearch = useDebounce(search, 250);
+
+  useEffect(() => {
+    setFilters(filtersFromSearchParams(searchParams));
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;

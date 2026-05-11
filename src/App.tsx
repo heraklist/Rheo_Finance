@@ -6,12 +6,13 @@ import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { AddTransaction } from "@/pages/AddTransaction";
 import { Dashboard } from "@/pages/Dashboard";
+import { Forecast } from "@/pages/Forecast";
 import { Login } from "@/pages/Login";
-import { Placeholder } from "@/pages/Placeholder";
 import { Recurring } from "@/pages/Recurring";
 import { Settings } from "@/pages/Settings";
 import { TransactionDetail } from "@/pages/TransactionDetail";
 import { TransactionsList } from "@/pages/TransactionsList";
+import { VatSummary } from "@/pages/VatSummary";
 import { useEffect } from "react";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
@@ -30,16 +31,8 @@ const router = createBrowserRouter([
       { path: "transactions", element: <TransactionsList /> },
       { path: "transactions/:id", element: <TransactionDetail /> },
       { path: "recurring", element: <Recurring /> },
-      {
-        path: "vat",
-        element: (
-          <Placeholder title="Σύνοψη ΦΠΑ" description="Τριμηνιαία ανάλυση — υπό κατασκευή." />
-        ),
-      },
-      {
-        path: "forecast",
-        element: <Placeholder title="Forecast" description="Προβολή 12 μηνών — υπό κατασκευή." />,
-      },
+      { path: "vat", element: <VatSummary /> },
+      { path: "forecast", element: <Forecast /> },
       { path: "settings", element: <Settings /> },
     ],
   },

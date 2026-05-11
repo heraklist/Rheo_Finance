@@ -1,7 +1,7 @@
 import { BrandMark } from "@/components/ui/BrandMark";
 import { SyncPill } from "@/components/ui/SyncPill";
 import { useAppStore } from "@/lib/store";
-import { Plus, Repeat2, Settings } from "lucide-react";
+import { Calculator, Plus, Repeat2, Settings, TrendingUp } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
@@ -25,6 +25,20 @@ export function AppLayout() {
             aria-label="Πάγια"
           >
             <Repeat2 className="w-[18px] h-[18px]" strokeWidth={1.5} />
+          </Link>
+          <Link
+            to="/vat"
+            className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
+            aria-label="Σύνοψη ΦΠΑ"
+          >
+            <Calculator className="w-[18px] h-[18px]" strokeWidth={1.5} />
+          </Link>
+          <Link
+            to="/forecast"
+            className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
+            aria-label="Πρόβλεψη"
+          >
+            <TrendingUp className="w-[18px] h-[18px]" strokeWidth={1.5} />
           </Link>
           <Link
             to="/settings"
