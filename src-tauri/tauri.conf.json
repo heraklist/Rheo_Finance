@@ -25,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' asset: http://asset.localhost data: blob: https://*.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'"
     }
   },
   "bundle": {

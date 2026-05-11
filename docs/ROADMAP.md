@@ -18,7 +18,7 @@
 | 007 | Receipt photos | ✅ Done — local picker + storage sync |
 | 008 | Recurring templates | ✅ Done — CRUD + auto-generation |
 | 009 | VAT summary + Forecast | ✅ Done — VAT drill-down + 12-month cashflow |
-| 010 | Settings + Excel export + production polish | 📋 Skeleton |
+| 010 | Settings + Excel export + production polish | ✅ Done — settings, export, backup, CSP |
 | 011 | Android port + sideload | 📋 Skeleton |
 
 **Legend:** ✅ Complete · ⏳ Pending detailed prompt · 📋 Skeleton (full prompt γράφεται when we get there)

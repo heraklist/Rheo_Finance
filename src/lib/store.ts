@@ -2,11 +2,19 @@ import type { Session, User } from "@supabase/supabase-js";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import type { PaymentMethod } from "@/lib/types";
+
 export type SyncState = "synced" | "syncing" | "offline" | "error";
 
 interface AppState {
   currentBookId: string;
   setCurrentBookId: (id: string) => void;
+  defaultVatRate: number;
+  setDefaultVatRate: (rate: number) => void;
+  defaultPaymentMethod: PaymentMethod;
+  setDefaultPaymentMethod: (method: PaymentMethod) => void;
+  autoBackupEnabled: boolean;
+  setAutoBackupEnabled: (enabled: boolean) => void;
   user: User | null;
   session: Session | null;
   authLoading: boolean;
@@ -28,6 +36,12 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       currentBookId: "book-business",
       setCurrentBookId: (id) => set({ currentBookId: id }),
+      defaultVatRate: 0.24,
+      setDefaultVatRate: (defaultVatRate) => set({ defaultVatRate }),
+      defaultPaymentMethod: "Μετρητά",
+      setDefaultPaymentMethod: (defaultPaymentMethod) => set({ defaultPaymentMethod }),
+      autoBackupEnabled: false,
+      setAutoBackupEnabled: (autoBackupEnabled) => set({ autoBackupEnabled }),
       user: null,
       session: null,
       authLoading: true,
@@ -51,7 +65,12 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "evochia-app-state",
-      partialize: (state) => ({ currentBookId: state.currentBookId }),
+      partialize: (state) => ({
+        currentBookId: state.currentBookId,
+        defaultVatRate: state.defaultVatRate,
+        defaultPaymentMethod: state.defaultPaymentMethod,
+        autoBackupEnabled: state.autoBackupEnabled,
+      }),
     },
   ),
 );

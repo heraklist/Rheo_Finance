@@ -364,6 +364,17 @@ export async function getPendingCount(): Promise<number> {
   return rows[0]?.count ?? 0;
 }
 
+export async function resetSyncStateForFullPull(): Promise<void> {
+  const db = await getDb();
+  const ts = now();
+
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('last_synced_at', ?, ?)`,
+    ["1970-01-01T00:00:00.000Z", ts],
+  );
+}
+
 /**
  * Push pending changes from the local outbox to Supabase.
  */

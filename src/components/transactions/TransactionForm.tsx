@@ -8,6 +8,7 @@ import {
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
+import { useAppStore } from "@/lib/store";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
 import { Camera, X } from "lucide-react";
@@ -60,17 +61,21 @@ interface TransactionFormProps {
   onSubmit: (values: TransactionFormValues) => Promise<void>;
 }
 
-function defaultValues(): NonNullable<TransactionFormProps["initialValues"]> {
+function defaultValues(input: {
+  bookId: string;
+  vatRate: number;
+  paymentMethod: PaymentMethod;
+}): NonNullable<TransactionFormProps["initialValues"]> {
   return {
     amount: "",
     type: "expense",
     description: "",
-    bookId: "book-business",
+    bookId: input.bookId,
     accountId: "",
     categoryId: "",
     date: new Date().toISOString().slice(0, 10),
-    vatRate: 0.24,
-    paymentMethod: "Μετρητά",
+    vatRate: input.vatRate,
+    paymentMethod: input.paymentMethod,
     tagName: "",
     notes: "",
     receiptPhotoPath: null,
@@ -84,7 +89,16 @@ export function TransactionForm({
   autoFocusAmount = false,
   onSubmit,
 }: TransactionFormProps) {
-  const defaults = initialValues ?? defaultValues();
+  const preferredBookId = useAppStore((state) => state.currentBookId);
+  const defaultVatRate = useAppStore((state) => state.defaultVatRate);
+  const defaultPaymentMethod = useAppStore((state) => state.defaultPaymentMethod);
+  const defaults =
+    initialValues ??
+    defaultValues({
+      bookId: preferredBookId,
+      vatRate: defaultVatRate,
+      paymentMethod: defaultPaymentMethod,
+    });
   const [submitting, setSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
