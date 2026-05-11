@@ -1,7 +1,7 @@
 import { BrandMark } from "@/components/ui/BrandMark";
 import { SyncPill } from "@/components/ui/SyncPill";
 import { useAppStore } from "@/lib/store";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Repeat2, Settings } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
@@ -19,6 +19,13 @@ export function AppLayout() {
         </Link>
         <div className="flex items-center gap-2">
           <SyncPill status={syncState} pendingCount={pendingCount} />
+          <Link
+            to="/recurring"
+            className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
+            aria-label="Πάγια"
+          >
+            <Repeat2 className="w-[18px] h-[18px]" strokeWidth={1.5} />
+          </Link>
           <Link
             to="/settings"
             className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"

@@ -1,3 +1,4 @@
+import { generateDueRecurringTransactions } from "@/lib/recurring";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount, syncAll } from "@/lib/sync";
 import { useEffect } from "react";
@@ -36,6 +37,7 @@ export function useSyncWorker() {
 
       try {
         await syncAll();
+        await generateDueRecurringTransactions();
         if (cancelled) return;
 
         setSyncState("synced");

@@ -1,7 +1,7 @@
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
-import { Receipt } from "lucide-react";
+import { Receipt, Repeat2 } from "lucide-react";
 
 interface TransactionRowProps {
   tx: TransactionWithRelations;
@@ -21,12 +21,17 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
       onClick={onClick}
       className="tx-row w-full text-left hover:bg-sand/40 transition-colors"
     >
-      <div className="tx-thumb">
+      <div className="tx-thumb relative">
         {receiptUrl ? (
           <img src={receiptUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <Receipt className="w-3.5 h-3.5" strokeWidth={1.5} />
         )}
+        {tx.recurring_template_id ? (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-cream bg-gold text-text-on-dark">
+            <Repeat2 className="h-2.5 w-2.5" strokeWidth={2} />
+          </span>
+        ) : null}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-text-primary truncate mb-0.5">

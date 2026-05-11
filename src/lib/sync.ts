@@ -236,7 +236,7 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
     if (column === "user_id") {
       remoteRow[column] = userId;
     } else if (row[column] !== undefined) {
-      remoteRow[column] = row[column];
+      remoteRow[column] = toRemoteValue(column, row[column]);
     }
   }
 
@@ -245,6 +245,13 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
   }
 
   return remoteRow;
+}
+
+function toRemoteValue(column: string, value: JsonValue): JsonValue {
+  if ((column === "is_archived" || column === "active") && typeof value === "number") {
+    return value === 1;
+  }
+  return value;
 }
 
 async function prepareRemoteRowForPush(

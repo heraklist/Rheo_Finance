@@ -1,5 +1,6 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useRecurringWorker } from "@/hooks/useRecurringWorker";
 import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import { AddTransaction } from "@/pages/AddTransaction";
 import { Dashboard } from "@/pages/Dashboard";
 import { Login } from "@/pages/Login";
 import { Placeholder } from "@/pages/Placeholder";
+import { Recurring } from "@/pages/Recurring";
 import { Settings } from "@/pages/Settings";
 import { TransactionDetail } from "@/pages/TransactionDetail";
 import { TransactionsList } from "@/pages/TransactionsList";
@@ -27,15 +29,7 @@ const router = createBrowserRouter([
       { path: "add", element: <AddTransaction /> },
       { path: "transactions", element: <TransactionsList /> },
       { path: "transactions/:id", element: <TransactionDetail /> },
-      {
-        path: "recurring",
-        element: (
-          <Placeholder
-            title="Πάγια έσοδα/έξοδα"
-            description="Recurring templates — υπό κατασκευή."
-          />
-        ),
-      },
+      { path: "recurring", element: <Recurring /> },
       {
         path: "vat",
         element: (
@@ -53,6 +47,7 @@ const router = createBrowserRouter([
 
 export function App() {
   const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
+  useRecurringWorker();
   useSyncWorker();
 
   useEffect(() => {

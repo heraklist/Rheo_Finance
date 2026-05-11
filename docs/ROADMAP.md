@@ -16,7 +16,7 @@
 | 005 | Supabase setup + auth | ✅ Done — `3bd500e` |
 | 006 | Sync engine | ✅ Done — password + TOTP, outbox sync |
 | 007 | Receipt photos | ✅ Done — local picker + storage sync |
-| 008 | Recurring templates | 📋 Skeleton |
+| 008 | Recurring templates | ✅ Done — CRUD + auto-generation |
 | 009 | VAT summary + Forecast | 📋 Skeleton |
 | 010 | Settings + Excel export + production polish | 📋 Skeleton |
 | 011 | Android port + sideload | 📋 Skeleton |

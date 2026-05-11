@@ -67,6 +67,15 @@ export interface RecurringTemplate extends SyncableEntity {
   created_at: string;
 }
 
+export interface RecurringTemplateWithRelations extends RecurringTemplate {
+  book_name?: string;
+  account_name?: string;
+  category_name?: string;
+  category_type?: CategoryType;
+  tag_name?: string | null;
+  next_due: string | null;
+}
+
 export type PaymentMethod = "Μετρητά" | "Κάρτα" | "Τραπεζική μεταφορά" | "IRIS" | "Άλλο";
 
 export interface Transaction extends SyncableEntity {

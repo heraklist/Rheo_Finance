@@ -169,6 +169,7 @@ export interface NewTransactionInput {
   receipt_photo_path?: string | null;
   receipt_photo_bytes?: Uint8Array | null;
   remove_receipt_photo?: boolean;
+  recurring_template_id?: string | null;
   notes?: string | null;
 }
 
@@ -203,7 +204,7 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
     amount_vat,
     amount_net,
     receipt_photo_path: receiptPhotoPath,
-    recurring_template_id: null,
+    recurring_template_id: input.recurring_template_id ?? null,
     notes: input.notes ?? null,
     created_at: ts,
     updated_at: ts,
