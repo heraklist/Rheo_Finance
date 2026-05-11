@@ -19,7 +19,7 @@
 | 008 | Recurring templates | ✅ Done — CRUD + auto-generation |
 | 009 | VAT summary + Forecast | ✅ Done — VAT drill-down + 12-month cashflow |
 | 010 | Settings + Excel export + production polish | ✅ Done — settings, export, backup, CSP |
-| 011 | Android port + sideload | 📋 Skeleton |
+| 011 | Android port + sideload | ✅ Done — toolchain + arm64 debug APK; sideload pending device |
 
 **Legend:** ✅ Complete · ⏳ Pending detailed prompt · 📋 Skeleton (full prompt γράφεται when we get there)
 
