@@ -1,5 +1,6 @@
 import { BrandMark } from "@/components/ui/BrandMark";
 import { Input } from "@/components/ui/input";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { supabase } from "@/lib/supabase";
 import { LockKeyhole } from "lucide-react";
 import { useState } from "react";
@@ -23,6 +24,7 @@ function authErrorMessage(message: string): string {
 
 export function Login() {
   const navigate = useNavigate();
+  const companyName = useCompanyName();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,7 +69,7 @@ export function Login() {
           <div className="inline-flex">
             <BrandMark />
           </div>
-          <p className="text-text-muted mt-2">Διαχείριση οικονομικών</p>
+          <p className="text-text-muted mt-2">Διαχείριση οικονομικών για {companyName}</p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>

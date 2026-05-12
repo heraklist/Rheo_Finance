@@ -1,3 +1,4 @@
+import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
@@ -14,6 +15,8 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
   const sign = isIncome ? "+" : isExpense ? "−" : "";
   const amountClass = isIncome ? "pos" : isExpense ? "neg" : "";
   const receiptUrl = useReceiptPhotoUrl(tx.receipt_photo_path, tx.id);
+  const displayAccountName = useDisplayAccountName();
+  const accountName = displayAccountName(tx.account_name);
 
   return (
     <button
@@ -39,7 +42,7 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
         </div>
         <div className="text-caption text-text-muted">
           {tx.category_name}
-          {tx.account_name && ` · ${tx.account_name}`}
+          {accountName && ` · ${accountName}`}
           {` · ${formatDateRelative(tx.date)}`}
         </div>
       </div>

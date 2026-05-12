@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { ShieldCheck, ShieldPlus, Trash2 } from "lucide-react";
@@ -36,6 +37,7 @@ function mfaErrorMessage(message: string): string {
 
 export function MfaSettingsPanel() {
   const { setAuth, setMfaStatus } = useAppStore();
+  const companyName = useCompanyName();
   const [verifiedCount, setVerifiedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -81,8 +83,8 @@ export function MfaSettingsPanel() {
 
     const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: "totp",
-      issuer: "Evochia Finance",
-      friendlyName: `Evochia Finance ${new Date().toISOString()}`,
+      issuer: `${companyName} Finance`,
+      friendlyName: `${companyName} Finance ${new Date().toISOString()}`,
     });
 
     setBusy(false);

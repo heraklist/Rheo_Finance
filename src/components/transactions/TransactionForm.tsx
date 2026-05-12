@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { parseGreekAmount } from "@/lib/money";
 import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
@@ -121,6 +122,7 @@ export function TransactionForm({
   const [formError, setFormError] = useState("");
   const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
   const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
+  const displayAccountName = useDisplayAccountName();
   const showVat = bookId === "book-business";
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
@@ -313,7 +315,7 @@ export function TransactionForm({
               <SelectContent>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
-                    {account.name}
+                    {displayAccountName(account.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

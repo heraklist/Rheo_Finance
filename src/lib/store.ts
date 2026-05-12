@@ -2,6 +2,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { DEFAULT_COMPANY_NAME, normalizeCompanyName } from "@/lib/company";
 import type { PaymentMethod } from "@/lib/types";
 
 export type SyncState = "synced" | "syncing" | "offline" | "error";
@@ -9,6 +10,8 @@ export type SyncState = "synced" | "syncing" | "offline" | "error";
 interface AppState {
   currentBookId: string;
   setCurrentBookId: (id: string) => void;
+  companyName: string;
+  setCompanyName: (name: string) => void;
   defaultVatRate: number;
   setDefaultVatRate: (rate: number) => void;
   defaultPaymentMethod: PaymentMethod;
@@ -36,6 +39,8 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       currentBookId: "book-business",
       setCurrentBookId: (id) => set({ currentBookId: id }),
+      companyName: DEFAULT_COMPANY_NAME,
+      setCompanyName: (companyName) => set({ companyName: normalizeCompanyName(companyName) }),
       defaultVatRate: 0.24,
       setDefaultVatRate: (defaultVatRate) => set({ defaultVatRate }),
       defaultPaymentMethod: "Μετρητά",
@@ -67,6 +72,7 @@ export const useAppStore = create<AppState>()(
       name: "evochia-app-state",
       partialize: (state) => ({
         currentBookId: state.currentBookId,
+        companyName: state.companyName,
         defaultVatRate: state.defaultVatRate,
         defaultPaymentMethod: state.defaultPaymentMethod,
         autoBackupEnabled: state.autoBackupEnabled,

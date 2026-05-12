@@ -2,6 +2,7 @@ import {
   TransactionForm,
   type TransactionFormValues,
 } from "@/components/transactions/TransactionForm";
+import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { deleteTransaction, getTransaction, updateTransaction } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
@@ -58,6 +59,7 @@ export function TransactionDetail() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [error, setError] = useState("");
   const receiptUrl = useReceiptPhotoUrl(transaction?.receipt_photo_path, transaction?.id);
+  const displayAccountName = useDisplayAccountName();
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +156,7 @@ export function TransactionDetail() {
       : transaction.category_type === "expense"
         ? "text-expense"
         : "text-text-primary";
+  const accountName = displayAccountName(transaction.account_name);
 
   if (editing) {
     return (
@@ -254,7 +257,7 @@ export function TransactionDetail() {
       <section className="bg-cream border border-border-light rounded-md px-4 mb-4">
         <dl>
           <DetailRow label="Κατηγορία" value={transaction.category_name ?? "—"} />
-          <DetailRow label="Λογαριασμός" value={transaction.account_name ?? "—"} />
+          <DetailRow label="Λογαριασμός" value={accountName || "—"} />
           <DetailRow label="Τρόπος πληρωμής" value={transaction.payment_method} />
           <DetailRow label="Καθαρό ποσό" value={formatEuro(transaction.amount_net)} />
           <DetailRow

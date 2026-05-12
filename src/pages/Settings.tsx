@@ -8,31 +8,38 @@ import {
 } from "@/components/ui/select";
 import { deleteCurrentAccount } from "@/lib/account";
 import { createJsonBackup, getLastAutoBackupAt } from "@/lib/backup";
+import { normalizeCompanyName } from "@/lib/company";
 import {
   type ExportBookScope,
   type ExportPeriod,
   currentQuarterPeriods,
   saveFinanceExport,
 } from "@/lib/export";
+import { type EditableCategoryType, listCategoryCounts } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { getPendingCount, resetSyncStateForFullPull, syncAll } from "@/lib/sync";
 import type { PaymentMethod } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
 import {
+  Building2,
+  ChevronRight,
   DatabaseBackup,
   ExternalLink,
   FileSpreadsheet,
+  FolderTree,
   Info,
   LogOut,
   RefreshCcw,
   RotateCw,
+  Save,
   Settings2,
   ShieldAlert,
   Trash2,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const APP_VERSION = "0.1.0";
 const CURRENT_YEAR = new Date().getFullYear();
@@ -66,10 +73,12 @@ export function Settings() {
     lastSyncedAt,
     pendingCount,
     currentBookId,
+    companyName,
     defaultVatRate,
     defaultPaymentMethod,
     autoBackupEnabled,
     setCurrentBookId,
+    setCompanyName,
     setDefaultPaymentMethod,
     setDefaultVatRate,
     setAutoBackupEnabled,
@@ -93,6 +102,15 @@ export function Settings() {
   const [customFromDate, setCustomFromDate] = useState(`${CURRENT_YEAR}-01-01`);
   const [customToDate, setCustomToDate] = useState(`${CURRENT_YEAR}-12-31`);
   const [exportBookScope, setExportBookScope] = useState<ExportBookScope>("business");
+  const displayCompanyName = normalizeCompanyName(companyName);
+  const [companyDraft, setCompanyDraft] = useState(displayCompanyName);
+  const [companyEditing, setCompanyEditing] = useState(false);
+  const [categoryCounts, setCategoryCounts] = useState<Record<EditableCategoryType, number>>({
+    income: 0,
+    expense: 0,
+  });
+  const currentBookLabel =
+    BOOK_OPTIONS.find((book) => book.value === currentBookId)?.label ?? "Τρέχον book";
 
   const selectedPeriod: ExportPeriod = useMemo(() => {
     if (periodKey === "custom") {
@@ -130,6 +148,40 @@ export function Settings() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!companyEditing) setCompanyDraft(displayCompanyName);
+  }, [companyEditing, displayCompanyName]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCategoryCounts() {
+      try {
+        const counts = await listCategoryCounts(currentBookId);
+        if (!cancelled) setCategoryCounts(counts);
+      } catch (err) {
+        console.error("Failed to load category counts:", err);
+      }
+    }
+
+    void loadCategoryCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBookId]);
+
+  function handleSaveCompanyName() {
+    const nextCompanyName = normalizeCompanyName(companyDraft);
+    setCompanyName(nextCompanyName);
+    setCompanyDraft(nextCompanyName);
+    setCompanyEditing(false);
+  }
+
+  function handleCancelCompanyName() {
+    setCompanyDraft(displayCompanyName);
+    setCompanyEditing(false);
+  }
 
   async function handleSignOut() {
     const { error } = await supabase.auth.signOut();
@@ -284,6 +336,98 @@ export function Settings() {
           </button>
         </div>
         {accountMessage ? <p className="text-caption mt-3 text-expense">{accountMessage}</p> : null}
+      </section>
+
+      <section className={sectionClassName()}>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-h3">Επιχείρηση</h2>
+            <p className="text-caption mt-1">
+              Το όνομα εμφανίζεται σε welcome copy και labels λογαριασμών.
+            </p>
+          </div>
+          <Building2 className="h-5 w-5 text-gold" strokeWidth={1.7} />
+        </div>
+        {companyEditing ? (
+          <div className="space-y-3">
+            <div>
+              <label className="form-label" htmlFor="company-name">
+                Όνομα επιχείρησης
+              </label>
+              <input
+                id="company-name"
+                value={companyDraft}
+                onChange={(event) => setCompanyDraft(event.target.value)}
+                className="w-full rounded-md border border-border-light bg-cream px-3 py-2.5 text-sm focus:border-charcoal focus:outline-none"
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleSaveCompanyName}
+                className="inline-flex items-center gap-2 rounded-md bg-charcoal px-3 py-2 text-sm font-medium text-text-on-dark"
+              >
+                <Save className="h-4 w-4" strokeWidth={1.7} />
+                Αποθήκευση
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelCompanyName}
+                className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary hover:underline"
+              >
+                <X className="h-4 w-4" strokeWidth={1.7} />
+                Άκυρο
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-text-primary">{displayCompanyName}</p>
+              <p className="text-caption">BrandMark: ◆ Finance</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCompanyEditing(true)}
+              className="text-sm font-medium text-gold hover:underline"
+            >
+              Επεξεργασία
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className={sectionClassName()}>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-h3">Κατηγορίες</h2>
+            <p className="text-caption mt-1">{currentBookLabel}</p>
+          </div>
+          <FolderTree className="h-5 w-5 text-gold" strokeWidth={1.7} />
+        </div>
+        <div className="divide-y divide-border-light overflow-hidden rounded-md border border-border-light">
+          <Link
+            to="/settings/categories/income"
+            className="flex items-center justify-between gap-3 bg-sand px-3 py-3 transition-colors hover:bg-cream"
+          >
+            <div>
+              <p className="text-sm font-medium text-text-primary">Έσοδα</p>
+              <p className="text-caption">{categoryCounts.income} ενεργές κατηγορίες</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-text-muted" strokeWidth={1.7} />
+          </Link>
+          <Link
+            to="/settings/categories/expense"
+            className="flex items-center justify-between gap-3 bg-sand px-3 py-3 transition-colors hover:bg-cream"
+          >
+            <div>
+              <p className="text-sm font-medium text-text-primary">Έξοδα</p>
+              <p className="text-caption">{categoryCounts.expense} ενεργές κατηγορίες</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-text-muted" strokeWidth={1.7} />
+          </Link>
+        </div>
       </section>
 
       <MfaSettingsPanel />
@@ -554,11 +698,11 @@ export function Settings() {
             className="inline-flex items-center gap-2 text-gold font-medium hover:underline"
           >
             <ExternalLink className="w-4 h-4" strokeWidth={1.7} />
-            Άνοιγμα repo
+            Άνοιγμα repo για {displayCompanyName}
           </button>
           <div className="flex items-start gap-2 text-text-muted">
             <ShieldAlert className="w-4 h-4 mt-0.5 text-gold" strokeWidth={1.7} />
-            <p>Άδεια: ιδιωτική χρήση Heraklis / Evochia.</p>
+            <p>Άδεια: ιδιωτική χρήση Heraklis / {displayCompanyName}.</p>
           </div>
           <button
             type="button"

@@ -6,6 +6,7 @@ import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { AddTransaction } from "@/pages/AddTransaction";
+import { CategorySettings } from "@/pages/CategorySettings";
 import { Dashboard } from "@/pages/Dashboard";
 import { Forecast } from "@/pages/Forecast";
 import { Login } from "@/pages/Login";
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: "vat", element: <VatSummary /> },
       { path: "forecast", element: <Forecast /> },
       { path: "settings", element: <Settings /> },
+      { path: "settings/categories/:type", element: <CategorySettings /> },
     ],
   },
 ]);

@@ -10,7 +10,10 @@ export function AppLayout() {
   const showVat = currentBookId === "book-business";
 
   // Hide FAB where a focused transaction flow owns the bottom action area.
-  const showFab = location.pathname !== "/add" && !location.pathname.startsWith("/transactions/");
+  const showFab =
+    location.pathname !== "/add" &&
+    !location.pathname.startsWith("/transactions/") &&
+    !location.pathname.startsWith("/settings/categories");
 
   return (
     <div className="min-h-screen flex flex-col bg-cream">

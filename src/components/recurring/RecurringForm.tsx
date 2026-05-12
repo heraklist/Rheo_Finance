@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { parseGreekAmount } from "@/lib/money";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
@@ -127,6 +128,7 @@ export function RecurringForm({
   const [tagName, setTagName] = useState(defaults.tagName);
   const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
+  const displayAccountName = useDisplayAccountName();
   const showVat = currentBookId === "book-business";
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
@@ -335,7 +337,7 @@ export function RecurringForm({
               <SelectContent>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
-                    {account.name}
+                    {displayAccountName(account.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

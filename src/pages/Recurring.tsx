@@ -1,4 +1,5 @@
 import { RecurringForm, type RecurringFormValues } from "@/components/recurring/RecurringForm";
+import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import {
   createRecurringTemplate,
   deleteRecurringTemplate,
@@ -55,6 +56,7 @@ function dueLabel(template: RecurringTemplateWithRelations): string {
 export function Recurring() {
   const currentBookId = useAppStore((state) => state.currentBookId);
   const setPendingCount = useAppStore((state) => state.setPendingCount);
+  const displayAccountName = useDisplayAccountName();
   const [mode, setMode] = useState<Mode>("list");
   const [templates, setTemplates] = useState<RecurringTemplateWithRelations[]>([]);
   const [selected, setSelected] = useState<RecurringTemplateWithRelations | null>(null);
@@ -327,7 +329,9 @@ export function Recurring() {
                         </h2>
                         <p className="text-caption truncate">
                           {template.category_name ?? "—"}
-                          {template.account_name ? ` · ${template.account_name}` : ""}
+                          {template.account_name
+                            ? ` · ${displayAccountName(template.account_name)}`
+                            : ""}
                         </p>
                       </div>
                     </div>
