@@ -15,6 +15,7 @@ import {
   deleteCategory,
   getCategoryUsage,
   listCategories,
+  restoreCategory,
   updateCategoryName,
 } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
@@ -42,6 +43,10 @@ function usageMessage(parts: string[]): string {
   )}. Μπορείς να την αρχειοθετήσεις.`;
 }
 
+function isCategoryArchived(category: Category): boolean {
+  return Number(category.is_archived) === 1;
+}
+
 export function CategorySettings() {
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
@@ -62,7 +67,11 @@ export function CategorySettings() {
     try {
       setLoading(true);
       setError("");
-      const rows = await listCategories({ bookId: currentBookId, type: categoryType });
+      const rows = await listCategories({
+        bookId: currentBookId,
+        type: categoryType,
+        includeArchived: true,
+      });
       setCategories(rows);
     } catch (err) {
       console.error("Failed to load categories:", err);
@@ -85,6 +94,8 @@ export function CategorySettings() {
     if (!query) return categories;
     return categories.filter((category) => category.name.toLowerCase().includes(query));
   }, [categories, search]);
+  const activeCategories = filteredCategories.filter((category) => !isCategoryArchived(category));
+  const archivedCategories = filteredCategories.filter((category) => isCategoryArchived(category));
 
   function closeSheet() {
     setSheetMode(null);
@@ -159,6 +170,24 @@ export function CategorySettings() {
     }
   }
 
+  async function handleRestore(category: Category) {
+    if (busy) return;
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await restoreCategory(category.id);
+      setMessage("Η κατηγορία ενεργοποιήθηκε ξανά.");
+      await loadCategories();
+    } catch (err) {
+      console.error("Failed to restore category:", err);
+      setError("Δεν ενεργοποιήθηκε η κατηγορία.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleDelete(category: Category) {
     if (busy) return;
 
@@ -190,6 +219,68 @@ export function CategorySettings() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function renderCategoryRow(category: Category) {
+    const archived = isCategoryArchived(category);
+
+    return (
+      <article
+        key={category.id}
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-md border border-border-light bg-cream p-3",
+          archived && "opacity-75",
+        )}
+      >
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-text-primary">{category.name}</h2>
+          <p className="text-caption">
+            {archived ? "Αρχειοθετημένη" : `Σειρά ${category.sort_order}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          {!archived ? (
+            <>
+              <button
+                type="button"
+                onClick={() => openEditSheet(category)}
+                className="rounded-md p-2 text-text-secondary transition-colors hover:bg-sand hover:text-charcoal"
+                aria-label="Επεξεργασία"
+              >
+                <Pencil className="h-4 w-4" strokeWidth={1.7} />
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleArchive(category)}
+                disabled={busy}
+                className="rounded-md p-2 text-text-secondary transition-colors hover:bg-sand hover:text-charcoal disabled:opacity-50"
+                aria-label="Αρχειοθέτηση"
+              >
+                <Archive className="h-4 w-4" strokeWidth={1.7} />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleRestore(category)}
+              disabled={busy}
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-sand disabled:opacity-50"
+            >
+              Επαναφορά
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleDelete(category)}
+            disabled={busy}
+            className="rounded-md p-2 text-expense transition-colors hover:bg-expense-light/30 disabled:opacity-50"
+            aria-label="Διαγραφή"
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.7} />
+          </button>
+        </div>
+      </article>
+    );
   }
 
   if (!categoryType) return null;
@@ -259,48 +350,24 @@ export function CategorySettings() {
           </button>
         </section>
       ) : (
-        <div className="space-y-2.5">
-          {filteredCategories.map((category) => (
-            <article
-              key={category.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-border-light bg-cream p-3"
-            >
-              <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold text-text-primary">
-                  {category.name}
-                </h2>
-                <p className="text-caption">Σειρά {category.sort_order}</p>
+        <div className="space-y-5">
+          <section className="space-y-2.5">
+            <div className="text-label uppercase text-text-muted">Ενεργές</div>
+            {activeCategories.length > 0 ? (
+              activeCategories.map(renderCategoryRow)
+            ) : (
+              <div className="rounded-md border border-border-light bg-cream p-4 text-caption">
+                Δεν υπάρχουν ενεργές κατηγορίες.
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => openEditSheet(category)}
-                  className="rounded-md p-2 text-text-secondary transition-colors hover:bg-sand hover:text-charcoal"
-                  aria-label="Επεξεργασία"
-                >
-                  <Pencil className="h-4 w-4" strokeWidth={1.7} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleArchive(category)}
-                  disabled={busy}
-                  className="rounded-md p-2 text-text-secondary transition-colors hover:bg-sand hover:text-charcoal disabled:opacity-50"
-                  aria-label="Αρχειοθέτηση"
-                >
-                  <Archive className="h-4 w-4" strokeWidth={1.7} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(category)}
-                  disabled={busy}
-                  className="rounded-md p-2 text-expense transition-colors hover:bg-expense-light/30 disabled:opacity-50"
-                  aria-label="Διαγραφή"
-                >
-                  <Trash2 className="h-4 w-4" strokeWidth={1.7} />
-                </button>
-              </div>
-            </article>
-          ))}
+            )}
+          </section>
+
+          {archivedCategories.length > 0 ? (
+            <section className="space-y-2.5">
+              <div className="text-label uppercase text-text-muted">Αρχειοθετημένες</div>
+              {archivedCategories.map(renderCategoryRow)}
+            </section>
+          ) : null}
         </div>
       )}
 

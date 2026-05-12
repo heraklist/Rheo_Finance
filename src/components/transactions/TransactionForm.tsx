@@ -25,6 +25,11 @@ const VAT_RATES = [
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά", "IRIS", "Άλλο"];
 
+const BOOK_OPTIONS = [
+  { label: "Επαγγελματικά", value: "book-business" },
+  { label: "Προσωπικά", value: "book-personal" },
+];
+
 type TxType = "income" | "expense" | "reserve";
 
 export interface TransactionFormValues {
@@ -105,7 +110,7 @@ export function TransactionForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [bookId] = useState(defaults.bookId);
+  const [bookId, setBookId] = useState(defaults.bookId);
   const [type, setType] = useState<TxType>(defaults.type);
   const [amount, setAmount] = useState(defaults.amount);
   const [description, setDescription] = useState(defaults.description);
@@ -130,7 +135,10 @@ export function TransactionForm({
     void (async () => {
       const accs = await listAccounts(bookId);
       setAccounts(accs);
-      setAccountId((current) => current || accs[0]?.id || "");
+      setAccountId((current) => {
+        if (current && accs.some((account) => account.id === current)) return current;
+        return accs[0]?.id || "";
+      });
     })();
   }, [bookId]);
 
@@ -224,6 +232,27 @@ export function TransactionForm({
   return (
     <>
       <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
+        <div>
+          <div className="form-label">Βιβλίο</div>
+          <div className="grid grid-cols-2 bg-sand p-0.5 rounded-md border border-border-light">
+            {BOOK_OPTIONS.map((book) => (
+              <button
+                key={book.value}
+                type="button"
+                onClick={() => setBookId(book.value)}
+                className={`text-sm py-2 px-3 rounded-md transition-all ${
+                  bookId === book.value
+                    ? "bg-cream text-text-primary shadow-sm font-medium"
+                    : "text-text-secondary"
+                }`}
+              >
+                {book.label}
+              </button>
+            ))}
+          </div>
+          {!showVat ? <p className="text-caption mt-1">Στα προσωπικά δεν τηρείται ΦΠΑ.</p> : null}
+        </div>
+
         <div>
           <label className="form-label" htmlFor="tx-amount">
             Ποσό

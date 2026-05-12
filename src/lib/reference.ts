@@ -34,10 +34,11 @@ export async function listCategories(
   opts: {
     bookId?: string;
     type?: "income" | "expense" | "reserve" | "transfer";
+    includeArchived?: boolean;
   } = {},
 ): Promise<Category[]> {
   const db = await getDb();
-  const conditions: string[] = ["is_archived = 0"];
+  const conditions: string[] = opts.includeArchived ? [] : ["is_archived = 0"];
   const params: string[] = [];
 
   if (opts.bookId) {
@@ -49,8 +50,10 @@ export async function listCategories(
     params.push(opts.type);
   }
 
+  const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
   return db.select<Category[]>(
-    `SELECT * FROM categories WHERE ${conditions.join(" AND ")}
+    `SELECT * FROM categories ${whereClause}
      ORDER BY sort_order, name`,
     params,
   );
@@ -186,7 +189,7 @@ export async function updateCategoryName(id: string, name: string): Promise<Cate
   return category;
 }
 
-export async function archiveCategory(id: string): Promise<Category> {
+async function setCategoryArchived(id: string, archived: boolean): Promise<Category> {
   const db = await getDb();
   const existing = await getCategory(id);
   if (!existing) throw new Error("Category not found");
@@ -194,7 +197,7 @@ export async function archiveCategory(id: string): Promise<Category> {
   const ts = now();
   const category: Category = {
     ...existing,
-    is_archived: true,
+    is_archived: archived,
     sync_status: "pending",
     local_updated_at: ts,
     server_updated_at: null,
@@ -202,12 +205,18 @@ export async function archiveCategory(id: string): Promise<Category> {
 
   await db.execute(
     `UPDATE categories
-     SET is_archived = 1,
+     SET is_archived = ?,
          sync_status = ?,
          local_updated_at = ?,
          server_updated_at = ?
      WHERE id = ?`,
-    [category.sync_status, category.local_updated_at, category.server_updated_at, category.id],
+    [
+      archived ? 1 : 0,
+      category.sync_status,
+      category.local_updated_at,
+      category.server_updated_at,
+      category.id,
+    ],
   );
 
   await db.execute(
@@ -217,6 +226,14 @@ export async function archiveCategory(id: string): Promise<Category> {
   );
 
   return category;
+}
+
+export async function archiveCategory(id: string): Promise<Category> {
+  return setCategoryArchived(id, true);
+}
+
+export async function restoreCategory(id: string): Promise<Category> {
+  return setCategoryArchived(id, false);
 }
 
 export async function getCategoryUsage(id: string): Promise<CategoryUsage> {

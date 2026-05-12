@@ -42,6 +42,12 @@ export interface MonthlyTotals {
   expense: number;
 }
 
+export interface BookTransactionCounts {
+  all: number;
+  business: number;
+  personal: number;
+}
+
 interface TransactionAnalyticsRow {
   date: string;
   amount_gross: number;
@@ -192,13 +198,21 @@ export async function getVatByQuarter(year: number, bookId?: string): Promise<Va
   }));
 }
 
-export async function getMonthlyTotals(bookId: string, monthsBack = 12): Promise<MonthlyTotals[]> {
+export async function getMonthlyTotals(bookId?: string, monthsBack = 12): Promise<MonthlyTotals[]> {
   const db = await getDb();
   const start = addMonths(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     -(monthsBack - 1),
   );
   const startDate = isoDate(start);
+  const conditions = ["t.date >= ?"];
+  const params: string[] = [startDate];
+
+  if (bookId) {
+    conditions.push("t.book_id = ?");
+    params.push(bookId);
+  }
+
   const rows = await db.select<MonthlyTotals[]>(
     `SELECT
        strftime('%Y-%m', t.date) AS month,
@@ -206,11 +220,10 @@ export async function getMonthlyTotals(bookId: string, monthsBack = 12): Promise
        COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount_gross ELSE 0 END), 0) AS expense
      FROM transactions t
      LEFT JOIN categories c ON t.category_id = c.id
-     WHERE t.book_id = ?
-       AND t.date >= ?
+     WHERE ${conditions.join(" AND ")}
      GROUP BY month
      ORDER BY month ASC`,
-    [bookId, startDate],
+    params,
   );
   const byMonth = new Map(rows.map((row) => [row.month, row]));
 
@@ -219,6 +232,25 @@ export async function getMonthlyTotals(bookId: string, monthsBack = 12): Promise
     const month = monthKey(date);
     return byMonth.get(month) ?? { month, income: 0, expense: 0 };
   });
+}
+
+export async function getBookTransactionCounts(): Promise<BookTransactionCounts> {
+  const db = await getDb();
+  const rows = await db.select<Array<{ book_id: string; count: number }>>(
+    `SELECT book_id, COUNT(*) AS count
+     FROM transactions
+     GROUP BY book_id`,
+  );
+  const counts: BookTransactionCounts = { all: 0, business: 0, personal: 0 };
+
+  for (const row of rows) {
+    const count = Number(row.count);
+    counts.all += count;
+    if (row.book_id === "book-business") counts.business = count;
+    if (row.book_id === "book-personal") counts.personal = count;
+  }
+
+  return counts;
 }
 
 async function getOpeningBalance(bookId: string | undefined, beforeDate: string): Promise<number> {
