@@ -353,6 +353,7 @@ CREATE INDEX idx_outbox_pending ON sync_outbox(created_at);
 3. Update `last_synced_at`
 
 **Conflict resolution (single user):**
+- Current implementation: timestamp-based LWW. Before push, the sync engine compares local `local_updated_at`/`updated_at` with server `updated_at`; older local pushes are skipped and the outbox entry is resolved so the following pull can apply the newer server row. During pull, rows are not applied over a newer local `local_updated_at`.
 - Αν local έχει `local_updated_at > server_updated_at` και remote άλλαξε επίσης → last-write-wins με `local_updated_at`
 - Στην πράξη σπάνιο: ο ίδιος χρήστης δεν επεξεργάζεται την ίδια εγγραφή σε δύο devices ταυτόχρονα
 - Αν συμβεί, η πιο πρόσφατη edit κερδίζει

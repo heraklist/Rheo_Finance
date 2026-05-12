@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useDebounce } from "@/hooks/useDebounce";
+import { parseGreekAmount } from "@/lib/money";
 import { listCategories } from "@/lib/reference";
+import { useAppStore } from "@/lib/store";
 import { listTransactions } from "@/lib/transactions";
 import type { Category, TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
@@ -17,7 +19,6 @@ import { AlertCircle, Filter, Plus, ReceiptText, Search, X } from "lucide-react"
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-const CURRENT_BOOK_ID = "book-business";
 const ALL_CATEGORIES = "all";
 
 interface TransactionGroup {
@@ -60,8 +61,11 @@ function groupTotal(transactions: TransactionWithRelations[]): number {
 
 function parseAmountFilter(value: string): number | undefined {
   if (!value) return undefined;
-  const parsed = Number.parseFloat(value.replace(",", "."));
-  return Number.isNaN(parsed) ? undefined : parsed;
+  return parseGreekAmount(value) ?? undefined;
+}
+
+function bookLabel(bookId: string): string {
+  return bookId === "book-personal" ? "Προσωπικά βιβλία" : "Επαγγελματικά βιβλία";
 }
 
 function filtersFromSearchParams(searchParams: URLSearchParams): TransactionFilters {
@@ -77,6 +81,7 @@ function filtersFromSearchParams(searchParams: URLSearchParams): TransactionFilt
 export function TransactionsList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const currentBookId = useAppStore((state) => state.currentBookId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -96,7 +101,7 @@ export function TransactionsList() {
 
     async function loadCategories() {
       try {
-        const rows = await listCategories({ bookId: CURRENT_BOOK_ID });
+        const rows = await listCategories({ bookId: currentBookId });
         if (!cancelled) setCategories(rows);
       } catch (err) {
         console.error("Failed to load transaction filters:", err);
@@ -107,7 +112,7 @@ export function TransactionsList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentBookId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,7 +122,7 @@ export function TransactionsList() {
         setLoading(true);
         setError("");
         const rows = await listTransactions({
-          bookId: CURRENT_BOOK_ID,
+          bookId: currentBookId,
           limit: 200,
           search: debouncedSearch,
           ...filters,
@@ -135,7 +140,7 @@ export function TransactionsList() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, filters]);
+  }, [currentBookId, debouncedSearch, filters]);
 
   const groups = groupByDate(transactions);
   const hasSearch = debouncedSearch.trim().length > 0;
@@ -149,7 +154,7 @@ export function TransactionsList() {
       <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-light">
         <div>
           <h1 className="text-h2">Συναλλαγές</h1>
-          <p className="text-caption mt-0.5">Επαγγελματικά βιβλία</p>
+          <p className="text-caption mt-0.5">{bookLabel(currentBookId)}</p>
         </div>
         <Link
           to="/add"
@@ -264,7 +269,8 @@ export function TransactionsList() {
                   </label>
                   <Input
                     id="filter-min-amount"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     step="0.01"
                     value={filters.minAmount ?? ""}
                     onChange={(event) =>
@@ -282,7 +288,8 @@ export function TransactionsList() {
                   </label>
                   <Input
                     id="filter-max-amount"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     step="0.01"
                     value={filters.maxAmount ?? ""}
                     onChange={(event) =>

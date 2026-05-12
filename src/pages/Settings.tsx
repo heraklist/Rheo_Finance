@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteCurrentAccount } from "@/lib/account";
-import { createJsonBackup } from "@/lib/backup";
+import { createJsonBackup, getLastAutoBackupAt } from "@/lib/backup";
 import {
   type ExportBookScope,
   type ExportPeriod,
@@ -31,7 +31,7 @@ import {
   ShieldAlert,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const APP_VERSION = "0.1.0";
@@ -83,6 +83,7 @@ export function Settings() {
   const [manualSyncing, setManualSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
+  const [lastAutoBackupAt, setLastAutoBackupAt] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
@@ -111,6 +112,24 @@ export function Settings() {
       }
     );
   }, [customFromDate, customToDate, periodKey, quarterPeriods]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLastAutoBackup() {
+      try {
+        const value = await getLastAutoBackupAt();
+        if (!cancelled) setLastAutoBackupAt(value);
+      } catch (err) {
+        console.error("Failed to load auto-backup state:", err);
+      }
+    }
+
+    void loadLastAutoBackup();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSignOut() {
     const { error } = await supabase.auth.signOut();
@@ -339,6 +358,12 @@ export function Settings() {
           </label>
         </div>
         {backupMessage ? <p className="text-caption mt-3 break-all">{backupMessage}</p> : null}
+        {autoBackupEnabled ? (
+          <p className="text-caption mt-3 text-text-muted">
+            Τελευταίο auto-backup:{" "}
+            {lastAutoBackupAt ? formatDateRelative(lastAutoBackupAt) : "δεν έχει τρέξει ακόμη"}
+          </p>
+        ) : null}
         <p className="text-caption mt-3 text-text-muted">
           Restore από backup θα μπει σε ξεχωριστό ασφαλές flow για να αποφύγουμε κατά λάθος απώλεια
           δεδομένων.

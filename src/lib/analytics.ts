@@ -36,6 +36,12 @@ export interface ForecastResult {
   historyMonthsWithData: number;
 }
 
+export interface MonthlyTotals {
+  month: string;
+  income: number;
+  expense: number;
+}
+
 interface TransactionAnalyticsRow {
   date: string;
   amount_gross: number;
@@ -184,6 +190,35 @@ export async function getVatByQuarter(year: number, bookId?: string): Promise<Va
     ...quarter,
     net: quarter.output - quarter.input,
   }));
+}
+
+export async function getMonthlyTotals(bookId: string, monthsBack = 12): Promise<MonthlyTotals[]> {
+  const db = await getDb();
+  const start = addMonths(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    -(monthsBack - 1),
+  );
+  const startDate = isoDate(start);
+  const rows = await db.select<MonthlyTotals[]>(
+    `SELECT
+       strftime('%Y-%m', t.date) AS month,
+       COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount_gross ELSE 0 END), 0) AS income,
+       COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount_gross ELSE 0 END), 0) AS expense
+     FROM transactions t
+     LEFT JOIN categories c ON t.category_id = c.id
+     WHERE t.book_id = ?
+       AND t.date >= ?
+     GROUP BY month
+     ORDER BY month ASC`,
+    [bookId, startDate],
+  );
+  const byMonth = new Map(rows.map((row) => [row.month, row]));
+
+  return Array.from({ length: monthsBack }, (_, index) => {
+    const date = addMonths(start, index);
+    const month = monthKey(date);
+    return byMonth.get(month) ?? { month, income: 0, expense: 0 };
+  });
 }
 
 async function getOpeningBalance(bookId: string | undefined, beforeDate: string): Promise<number> {

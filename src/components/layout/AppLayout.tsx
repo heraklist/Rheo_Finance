@@ -6,7 +6,8 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
   const location = useLocation();
-  const { syncState, pendingCount } = useAppStore();
+  const { currentBookId, syncState, pendingCount } = useAppStore();
+  const showVat = currentBookId === "book-business";
 
   // Hide FAB where a focused transaction flow owns the bottom action area.
   const showFab = location.pathname !== "/add" && !location.pathname.startsWith("/transactions/");
@@ -26,13 +27,15 @@ export function AppLayout() {
           >
             <Repeat2 className="w-[18px] h-[18px]" strokeWidth={1.5} />
           </Link>
-          <Link
-            to="/vat"
-            className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
-            aria-label="Σύνοψη ΦΠΑ"
-          >
-            <Calculator className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </Link>
+          {showVat ? (
+            <Link
+              to="/vat"
+              className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"
+              aria-label="Σύνοψη ΦΠΑ"
+            >
+              <Calculator className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </Link>
+          ) : null}
           <Link
             to="/forecast"
             className="p-1 rounded-md text-text-secondary hover:text-charcoal hover:bg-sand transition-colors"

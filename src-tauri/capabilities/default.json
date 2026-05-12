@@ -6,13 +6,21 @@
   "permissions": [
     "core:default",
     "shell:allow-open",
-    "dialog:default",
-    "fs:default",
-    "os:default",
-    "sql:default",
-    "sql:allow-load",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA/receipts/**" }, { "path": "$DOCUMENT/Evochia_Backups/**" }]
+    },
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-exists",
+    "os:allow-platform",
     "sql:allow-execute",
     "sql:allow-select",
+    "sql:allow-load",
     "sql:allow-close"
   ]
 }

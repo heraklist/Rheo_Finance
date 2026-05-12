@@ -1,5 +1,6 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAutoBackupWorker } from "@/hooks/useAutoBackupWorker";
 import { useRecurringWorker } from "@/hooks/useRecurringWorker";
 import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
 
 export function App() {
   const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
+  useAutoBackupWorker();
   useRecurringWorker();
   useSyncWorker();
 

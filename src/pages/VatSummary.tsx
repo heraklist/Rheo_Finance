@@ -19,12 +19,20 @@ function quarterCaption(quarter: VatQuarter): string {
 
 export function VatSummary() {
   const currentBookId = useAppStore((state) => state.currentBookId);
+  const showVat = currentBookId === "book-business";
   const [year, setYear] = useState(new Date().getFullYear());
   const [quarters, setQuarters] = useState<VatQuarter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!showVat) {
+      setQuarters([]);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -45,7 +53,7 @@ export function VatSummary() {
     return () => {
       cancelled = true;
     };
-  }, [currentBookId, year]);
+  }, [currentBookId, showVat, year]);
 
   const total = useMemo(
     () =>
@@ -60,6 +68,22 @@ export function VatSummary() {
       ),
     [quarters],
   );
+
+  if (!showVat) {
+    return (
+      <div className="px-4 pb-24 pt-4">
+        <div className="rounded-md border border-border-light bg-cream p-5">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border-light bg-sand text-gold">
+            <Calculator className="h-5 w-5" strokeWidth={1.7} />
+          </div>
+          <h1 className="text-h2">Σύνοψη ΦΠΑ</h1>
+          <p className="text-body mt-2 text-text-muted">
+            Το ΦΠΑ εμφανίζεται μόνο στο επαγγελματικό βιβλίο.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pb-24 pt-4">

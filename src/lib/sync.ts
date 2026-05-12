@@ -228,6 +228,64 @@ function syncErrorMessage(err: unknown): string {
   return String(err);
 }
 
+function timestampValue(value: JsonValue | undefined): string | null {
+  if (typeof value !== "string") return null;
+  return Number.isNaN(Date.parse(value)) ? null : value;
+}
+
+function timestampMs(value: string | null): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+function localUpdatedAt(row: SyncRow): string {
+  return (
+    timestampValue(row.local_updated_at) ??
+    timestampValue(row.updated_at) ??
+    timestampValue(row.created_at) ??
+    now()
+  );
+}
+
+function serverUpdatedAt(row: SyncRow): string {
+  return timestampValue(row.updated_at) ?? now();
+}
+
+async function getRemoteUpdatedAt(table: string, entityId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("updated_at")
+    .eq("id", entityId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const remote = data as { updated_at?: string | null } | null;
+  return remote?.updated_at ?? null;
+}
+
+async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Promise<boolean> {
+  const entityId = remoteRow.id;
+  const remoteMs = timestampMs(serverUpdatedAt(remoteRow));
+
+  if (typeof entityId !== "string" || remoteMs === null) return false;
+
+  const db = await getDb();
+  const localRows = await db.select<Array<{ local_updated_at: string }>>(
+    `SELECT local_updated_at FROM ${config.localTable} WHERE id = ? LIMIT 1`,
+    [entityId],
+  );
+  const localMs = timestampMs(localRows[0]?.local_updated_at ?? null);
+
+  if (localMs !== null && localMs > remoteMs) {
+    console.warn(`[sync] LWW: local newer for ${config.table} ${entityId}. Skipping pull.`);
+    return true;
+  }
+
+  return false;
+}
+
 function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): SyncRow {
   const config = SYNC_TABLES[entityType];
   const remoteRow: SyncRow = {};
@@ -300,8 +358,9 @@ function toLocalRow(entityType: SyncEntityType, row: SyncRow): SyncRow {
   }
 
   localRow.sync_status = "synced";
-  localRow.local_updated_at = now();
-  localRow.server_updated_at = typeof row.updated_at === "string" ? row.updated_at : now();
+  const syncedAt = serverUpdatedAt(row);
+  localRow.local_updated_at = syncedAt;
+  localRow.server_updated_at = syncedAt;
 
   return localRow;
 }
@@ -338,21 +397,46 @@ async function upsertLocalReferenceData(userId: string) {
 
   for (const entityType of PUSH_REFERENCE_ORDER) {
     const config = SYNC_TABLES[entityType];
-    const rows = await db.select<SyncRow[]>(`SELECT * FROM ${config.localTable}`);
+    const rows = await db.select<SyncRow[]>(
+      `SELECT * FROM ${config.localTable} WHERE sync_status = 'pending'`,
+    );
 
     if (rows.length === 0) continue;
 
-    const remoteRows = rows.map((row) => toRemoteRow(entityType, row, userId));
-    const { error } = await supabase.from(config.table).upsert(remoteRows);
+    for (const row of rows) {
+      const entityId = row.id;
+      if (typeof entityId !== "string") continue;
 
-    if (error) throw error;
+      const remoteUpdatedAt = await getRemoteUpdatedAt(config.table, entityId);
+      const remoteMs = timestampMs(remoteUpdatedAt);
+      const localMs = timestampMs(localUpdatedAt(row));
 
-    await db.execute(
-      `UPDATE ${config.localTable}
-       SET sync_status = 'synced', server_updated_at = ?
-       WHERE sync_status = 'pending'`,
-      [now()],
-    );
+      if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
+        console.warn(
+          `[sync] LWW: remote newer for ${entityType} ${entityId} ` +
+            `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(row)}). Skipping push.`,
+        );
+        await db.execute(
+          `UPDATE ${config.localTable}
+           SET sync_status = 'synced', server_updated_at = ?
+           WHERE id = ?`,
+          [remoteUpdatedAt, entityId],
+        );
+        continue;
+      }
+
+      const remoteRow = toRemoteRow(entityType, row, userId);
+      const { error } = await supabase.from(config.table).upsert(remoteRow);
+
+      if (error) throw error;
+
+      await db.execute(
+        `UPDATE ${config.localTable}
+         SET sync_status = 'synced', server_updated_at = ?
+         WHERE id = ?`,
+        [now(), entityId],
+      );
+    }
   }
 }
 
@@ -402,6 +486,19 @@ export async function pushChanges(): Promise<number> {
 
       if (entry.operation === "create" || entry.operation === "update") {
         const payload = parsePayload(entry.payload);
+        const remoteUpdatedAt = await getRemoteUpdatedAt(config.table, entry.entity_id);
+        const remoteMs = timestampMs(remoteUpdatedAt);
+        const localMs = timestampMs(localUpdatedAt(payload));
+
+        if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
+          console.warn(
+            `[sync] LWW: remote newer for ${entry.entity_type} ${entry.entity_id} ` +
+              `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(payload)}). Skipping push.`,
+          );
+          await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
+          continue;
+        }
+
         const remoteRow = await prepareRemoteRowForPush(
           entry.entity_type,
           payload,
@@ -481,7 +578,10 @@ export async function pullChanges(): Promise<number> {
     }
 
     for (const row of data ?? []) {
-      const localRow = await preparePulledRowForLocal(entityType, row as SyncRow);
+      const remoteRow = row as SyncRow;
+      if (await shouldSkipPull(config, remoteRow)) continue;
+
+      const localRow = await preparePulledRowForLocal(entityType, remoteRow);
       await upsertLocal(entityType, localRow);
       total++;
     }

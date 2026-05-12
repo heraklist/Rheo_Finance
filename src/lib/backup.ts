@@ -21,11 +21,37 @@ export interface BackupResult {
   path: string;
 }
 
-function backupFileName(timestamp: string): string {
-  return `evochia-backup-${timestamp.replace(/[:.]/g, "-")}.json`;
+export interface BackupOptions {
+  auto?: boolean;
 }
 
-export async function createJsonBackup(): Promise<BackupResult> {
+export const LAST_AUTO_BACKUP_KEY = "last_auto_backup_at";
+
+function backupFileName(timestamp: string, auto: boolean): string {
+  const prefix = auto ? "evochia-auto-backup" : "evochia-backup";
+  return `${prefix}-${timestamp.replace(/[:.]/g, "-")}.json`;
+}
+
+export async function getLastAutoBackupAt(): Promise<string | null> {
+  const db = await getDb();
+  const result = await db.select<Array<{ value: string }>>(
+    "SELECT value FROM sync_metadata WHERE key = ? LIMIT 1",
+    [LAST_AUTO_BACKUP_KEY],
+  );
+  return result[0]?.value ?? null;
+}
+
+export async function markAutoBackupCompleted(timestamp = now()): Promise<string> {
+  const db = await getDb();
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES (?, ?, ?)`,
+    [LAST_AUTO_BACKUP_KEY, timestamp, timestamp],
+  );
+  return timestamp;
+}
+
+export async function createJsonBackup(options: BackupOptions = {}): Promise<BackupResult> {
   const db = await getDb();
   const tables: Record<BackupTable, BackupRow[]> = {} as Record<BackupTable, BackupRow[]>;
 
@@ -36,7 +62,7 @@ export async function createJsonBackup(): Promise<BackupResult> {
   const timestamp = now();
   const documents = await documentDir();
   const backupDir = await join(documents, "Evochia_Backups");
-  const fileName = backupFileName(timestamp);
+  const fileName = backupFileName(timestamp, options.auto ?? false);
   const relativePath = `Evochia_Backups/${fileName}`;
   await mkdir("Evochia_Backups", { baseDir: BaseDirectory.Document, recursive: true });
 

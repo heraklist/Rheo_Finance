@@ -1,9 +1,11 @@
 import { IncomeExpenseChart } from "@/components/charts/IncomeExpenseChart";
 import { KPITile } from "@/components/ui/KPITile";
 import { TransactionRow, TransactionRowSkeleton } from "@/components/ui/TransactionRow";
+import { getMonthlyTotals } from "@/lib/analytics";
+import { useAppStore } from "@/lib/store";
 import { getTotals, listTransactions } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown, ReceiptText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -37,6 +39,15 @@ const MONTHS_SHORT = [
   "Δεκ",
 ];
 
+function bookLabel(bookId: string): string {
+  return bookId === "book-personal" ? "Προσωπικά" : "Επαγγελματικά";
+}
+
+function monthLabel(month: string): string {
+  const monthNumber = Number(month.slice(5, 7));
+  return MONTHS_SHORT[(monthNumber || 1) - 1] ?? month;
+}
+
 interface Totals {
   income: number;
   expense: number;
@@ -46,9 +57,14 @@ interface Totals {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const currentBookId = useAppStore((state) => state.currentBookId);
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [recent, setRecent] = useState<TransactionWithRelations[]>([]);
+  const [chartData, setChartData] = useState<
+    Array<{ month: string; income: number; expense: number }>
+  >([]);
+  const showVat = currentBookId === "book-business";
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -61,14 +77,16 @@ export function Dashboard() {
         const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
         const toDate = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-        const [t, r] = await Promise.all([
-          getTotals({ fromDate, toDate, bookId: "book-business" }),
-          listTransactions({ limit: 5, bookId: "book-business" }),
+        const [t, r, monthly] = await Promise.all([
+          getTotals({ fromDate, toDate, bookId: currentBookId }),
+          listTransactions({ limit: 5, bookId: currentBookId }),
+          getMonthlyTotals(currentBookId),
         ]);
 
         if (!cancelled) {
           setTotals(t);
           setRecent(r);
+          setChartData(monthly.map((row) => ({ ...row, month: monthLabel(row.month) })));
           setLoading(false);
         }
       } catch (err) {
@@ -80,17 +98,10 @@ export function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [currentMonth, currentYear]);
+  }, [currentBookId, currentMonth, currentYear]);
 
   const isEmpty =
     !loading && (!totals || (totals.income === 0 && totals.expense === 0)) && recent.length === 0;
-
-  // Mock chart data for now (will compute from DB in Phase 2)
-  const chartData = MONTHS_SHORT.map((m, i) => ({
-    month: m,
-    income: i === currentMonth ? (totals?.income ?? 0) : 0,
-    expense: i === currentMonth ? (totals?.expense ?? 0) : 0,
-  }));
 
   return (
     <div className="px-4 pb-24 pt-4">
@@ -102,7 +113,7 @@ export function Dashboard() {
           <ChevronDown className="w-3 h-3" strokeWidth={2} />
         </button>
         <button type="button" className="chip py-2 px-3">
-          Επαγγελματικά
+          {bookLabel(currentBookId)}
           <ChevronDown className="w-3 h-3" strokeWidth={2} />
         </button>
       </div>
@@ -124,13 +135,15 @@ export function Dashboard() {
           empty={isEmpty}
         />
         <KPITile label="Καθαρό" value={totals?.net} sand loading={loading} empty={isEmpty} />
-        <KPITile
-          label="ΦΠΑ Πληρωτέο"
-          value={totals?.vat_net}
-          sand
-          loading={loading}
-          empty={isEmpty}
-        />
+        {showVat ? (
+          <KPITile
+            label="ΦΠΑ Πληρωτέο"
+            value={totals?.vat_net}
+            sand
+            loading={loading}
+            empty={isEmpty}
+          />
+        ) : null}
       </div>
 
       {/* Chart */}
@@ -168,7 +181,7 @@ export function Dashboard() {
 
         {isEmpty ? (
           <div className="bg-cream border border-border-light rounded-md p-7 text-center">
-            <div className="text-text-muted mb-2 text-2xl">📋</div>
+            <ReceiptText className="mx-auto mb-2 h-6 w-6 text-text-muted" strokeWidth={1.5} />
             <p className="text-body mb-1">Καμία συναλλαγή ακόμα</p>
             <p className="text-caption">Πρόσθεσε την πρώτη σου ↓</p>
           </div>

@@ -6,6 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
+import { parseGreekAmount } from "@/lib/money";
 import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
@@ -116,9 +117,12 @@ export function TransactionForm({
   const [notes, setNotes] = useState(defaults.notes);
   const [receiptDraft, setReceiptDraft] = useState<ReceiptPhotoDraft | null>(null);
   const [receiptRemoved, setReceiptRemoved] = useState(false);
+  const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
   const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
   const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
+  const showVat = bookId === "book-business";
+  const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {
     void (async () => {
@@ -138,6 +142,12 @@ export function TransactionForm({
       });
     })();
   }, [type, bookId]);
+
+  useEffect(() => {
+    if (!showVat && vatRate !== 0) {
+      setVatRate(0);
+    }
+  }, [showVat, vatRate]);
 
   useEffect(() => {
     return () => {
@@ -170,10 +180,16 @@ export function TransactionForm({
   async function handleSubmit() {
     if (submitting) return;
     setFormError("");
+    setAmountError("");
 
-    const grossNum = Number.parseFloat(amount.replace(",", "."));
-    if (!grossNum || grossNum <= 0 || !accountId || !categoryId) {
-      setFormError("Συμπλήρωσε ποσό, κατηγορία και λογαριασμό.");
+    const grossNum = parseGreekAmount(amount);
+    if (grossNum === null || grossNum <= 0) {
+      setAmountError("Μη έγκυρο ποσό. Παράδειγμα: 1.234,56");
+      return;
+    }
+
+    if (!accountId || !categoryId) {
+      setFormError("Συμπλήρωσε κατηγορία και λογαριασμό.");
       return;
     }
 
@@ -215,11 +231,23 @@ export function TransactionForm({
             type="text"
             inputMode="decimal"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => {
+              setAmount(event.target.value);
+              setAmountError("");
+            }}
             placeholder="0,00 €"
             autoFocus={autoFocusAmount}
-            className="w-full bg-cream border border-border-light rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none focus:border-charcoal transition-colors"
+            className={`w-full bg-cream border rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none transition-colors ${
+              amountError
+                ? "border-expense focus:border-expense"
+                : "border-border-light focus:border-charcoal"
+            }`}
           />
+          {amountError ? (
+            <p className="mt-1.5 text-sm text-expense" role="alert">
+              {amountError}
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -307,21 +335,23 @@ export function TransactionForm({
           <p className="text-caption mt-1">{formatDateRelative(date)}</p>
         </div>
 
-        <div>
-          <div className="form-label">ΦΠΑ</div>
-          <div className="flex gap-1.5">
-            {VAT_RATES.map((vat) => (
-              <button
-                key={vat.value}
-                type="button"
-                onClick={() => setVatRate(vat.value)}
-                className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
-              >
-                {vat.label}
-              </button>
-            ))}
+        {showVat ? (
+          <div>
+            <div className="form-label">{vatLabel}</div>
+            <div className="flex gap-1.5">
+              {VAT_RATES.map((vat) => (
+                <button
+                  key={vat.value}
+                  type="button"
+                  onClick={() => setVatRate(vat.value)}
+                  className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
+                >
+                  {vat.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div>
           <label className="form-label" htmlFor="tx-payment-method">

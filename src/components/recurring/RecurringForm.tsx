@@ -5,13 +5,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { parseGreekAmount } from "@/lib/money";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
+import { useAppStore } from "@/lib/store";
 import type { Account, Category, CategoryType, Frequency } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
 import { CalendarClock, Check, Pause } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const CURRENT_BOOK_ID = "book-business";
 
 const VAT_RATES = [
   { label: "24%", value: 0.24 },
@@ -77,7 +77,7 @@ interface RecurringFormProps {
   onCancel: () => void;
 }
 
-function defaultValues(): RecurringFormInitialValues {
+function defaultValues(vatRate: number): RecurringFormInitialValues {
   return {
     active: true,
     amount: "",
@@ -85,17 +85,13 @@ function defaultValues(): RecurringFormInitialValues {
     description: "",
     accountId: "",
     categoryId: "",
-    vatRate: 0.24,
+    vatRate,
     frequency: "monthly",
     dayOfPeriod: new Date().getDate(),
     startDate: new Date().toISOString().slice(0, 10),
     endDate: "",
     tagName: "",
   };
-}
-
-function parseAmount(value: string): number {
-  return Number.parseFloat(value.replace(",", "."));
 }
 
 function clampDay(value: number): number {
@@ -109,7 +105,10 @@ export function RecurringForm({
   onSubmit,
   onCancel,
 }: RecurringFormProps) {
-  const defaults = initialValues ?? defaultValues();
+  const currentBookId = useAppStore((state) => state.currentBookId);
+  const defaultVatRate = useAppStore((state) => state.defaultVatRate);
+  const defaults =
+    initialValues ?? defaultValues(currentBookId === "book-business" ? defaultVatRate : 0);
   const [submitting, setSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -126,13 +125,16 @@ export function RecurringForm({
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
   const [tagName, setTagName] = useState(defaults.tagName);
+  const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
+  const showVat = currentBookId === "book-business";
+  const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadAccounts() {
-      const rows = await listAccounts(CURRENT_BOOK_ID);
+      const rows = await listAccounts(currentBookId);
       if (cancelled) return;
       setAccounts(rows);
       setAccountId((current) => current || rows[0]?.id || "");
@@ -142,13 +144,13 @@ export function RecurringForm({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentBookId]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadCategories() {
-      const rows = await listCategories({ bookId: CURRENT_BOOK_ID, type });
+      const rows = await listCategories({ bookId: currentBookId, type });
       if (cancelled) return;
 
       setCategories(rows);
@@ -162,15 +164,27 @@ export function RecurringForm({
     return () => {
       cancelled = true;
     };
-  }, [type]);
+  }, [currentBookId, type]);
+
+  useEffect(() => {
+    if (!showVat && vatRate !== 0) {
+      setVatRate(0);
+    }
+  }, [showVat, vatRate]);
 
   async function handleSubmit() {
     if (submitting) return;
     setFormError("");
+    setAmountError("");
 
-    const grossNum = parseAmount(amount);
-    if (!grossNum || grossNum <= 0 || !description.trim() || !accountId || !categoryId) {
-      setFormError("Συμπλήρωσε περιγραφή, ποσό, κατηγορία και λογαριασμό.");
+    const grossNum = parseGreekAmount(amount);
+    if (grossNum === null || grossNum <= 0) {
+      setAmountError("Μη έγκυρο ποσό. Παράδειγμα: 1.234,56");
+      return;
+    }
+
+    if (!description.trim() || !accountId || !categoryId) {
+      setFormError("Συμπλήρωσε περιγραφή, κατηγορία και λογαριασμό.");
       return;
     }
 
@@ -185,7 +199,7 @@ export function RecurringForm({
       await onSubmit({
         active,
         description: description.trim(),
-        book_id: CURRENT_BOOK_ID,
+        book_id: currentBookId,
         account_id: accountId,
         category_id: categoryId,
         tag_id: tag?.id ?? null,
@@ -254,10 +268,22 @@ export function RecurringForm({
             type="text"
             inputMode="decimal"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => {
+              setAmount(event.target.value);
+              setAmountError("");
+            }}
             placeholder="0,00 €"
-            className="w-full bg-cream border border-border-light rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none focus:border-charcoal transition-colors"
+            className={`w-full bg-cream border rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none transition-colors ${
+              amountError
+                ? "border-expense focus:border-expense"
+                : "border-border-light focus:border-charcoal"
+            }`}
           />
+          {amountError ? (
+            <p className="mt-1.5 text-sm text-expense" role="alert">
+              {amountError}
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -402,21 +428,23 @@ export function RecurringForm({
           )}
         </div>
 
-        <div>
-          <div className="form-label">ΦΠΑ</div>
-          <div className="flex gap-1.5">
-            {VAT_RATES.map((vat) => (
-              <button
-                key={vat.value}
-                type="button"
-                onClick={() => setVatRate(vat.value)}
-                className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
-              >
-                {vat.label}
-              </button>
-            ))}
+        {showVat ? (
+          <div>
+            <div className="form-label">{vatLabel}</div>
+            <div className="flex gap-1.5">
+              {VAT_RATES.map((vat) => (
+                <button
+                  key={vat.value}
+                  type="button"
+                  onClick={() => setVatRate(vat.value)}
+                  className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
+                >
+                  {vat.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div>
           <label className="form-label" htmlFor="rec-tag">

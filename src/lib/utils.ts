@@ -62,8 +62,22 @@ export function formatDateRelative(iso: string): string {
  * net = gross / (1 + rate)
  * vat = gross - net
  */
-export function computeVat(grossAmount: number, vatRate: number) {
-  const net = grossAmount / (1 + vatRate);
-  const vat = grossAmount - net;
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function computeVat(
+  grossAmount: number,
+  vatRate: number,
+): {
+  net: number;
+  vat: number;
+} {
+  if (vatRate === 0) {
+    return { net: round2(grossAmount), vat: 0 };
+  }
+
+  const net = round2(grossAmount / (1 + vatRate));
+  const vat = round2(grossAmount - net);
   return { net, vat };
 }

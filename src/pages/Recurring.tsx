@@ -53,6 +53,7 @@ function dueLabel(template: RecurringTemplateWithRelations): string {
 }
 
 export function Recurring() {
+  const currentBookId = useAppStore((state) => state.currentBookId);
   const setPendingCount = useAppStore((state) => state.setPendingCount);
   const [mode, setMode] = useState<Mode>("list");
   const [templates, setTemplates] = useState<RecurringTemplateWithRelations[]>([]);
@@ -65,14 +66,15 @@ export function Recurring() {
     try {
       setLoading(true);
       setError("");
-      setTemplates(await listRecurringTemplates());
+      const rows = await listRecurringTemplates();
+      setTemplates(rows.filter((template) => template.book_id === currentBookId));
     } catch (err) {
       console.error("Failed to load recurring templates:", err);
       setError("Δεν φορτώθηκαν τα πάγια.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentBookId]);
 
   useEffect(() => {
     void loadTemplates();
