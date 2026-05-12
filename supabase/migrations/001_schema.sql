@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.books (
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
   UNIQUE (user_id, slug)
 );
 
@@ -40,7 +41,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
   initial_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
   is_archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -56,7 +58,8 @@ CREATE TABLE IF NOT EXISTS public.categories (
   is_archived BOOLEAN NOT NULL DEFAULT false,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -69,7 +72,8 @@ CREATE TABLE IF NOT EXISTS public.tags (
   description TEXT,
   is_archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -92,7 +96,8 @@ CREATE TABLE IF NOT EXISTS public.recurring_templates (
   end_date DATE,
   last_generated DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -120,7 +125,8 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   recurring_template_id TEXT REFERENCES public.recurring_templates(id),
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- ============================================================

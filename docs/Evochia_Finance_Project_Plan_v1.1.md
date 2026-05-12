@@ -350,10 +350,12 @@ CREATE INDEX idx_outbox_pending ON sync_outbox(created_at);
 **Αναγνώσεις (pull):**
 1. Sync engine ζητάει `SELECT * FROM <table> WHERE updated_at > last_synced_at`
 2. Για κάθε row, `INSERT OR REPLACE` στο SQLite
-3. Update `last_synced_at`
+3. Remote rows με `deleted_at` λειτουργούν ως tombstones και διαγράφουν/αποσυνδέουν το αντίστοιχο local row
+4. Update `last_synced_at` μόνο όταν όλα τα table pulls πετύχουν, και μόνο μέχρι το μεγαλύτερο remote `updated_at` που εφαρμόστηκε/αναγνωρίστηκε
 
 **Conflict resolution (single user):**
 - Current implementation: timestamp-based LWW. Before push, the sync engine compares local `local_updated_at`/`updated_at` with server `updated_at`; older local pushes are skipped and the outbox entry is resolved so the following pull can apply the newer server row. During pull, rows are not applied over a newer local `local_updated_at`.
+- Deletes are timestamped soft-deletes remotely (`deleted_at`) so other devices can pull deletion tombstones; hard local deletion remains okay because the outbox payload carries the delete timestamp.
 - Αν local έχει `local_updated_at > server_updated_at` και remote άλλαξε επίσης → last-write-wins με `local_updated_at`
 - Στην πράξη σπάνιο: ο ίδιος χρήστης δεν επεξεργάζεται την ίδια εγγραφή σε δύο devices ταυτόχρονα
 - Αν συμβεί, η πιο πρόσφατη edit κερδίζει

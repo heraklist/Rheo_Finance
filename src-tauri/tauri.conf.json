@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "nsis",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -45,11 +45,6 @@
     "longDescription": "Native app για διαχείριση των οικονομικών του Evochia (επαγγελματικά + προσωπικά). Local-first με sync σε cloud."
   },
   "plugins": {
-    "updater": {
-      "endpoints": ["https://finance.evochia.gr/update/{{target}}/{{current_version}}"],
-      "dialog": true,
-      "pubkey": ""
-    },
     "sql": {
       "preload": ["sqlite:evochia.db"]
     }

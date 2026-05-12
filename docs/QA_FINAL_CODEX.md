@@ -1,146 +1,191 @@
-# QA Final Report — CODEX — 2026-05-11
+# QA Final Report - CODEX - 2026-05-12
 
 ## Συνοπτικά
 
-Το app είναι κοντά σε usable single-user state, αλλά δεν είναι production-ready για release build σήμερα. Το σημαντικότερο blocker είναι ότι το Tauri desktop build αποτυγχάνει στο τρέχον Windows setup επειδή το `beforeBuildCommand` καλεί `pnpm` ενώ διαθέσιμο είναι μόνο `corepack pnpm`. Τα data integrity checks στο πραγματικό local DB ήταν καθαρά, και το frontend/Rust compile περνάει, αλλά υπάρχουν high-risk θέματα σε book switching, amount parsing και sync conflict semantics.
+Το build health είναι καθαρό, αλλά δεν το θεωρώ production-ready ακόμα. Υπάρχει release blocker στο sync cursor: το `pullChanges()` μπορεί να προχωρήσει το `last_synced_at` ακόμα και μετά από partial pull failure ή με client clock που προηγείται του server, άρα υπάρχει κίνδυνος να μη ξανατραβηχτούν remote αλλαγές. Επίσης τα remote deletes δεν αναπαράγονται σε άλλες συσκευές χωρίς tombstones/soft-delete. Πριν από release θέλει fix-up session για sync.
 
 - Critical findings: 1
-- High findings: 4
-- Medium findings: 5
-- Low findings: 3
+- High findings: 1
+- Medium findings: 1
+- Low findings: 1
 
-Δεν διάβασα το `docs/QA_FINAL_CLAUDE_CODE.md`.
+## Build health
 
-## Build Health
+| Check | Result | Notes |
+|---|---:|---|
+| `corepack pnpm install --frozen-lockfile` | Pass | Lockfile already up to date |
+| `corepack pnpm typecheck` | Pass | `tsc --noEmit` clean |
+| `corepack pnpm lint` | Pass | Biome checked 63 files, no fixes |
+| `corepack pnpm build` | Pass | Vite build success |
+| `cargo check` in `src-tauri` | Pass | Rust compile check clean |
+| `corepack pnpm tauri dev` | Partial | Native dev launched processes and no `pnpm not recognized`; command timed out after 74s without captured app logs, then processes were stopped |
 
-- `corepack pnpm install`: pass, already up to date.
-- `corepack pnpm typecheck`: pass, 0 errors.
-- `corepack pnpm lint`: pass, Biome checked 61 files.
-- `corepack pnpm build`: pass, Vite built successfully.
-- `cargo check` in `src-tauri`: pass.
-- `corepack pnpm tauri build --debug`: fail, `pnpm` not recognized by Tauri `beforeBuildCommand`.
-- `corepack pnpm tauri dev`: fail without shim for same `pnpm` reason; with temporary PATH shim it ran until timeout without captured fatal error, but I did not confirm UI manually.
+Build warning captured:
 
-Build warning:
+- Vite reports `assets/index-BM1fuRjd.js` at about `1,061.61 kB` / gzip `306.91 kB`, above the 500 kB chunk warning threshold.
 
-- Vite output has one large JS chunk: `assets/index-kdLgNL0B.js` = 1,055.98 kB minified, 304.94 kB gzip.
+## Static security checks
 
-## Findings — Critical
+| Check | Result | Notes |
+|---|---:|---|
+| Hardcoded secrets scan | Pass | No `service_role`, `sk_live`, `sk_test`, obvious password assignment matches in `src` / `src-tauri/src` |
+| Tracked `.env*` files | Pass | No tracked `.env.local` or similar |
+| CSP | Pass | `src-tauri/tauri.conf.json:28` has a non-null CSP |
+| Updater pubkey | Medium | `src-tauri/tauri.conf.json:51` is empty |
+| `console.log` scan | Pass | No production `console.log` in `src` |
+| `: any` scan | Pass | No direct `: any` in TS/TSX scan |
+| TODO scan | Pass | No TODO markers in `src` TS/TSX scan |
+| Tauri capabilities | Pass static | `src-tauri/capabilities/default.json` no longer uses broad `fs:default` / `sql:default` |
 
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| C1 | Release build | Tauri build/dev commands are not reproducible in this environment. `corepack pnpm tauri build --debug` fails because Tauri runs `beforeBuildCommand` as `pnpm build`, but `pnpm` is not installed as a global command. This blocks desktop release artifact generation unless the machine has a global pnpm shim. | `src-tauri/tauri.conf.json:7`, `src-tauri/tauri.conf.json:9` | Run `corepack pnpm tauri build --debug`; observed `beforeBuildCommand \`pnpm build\` failed` and `'pnpm' is not recognized`. |
+Note on dialog + filesystem scope: exports and receipt imports use Tauri dialog-selected paths. Tauri's dialog API documents that selected save paths are added to filesystem scope for the app session, so I did not flag the narrowed static `fs:scope` as a blocker by itself.
 
-## Findings — High
+Sources used for this verification:
 
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| H1 | Book switching | Dashboard and Transactions list ignore the persisted `currentBookId` and hardcode `book-business`. Add Transaction uses the store, so personal entries can be created but then not shown consistently on dashboard/list after switching to personal. | `src/pages/Dashboard.tsx:65`, `src/pages/TransactionsList.tsx:20`, `src/pages/TransactionsList.tsx:120` | Set preferred book to personal in Settings, add a personal transaction, then open Dashboard or Transactions. Queries still use business. |
-| H2 | Amount validation | Transaction amount parsing accepts malformed values. `12abc` becomes `12`, and Greek thousands input `1.000,50` becomes `1`, silently corrupting financial data. | `src/components/transactions/TransactionForm.tsx:174` | Node check: `Number.parseFloat("12abc".replace(",", ".")) -> 12`; `Number.parseFloat("1.000,50".replace(",", ".")) -> 1`. |
-| H3 | Sync conflict semantics | The implementation is "last push wins", not the documented "last edit wins". Remote upsert does not compare `local_updated_at`/`server_updated_at`, so an older offline edit pushed later can overwrite a newer edit from another device. | `src/lib/sync.ts:411`, `src/lib/sync.ts:475` | Edit same transaction on two offline devices, push newer edit first, then push older edit later. Later push overwrites remote because no timestamp conflict check is applied. |
-| H4 | Auto backup | Settings exposes "Εβδομαδιαίο auto-backup", but the checkbox only persists a preference. No worker/scheduler calls `createJsonBackup()` automatically. This gives false confidence for backups. | `src/pages/Settings.tsx:334`, `src/pages/Settings.tsx:338` | Enable weekly auto-backup, restart/use app; no scheduled backup path exists in hooks or App startup. |
+- Tauri dialog `save()` reference: https://v2.tauri.app/reference/javascript/dialog/
+- Tauri filesystem scope reference: https://v2.tauri.app/plugin/file-system/
 
-## Findings — Medium
-
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| M1 | Updater signing | Tauri updater is enabled with endpoint/dialog, but `pubkey` is empty. For production-bound releases, update verification is incomplete or updater behavior will fail when activated. | `src-tauri/tauri.conf.json:48`, `src-tauri/tauri.conf.json:51` | Inspect `tauri.conf.json`; `plugins.updater.pubkey` is `""`. |
-| M2 | Local VAT precision | Local `computeVat()` stores unrounded floating values. For `0.10` at 6%, VAT is `0.005660377...`, not a cent-rounded amount. UI rounds on display, but DB/export can carry non-cent precision. | `src/lib/utils.ts:65` | Node check for gross `0.10`, rate `0.06`: net `0.0943396226`, VAT `0.0056603773`. |
-| M3 | Tauri permissions | Default capability grants broad `fs:default`, `sql:default`, `sql:allow-execute`, and `sql:allow-select`. CSP helps, but a webview injection would have broad local data access. Scope should be reduced before production hardening. | `src-tauri/capabilities/default.json:10`-`src-tauri/capabilities/default.json:16` | Inspect capability file. |
-| M4 | Dashboard analytics | Dashboard chart still uses mock month buckets and only fills the current month from totals. It does not show real 12-month income/expense history. | `src/pages/Dashboard.tsx:88` | Add historical transactions in previous months; dashboard chart remains zero for non-current months. |
-| M5 | Android release | SESSION_011 produced an arm64 debug APK, but no real-device sideload/QA was completed and release signing is not configured. | `docs/ANDROID_BUILD_NOTES.md` | `adb devices -l` returned no attached devices during SESSION_011. |
-
-## Findings — Low
+## Findings - Critical
 
 | # | Area | Description | File:Line | Repro steps |
 |---|---|---|---|---|
-| L1 | Bundle size | Main JS chunk exceeds Vite's 500 kB warning threshold. Not a blocker for desktop, but worth code-splitting charts/settings/export later. | Build output | Run `corepack pnpm build`. |
-| L2 | Brand conventions | Dashboard empty state uses a decorative emoji, which conflicts with the project anti-patterns. | `src/pages/Dashboard.tsx:171` | Inspect empty state markup. |
-| L3 | Runtime smoke coverage | Native `tauri dev` UI was not manually verified in this run because the first run failed on `pnpm`, and the shimmed run timed out without usable captured UI evidence. | QA process | Re-run after fixing C1 and manually verify native window startup. |
+| C1 | Sync pull cursor | `pullChanges()` continues after a per-table Supabase pull error, then writes `last_synced_at = now()`. It also uses local client time instead of max successfully-applied remote `updated_at`. A transient table failure or clock skew can advance the cursor past remote rows that were never applied, so future pulls skip them permanently. | `src/lib/sync.ts:575`, `src/lib/sync.ts:590` | 1. Have remote rows updated after current `last_synced_at`. 2. Make one table pull fail while another succeeds. 3. Run sync. 4. Observe `last_synced_at` advances anyway. 5. Restore network; rows from failed table with `updated_at <= new last_synced_at` are not pulled. |
 
-## Functional Test Outcomes
+Recommended fix:
 
-| Feature | Pass/Fail | Notes |
-|---|---|---|
-| Auth | Skipped | Requires live Supabase session/credentials. Code path reviewed; password + MFA components exist. |
-| Transaction CRUD | Partial | Code supports create/edit/delete and DB has 2 synced transactions. Manual UI not verified in this run. |
-| Book switching | Fail | Dashboard/list hardcode business book. |
-| Search & filters | Partial | Code uses SQL filters and debounce. Amount filter uses same loose parsing style as transaction form. |
-| Sync | Partial / risk | Outbox push/pull exists; current DB has 0 pending outbox rows. Conflict semantics are weaker than documented. |
-| Receipts | Partial | Local save/upload/download code exists; real file/photo flow not manually verified. |
-| Recurring | Partial | Generation code exists with duplicate guard; UI/manual generation not verified. |
-| Export | Partial | XLSX generation code exists; native save dialog not exercised. |
-| Backup | Partial / fail for auto | Manual backup code exists; auto-backup checkbox is not implemented. |
-| Android | Partial | Debug APK built; no real-device sideload. |
+- Track whether any table failed; if yes, do not advance `last_synced_at`.
+- Prefer per-table cursors or set cursor to the maximum remote `updated_at` that was actually applied.
+- Keep a tiny overlap window if using a single cursor, then dedupe by id/timestamp.
 
-## Edge Cases Tested
+## Findings - High
+
+| # | Area | Description | File:Line | Repro steps |
+|---|---|---|---|---|
+| H1 | Sync deletes | Remote deletes are physically deleted from Supabase and cannot be pulled by another device. `deleteTransaction()` deletes local row and queues a remote delete; `pushChanges()` executes `.delete()`. `pullChanges()` only selects existing rows by `updated_at`, so other devices keep stale local transactions forever. | `src/lib/transactions.ts:358`, `src/lib/transactions.ts:368`, `src/lib/sync.ts:510`, `src/lib/sync.ts:518`, `src/lib/sync.ts:569` | 1. Device A and B both synced. 2. Delete transaction on A. 3. A pushes delete to Supabase. 4. Sync B. 5. B has no remote tombstone row to pull, so stale transaction remains. |
+
+Recommended fix:
+
+- Add `deleted_at` / `is_deleted` tombstones to synced tables, or a dedicated `sync_deletions` table.
+- Pull tombstones newer than the cursor and delete/mark local rows.
+- Hard-delete only after all devices are beyond retention, or never hard-delete during v0.1.
+
+## Findings - Medium
+
+| # | Area | Description | File:Line | Repro steps |
+|---|---|---|---|---|
+| M1 | Updater signing | Updater is configured with endpoint + dialog, but `pubkey` is empty. If updater stays enabled in production, signed update verification is not release-ready. | `src-tauri/tauri.conf.json:47`, `src-tauri/tauri.conf.json:51` | Inspect `src-tauri/tauri.conf.json`; `"pubkey": ""`. |
+
+Recommended fix:
+
+- Generate Tauri signer key, securely store private key, set public key before release.
+- If no updater for v0.1.0, disable updater config rather than shipping an empty key path.
+
+## Findings - Low
+
+| # | Area | Description | File:Line | Repro steps |
+|---|---|---|---|---|
+| L1 | Bundle size | Production build succeeds but main JS chunk is over 1 MB raw. Not a release blocker for desktop, but startup can improve with route/vendor chunk splitting later. | `vite.config.ts:39` | Run `corepack pnpm build`; Vite emits chunk size warning. |
+
+Recommended fix:
+
+- Add `build.rollupOptions.output.manualChunks` for heavy vendors like `recharts`, `@supabase/supabase-js`, and Radix if startup becomes noticeable.
+
+## Functional test outcomes
+
+| Feature | Result | Notes |
+|---|---:|---|
+| Native startup | Partial | `tauri dev` launched, but command timed out without app logs; stopped spawned processes cleanly |
+| Browser automation | Skipped | Playwright tool could not start because Chrome distribution is missing at `C:\Users\herax\AppData\Local\Google\Chrome\Application\chrome.exe` |
+| Web dev server | Pass | `http://localhost:1420/` responded with HTTP 200 |
+| Auth | Skipped | Needs interactive browser/native session |
+| Transaction CRUD | Skipped | Needs interactive browser/native session |
+| Book switching | Source-pass | `Dashboard`, `TransactionsList`, `RecurringForm` use `currentBookId`; no hardcoded `CURRENT_BOOK_ID` found in those paths |
+| Amount parsing | Source-pass | `TransactionForm` uses `parseGreekAmount()` and visible `amountError` state |
+| VAT visibility/labels | Source-pass | Transaction + recurring forms hide VAT outside business book and use εισροών/εκροών labels |
+| Auto-backup | Source-pass | `useAutoBackupWorker()` is wired in `App.tsx` and stores `last_auto_backup_at` through backup helpers |
+| Sync | Fail | Critical/high findings above |
+| Recurring | Source-pass | `RecurringForm` uses current book, current account/category queries, and book-scoped VAT |
+| Export / receipts | Source-pass static | Dialog-selected paths should be session-scoped by Tauri; needs manual native confirmation |
+
+## Edge cases tested
 
 | Edge case | Result | Notes |
-|---|---|---|
-| Amount `0,01` | Pass | Parses to `0.01`. |
-| Amount `999999,99` | Pass | Parses to `999999.99`. |
-| Amount `abc` | Pass | Parses to `NaN` and validation rejects. |
-| Negative amount | Pass | Parses negative and validation rejects. |
-| Amount `12abc` | Fail | Accepted as `12`. |
-| Amount `1.000,50` | Fail | Accepted as `1`. |
-| VAT 6% tiny amount | Risk | Stored VAT/net are unrounded floats. |
-| Description empty | Pass by current requirement | Empty description falls back to selected category name. |
-| Tag whitespace | Pass | `findOrCreateTag()` trims and returns null for empty. |
-| Notes empty | Pass | Saved as `null`. |
-| No category/account | Pass | Validation blocks save. |
-| Greek tag/search path | Partial | SQL uses `LOWER(... LIKE ...)`; not manually verified with Greek collation edge cases. |
-| Double save | Partial | `submitting` guard exists. |
+|---|---:|---|
+| `12abc` amount | Source-pass | Rejected by `parseGreekAmount()` character regex; UI renders `"Μη έγκυρο ποσό. Παράδειγμα: 1.234,56"` |
+| `1.000,50` amount | Source-pass | Parses as Greek thousands + decimal, avoiding `parseFloat` truncation |
+| Empty amount | Source-pass | Parser returns null; form blocks |
+| Negative amount | Source-pass | Parser allows syntax, form rejects `<= 0` |
+| VAT `0.10` at `6%` | Source-pass | `computeVat()` rounds `net` and `vat` to 2 decimals |
+| Personal book VAT | Source-pass | VAT field hidden and `vatRate` forced to 0 |
+| Business income VAT label | Source-pass | `ΦΠΑ (εκροών)` |
+| Business expense VAT label | Source-pass | `ΦΠΑ (εισροών)` |
+| Dynamic TS function execution | Skipped | `pnpm exec tsx` unavailable; build/typecheck still pass |
+| Greek UI visual overflow | Skipped | Browser automation unavailable |
 
-## Data Integrity SQL Audit
+## Data integrity SQL audit
 
-Read-only queries ran against:
+Direct SQL audit was not completed in this run.
 
-`C:\Users\herax\AppData\Roaming\gr.evochia.finance\evochia.db`
+- SQLite DB located: `C:\Users\herax\AppData\Roaming\gr.evochia.finance\evochia.db`
+- `sqlite3` CLI is not installed.
+- `python` execution failed in this Windows session; `py -3` reported no installed Python.
+- I did not insert test/performance data into the real DB without a working safe SQL tool and cleanup path.
 
-Results:
+Required follow-up SQL checks:
 
-- VAT delta > 0.01: 0 rows.
-- Orphan transactions: 0 rows.
-- Stale outbox entries with attempts > 3 and age > 1h: 0 rows.
-- Duplicate transaction primary keys: 0 rows.
-- Transaction sync status counts: `synced = 2`.
-- Outbox counts: 0 rows.
+```sql
+SELECT id, amount_gross, amount_net, amount_vat,
+       ABS((amount_net + amount_vat) - amount_gross) AS delta
+FROM transactions
+WHERE delta > 0.01;
+
+SELECT t.id
+FROM transactions t
+LEFT JOIN categories c ON t.category_id = c.id
+WHERE c.id IS NULL;
+
+SELECT *
+FROM sync_outbox
+WHERE attempts > 3
+  AND datetime(created_at) < datetime('now', '-1 hour');
+
+SELECT id, COUNT(*)
+FROM transactions
+GROUP BY id
+HAVING COUNT(*) > 1;
+
+SELECT sync_status, COUNT(*)
+FROM transactions
+GROUP BY sync_status;
+```
 
 ## Performance
 
-Performance test ran on a copied DB at `C:\tmp\evochia_qa_perf.db`, then deleted the copy. 1000 generated transactions were inserted into the copy only.
+The 1000-row runtime performance test was skipped because there was no working SQLite CLI/Python path in this session and browser automation could not launch Chrome. Static/per-build performance signal:
 
-- Insert 1000 rows: 32.65 ms.
-- Recent 200 query: 0.92 ms.
-- Search `"perf test"` query: 0.80 ms.
-- Date filter query: 0.28 ms.
-- Dashboard totals query: 0.73 ms.
+- Vite production build succeeds.
+- Main JS chunk is over 1 MB raw; acceptable for desktop v0.1 if startup feels fine, but worth splitting later.
 
-SQLite query performance is good at 1000 rows. UI scroll/render performance was not manually measured.
-
-## Recommended Fixes Πριν Release
+## Recommended fixes πριν release
 
 Critical pre-release:
 
-- Fix Tauri `beforeDevCommand` / `beforeBuildCommand` to work without global pnpm, e.g. use `corepack pnpm dev` and `corepack pnpm build`, or ensure a committed/reproducible pnpm shim in the environment.
+- Fix `pullChanges()` cursor advancement. Do not advance on partial failure; use max applied remote timestamp or per-table cursors.
 
 High pre-release:
 
-- Replace hardcoded `book-business` in Dashboard/TransactionsList with `currentBookId`.
-- Replace loose amount parsing with strict Greek-aware money parsing and reject malformed input.
-- Either implement true edit-time LWW conflict handling or document the current "last push wins" behavior in UI/docs.
-- Remove or implement weekly auto-backup.
+- Add tombstone/soft-delete sync for transactions, and likely for other synced entities that can be deleted later.
 
-Medium before broad production use:
+Medium before public release:
 
-- Configure updater signing `pubkey` or disable updater until signed release infrastructure exists.
-- Round VAT/net to cents consistently for local DB/export.
-- Tighten Tauri capabilities around filesystem and SQL.
-- Replace mock dashboard chart with real monthly grouped data.
-- Complete real Android sideload and release signing.
+- Set updater pubkey or disable updater for v0.1.0 if update infrastructure is not ready.
 
-## Open Questions
+Low / next minor:
 
-- Θέλουμε να διορθωθούν τα Critical/High τώρα σε ένα corrective session πριν FINAL_RELEASE;
-- Για sync conflict, κρατάμε πραγματικό LWW με `local_updated_at` ή αποδεχόμαστε "last push wins" επειδή είναι single-user;
-- Το weekly auto-backup πρέπει να γίνει πραγματικό scheduler ή να αφαιρεθεί από UI μέχρι να υλοποιηθεί;
+- Add manual chunk splitting if desktop startup or Android startup feels heavy.
+- Install a local SQLite inspection tool for repeatable QA SQL checks.
+- Install/configure Playwright Chrome or use the Codex in-app browser automation path for repeatable UI QA.
+
+## Open questions
+
+- Will v0.1.0 ship with multi-device sync enabled by default? If yes, C1 and H1 are hard release blockers.
+- Is the updater intended to be live in v0.1.0, or should it be disabled until signing keys and update manifests are ready?

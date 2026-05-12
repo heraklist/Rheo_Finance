@@ -1,5 +1,10 @@
 import { getDb, now } from "@/lib/db";
-import { deleteRemoteReceiptPhoto, downloadReceiptPhoto, uploadReceiptPhoto } from "@/lib/receipts";
+import {
+  deleteLocalReceiptPhoto,
+  deleteRemoteReceiptPhoto,
+  downloadReceiptPhoto,
+  uploadReceiptPhoto,
+} from "@/lib/receipts";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 
@@ -37,7 +42,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
   book: {
     table: "books",
     localTable: "books",
-    remoteColumns: ["id", "user_id", "slug", "name", "created_at"],
+    remoteColumns: ["id", "user_id", "slug", "name", "created_at", "deleted_at"],
     localColumns: ["id", "slug", "name", "created_at"],
   },
   account: {
@@ -52,6 +57,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "initial_balance",
       "is_archived",
       "created_at",
+      "deleted_at",
     ],
     localColumns: ["id", "book_id", "name", "type", "initial_balance", "is_archived", "created_at"],
   },
@@ -68,6 +74,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "is_archived",
       "sort_order",
       "created_at",
+      "deleted_at",
     ],
     localColumns: [
       "id",
@@ -83,7 +90,15 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
   tag: {
     table: "tags",
     localTable: "tags",
-    remoteColumns: ["id", "user_id", "name", "description", "is_archived", "created_at"],
+    remoteColumns: [
+      "id",
+      "user_id",
+      "name",
+      "description",
+      "is_archived",
+      "created_at",
+      "deleted_at",
+    ],
     localColumns: ["id", "name", "description", "is_archived", "created_at"],
   },
   recurring_template: {
@@ -106,6 +121,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "end_date",
       "last_generated",
       "created_at",
+      "deleted_at",
     ],
     localColumns: [
       "id",
@@ -145,6 +161,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "notes",
       "created_at",
       "updated_at",
+      "deleted_at",
     ],
     localColumns: [
       "id",
@@ -239,6 +256,16 @@ function timestampMs(value: string | null): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+function laterTimestamp(current: string | null, candidate: string | null): string | null {
+  const candidateMs = timestampMs(candidate);
+  if (candidateMs === null) return current;
+
+  const currentMs = timestampMs(current);
+  if (currentMs === null || candidateMs > currentMs) return candidate;
+
+  return current;
+}
+
 function localUpdatedAt(row: SyncRow): string {
   return (
     timestampValue(row.local_updated_at) ??
@@ -250,6 +277,10 @@ function localUpdatedAt(row: SyncRow): string {
 
 function serverUpdatedAt(row: SyncRow): string {
   return timestampValue(row.updated_at) ?? now();
+}
+
+function deletedAt(row: SyncRow): string | null {
+  return timestampValue(row.deleted_at);
 }
 
 async function getRemoteUpdatedAt(table: string, entityId: string): Promise<string | null> {
@@ -293,6 +324,8 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
   for (const column of config.remoteColumns) {
     if (column === "user_id") {
       remoteRow[column] = userId;
+    } else if (column === "deleted_at") {
+      remoteRow[column] = row[column] === undefined ? null : toRemoteValue(column, row[column]);
     } else if (row[column] !== undefined) {
       remoteRow[column] = toRemoteValue(column, row[column]);
     }
@@ -390,6 +423,38 @@ async function upsertLocal(entityType: SyncEntityType, row: SyncRow) {
      ON CONFLICT(id) DO UPDATE SET ${updateAssignments}`,
     values,
   );
+}
+
+async function deleteLocalForRemoteTombstone(
+  entityType: SyncEntityType,
+  remoteRow: SyncRow,
+): Promise<void> {
+  const entityId = remoteRow.id;
+  if (typeof entityId !== "string") return;
+
+  const config = SYNC_TABLES[entityType];
+  const db = await getDb();
+
+  if (entityType === "transaction") {
+    const localRows = await db.select<Array<{ receipt_photo_path: string | null }>>(
+      "SELECT receipt_photo_path FROM transactions WHERE id = ? LIMIT 1",
+      [entityId],
+    );
+    await db.execute("DELETE FROM transactions WHERE id = ?", [entityId]);
+    await deleteLocalReceiptPhoto(localRows[0]?.receipt_photo_path);
+    return;
+  }
+
+  if (entityType === "recurring_template") {
+    await db.execute(
+      `UPDATE transactions
+       SET recurring_template_id = NULL
+       WHERE recurring_template_id = ?`,
+      [entityId],
+    );
+  }
+
+  await db.execute(`DELETE FROM ${config.localTable} WHERE id = ?`, [entityId]);
 }
 
 async function upsertLocalReferenceData(userId: string) {
@@ -508,14 +573,31 @@ export async function pushChanges(): Promise<number> {
         const { error } = await supabase.from(config.table).upsert(remoteRow);
         if (error) throw error;
       } else if (entry.operation === "delete") {
+        const payload = parsePayload(entry.payload);
+        const localDeletedAt = deletedAt(payload) ?? timestampValue(entry.created_at) ?? now();
+        const remoteUpdatedAt = await getRemoteUpdatedAt(config.table, entry.entity_id);
+        const remoteMs = timestampMs(remoteUpdatedAt);
+        const localMs = timestampMs(localDeletedAt);
+
+        if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
+          console.warn(
+            `[sync] LWW: remote newer for deleted ${entry.entity_type} ${entry.entity_id} ` +
+              `(remote=${remoteUpdatedAt}, local=${localDeletedAt}). Skipping delete.`,
+          );
+          await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
+          continue;
+        }
+
         if (entry.entity_type === "transaction") {
-          const payload = parsePayload(entry.payload);
           if (payload.receipt_photo_path) {
             await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
           }
         }
 
-        const { error } = await supabase.from(config.table).delete().eq("id", entry.entity_id);
+        const { error } = await supabase
+          .from(config.table)
+          .update({ deleted_at: localDeletedAt })
+          .eq("id", entry.entity_id);
         if (error) throw error;
       }
 
@@ -563,6 +645,8 @@ export async function pullChanges(): Promise<number> {
   const lastSync = meta[0]?.value || "1970-01-01T00:00:00.000Z";
 
   let total = 0;
+  let highWatermark: string | null = null;
+  const failures: string[] = [];
 
   for (const entityType of PULL_ORDER) {
     const config = SYNC_TABLES[entityType];
@@ -574,12 +658,22 @@ export async function pullChanges(): Promise<number> {
 
     if (error) {
       console.error(`Pull failed for ${config.table}:`, error);
+      failures.push(`${config.table}: ${syncErrorMessage(error)}`);
       continue;
     }
 
     for (const row of data ?? []) {
       const remoteRow = row as SyncRow;
+      const remoteUpdatedAt = timestampValue(remoteRow.updated_at);
+      highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
+
       if (await shouldSkipPull(config, remoteRow)) continue;
+
+      if (deletedAt(remoteRow)) {
+        await deleteLocalForRemoteTombstone(entityType, remoteRow);
+        total++;
+        continue;
+      }
 
       const localRow = await preparePulledRowForLocal(entityType, remoteRow);
       await upsertLocal(entityType, localRow);
@@ -587,12 +681,17 @@ export async function pullChanges(): Promise<number> {
     }
   }
 
-  const ts = now();
-  await db.execute(
-    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-     VALUES ('last_synced_at', ?, ?)`,
-    [ts, ts],
-  );
+  if (failures.length > 0) {
+    throw new Error(`Δεν ολοκληρώθηκε το pull. ${failures.join(" | ")}`);
+  }
+
+  if (highWatermark) {
+    await db.execute(
+      `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+       VALUES ('last_synced_at', ?, ?)`,
+      [highWatermark, now()],
+    );
+  }
 
   return total;
 }

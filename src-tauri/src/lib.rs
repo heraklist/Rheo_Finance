@@ -21,7 +21,7 @@ pub fn run() {
         },
     ];
 
-    let mut builder = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -31,12 +31,6 @@ pub fn run() {
                 .add_migrations("sqlite:evochia.db", migrations)
                 .build(),
         );
-
-    // Updater is desktop-only
-    #[cfg(desktop)]
-    {
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
-    }
 
     builder
         .invoke_handler(tauri::generate_handler![])

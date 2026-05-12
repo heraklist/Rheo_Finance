@@ -41,5 +41,16 @@ export default defineConfig({
     target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@supabase")) return "supabase";
+          if (id.includes("recharts")) return "charts";
+          if (id.includes("d3-")) return "d3";
+          return undefined;
+        },
+      },
+    },
   },
 });
