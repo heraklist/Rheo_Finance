@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { secureAuthStorage } from "@/lib/secureAuthStorage";
+
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
@@ -14,5 +16,6 @@ export const supabase = createClient(url, anonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    storage: secureAuthStorage,
   },
 });

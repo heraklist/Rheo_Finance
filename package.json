@@ -1,7 +1,7 @@
 {
   "name": "evochia-finance",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Evochia Finance — local-first finance tracker (desktop + Android)",
   "scripts": {
@@ -32,6 +32,8 @@
     "@tauri-apps/plugin-fs": "~2.5.1",
     "@tauri-apps/plugin-os": "~2.3.2",
     "@tauri-apps/plugin-sql": "~2.4.0",
+    "@tauri-apps/plugin-stronghold": "~2.3.1",
+    "@tauri-apps/plugin-updater": "~2.10.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

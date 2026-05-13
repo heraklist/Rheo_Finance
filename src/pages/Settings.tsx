@@ -20,6 +20,7 @@ import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { getPendingCount, resetSyncStateForFullPull, syncAll } from "@/lib/sync";
 import type { PaymentMethod } from "@/lib/types";
+import { checkForUpdate } from "@/lib/updater";
 import { formatDateRelative } from "@/lib/utils";
 import {
   Building2,
@@ -41,7 +42,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.2.0";
 const CURRENT_YEAR = new Date().getFullYear();
 const VAT_RATES = [
   { label: "24%", value: 0.24 },
@@ -95,9 +96,11 @@ export function Settings() {
   const [lastAutoBackupAt, setLastAutoBackupAt] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
+  const [updateMessage, setUpdateMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
   const [exportRunning, setExportRunning] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [periodKey, setPeriodKey] = useState<PeriodKey>("q1");
   const [customFromDate, setCustomFromDate] = useState(`${CURRENT_YEAR}-01-01`);
   const [customToDate, setCustomToDate] = useState(`${CURRENT_YEAR}-12-31`);
@@ -303,6 +306,20 @@ export function Settings() {
       setExportMessage("Δεν δημιουργήθηκε το Excel export.");
     } finally {
       setExportRunning(false);
+    }
+  }
+
+  async function handleUpdateCheck() {
+    if (checkingUpdate) return;
+
+    setCheckingUpdate(true);
+    setUpdateMessage("");
+
+    try {
+      const result = await checkForUpdate();
+      setUpdateMessage(result.message);
+    } finally {
+      setCheckingUpdate(false);
     }
   }
 
@@ -706,12 +723,17 @@ export function Settings() {
           </div>
           <button
             type="button"
-            onClick={() => window.alert("Δεν βρέθηκαν διαθέσιμες ενημερώσεις.")}
-            className="inline-flex items-center gap-2 text-text-secondary font-medium hover:underline"
+            onClick={handleUpdateCheck}
+            disabled={checkingUpdate}
+            className="inline-flex items-center gap-2 text-text-secondary font-medium hover:underline disabled:opacity-50"
           >
-            <RefreshCcw className="w-4 h-4" strokeWidth={1.7} />
-            Έλεγχος ενημερώσεων
+            <RefreshCcw
+              className={`w-4 h-4 ${checkingUpdate ? "animate-spin" : ""}`}
+              strokeWidth={1.7}
+            />
+            {checkingUpdate ? "Έλεγχος..." : "Έλεγχος ενημερώσεων"}
           </button>
+          {updateMessage ? <p className="text-caption text-text-muted">{updateMessage}</p> : null}
         </div>
       </section>
     </div>

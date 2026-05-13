@@ -8,6 +8,9 @@
     "shell:allow-open",
     "dialog:allow-open",
     "dialog:allow-save",
+    "stronghold:default",
+    "stronghold:allow-remove-store-record",
+    "updater:default",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA/receipts/**" }, { "path": "$DOCUMENT/Evochia_Backups/**" }]

@@ -2,6 +2,19 @@ import Database from "@tauri-apps/plugin-sql";
 
 let dbInstance: Database | null = null;
 
+interface ForeignKeysPragmaRow {
+  foreign_keys: number;
+}
+
+async function enableForeignKeyChecks(db: Database): Promise<void> {
+  await db.execute("PRAGMA foreign_keys = ON");
+  const rows = await db.select<ForeignKeysPragmaRow[]>("PRAGMA foreign_keys");
+
+  if (Number(rows[0]?.foreign_keys ?? 0) !== 1) {
+    throw new Error("SQLite foreign key enforcement could not be enabled.");
+  }
+}
+
 /**
  * Get (or initialize) the local SQLite database instance.
  * Tauri's sql plugin runs migrations automatically on first connection
@@ -9,7 +22,9 @@ let dbInstance: Database | null = null;
  */
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
-  dbInstance = await Database.load("sqlite:evochia.db");
+  const db = await Database.load("sqlite:evochia.db");
+  await enableForeignKeyChecks(db);
+  dbInstance = db;
   return dbInstance;
 }
 
