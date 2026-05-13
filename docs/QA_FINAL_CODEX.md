@@ -19,10 +19,10 @@
 ## v0.2.0 Hardening Update - 2026-05-13
 
 - H1 FK enforcement: implemented and verified in `src/lib/db.ts`.
-- M1 updater: Tauri updater plugin is installed, registered on desktop, and exposed from Settings. Final release is still gated on a real signing public key + endpoint; do not ship with a placeholder key.
+- M1 updater: Tauri updater plugin is installed, registered on desktop, exposed from Settings, configured with the generated public key + production endpoint, and release artifacts are signed.
 - M2 auth storage: Supabase auth persistence now uses Tauri Stronghold on desktop, with migration from existing WebView localStorage tokens on first read.
 - Version bump: app/package/Cargo/Tauri config moved to `0.2.0`.
-- Verification: `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `cargo check`, and `corepack pnpm tauri build --debug` pass. Debug installer built at `src-tauri/target/debug/bundle/nsis/Evochia Finance_0.2.0_x64-setup.exe`.
+- Verification: `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `cargo check`, `corepack pnpm tauri build --debug`, and signed `corepack pnpm tauri build` pass. Release installer and signature built under `src-tauri/target/release/bundle/nsis/`.
 
 ## Build Health
 
