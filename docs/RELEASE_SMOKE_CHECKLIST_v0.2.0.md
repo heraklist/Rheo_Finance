@@ -70,5 +70,7 @@ Run this against the native Tauri app, not the browser-only Vite page.
 ## Updater
 
 - In Settings, click `Έλεγχος ενημερώσεων`.
-- Before `finance.evochia.gr` is deployed, expected: update check may report no update or endpoint failure.
-- After deployment, expected: v0.2.0 reports no update for v0.2.0 clients.
+- Before GitHub release assets are uploaded, expected: update check may report endpoint/release JSON failure.
+- Upload `latest.json`, `Evochia Finance_0.2.0_x64-setup.exe`, and its `.sig` to the GitHub release.
+- Expected: v0.2.0 reports no update for v0.2.0 clients.
+- Expected for future v0.2.1+: an older client sees the GitHub-hosted update and verifies the signature before install.

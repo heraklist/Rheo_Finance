@@ -1,153 +1,179 @@
-# QA Final Report - CODEX - 2026-05-13
+# QA Final Report - CODEX - 2026-05-14
 
-## Συνοπτικά
+Fresh QA audit before v0.2.0 release. I did not use the previous QA reports as input.
 
-Το app είναι buildable και ξεκινά σε Tauri dev/debug build χωρίς compile blocker. Για production release δεν το θεωρώ ακόμη fully clean: υπάρχει ένα High data-integrity finding επειδή το πραγματικό SQLite connection έχει `PRAGMA foreign_keys = 0`, άρα τα foreign keys του schema δεν επιβάλλονται runtime. Τα βασικά security scans είναι καθαρά, αλλά το updater δεν είναι configured και το auth session μένει σε localStorage, που θέλουν explicit release decision.
+## Verdict
 
-- Critical findings: 0
-- High findings: 1
-- Medium findings: 3
-- Low findings: 2
+**App code/build: PASS.**
 
-## Post-QA Decisions - 2026-05-13
+**Release with updater: NOT READY until GitHub release assets are uploaded and publicly reachable.**
 
-- H1 FK enforcement: fixed in `src/lib/db.ts` by enabling and verifying `PRAGMA foreign_keys = ON` when the SQLite connection is created.
-- Updater: moved to v0.2.0 scope. v0.1.0 can proceed without auto-update infrastructure if needed.
-- Stronghold/keychain auth storage: moved to v0.2.0 scope. Current localStorage session remains an accepted interim implementation until that hardening session.
-- Authenticated native QA: still required before tagging a release candidate.
+The desktop app builds, typechecks, lints, starts, has a signed installer artifact, and the local SQLite integrity/performance checks are clean. The updater no longer depends on `finance.evochia.gr`; it is configured to read GitHub Releases via `latest.json`.
 
-## v0.2.0 Hardening Update - 2026-05-13
+## Findings
 
-- H1 FK enforcement: implemented and verified in `src/lib/db.ts`.
-- M1 updater: Tauri updater plugin is installed, registered on desktop, exposed from Settings, configured with the generated public key + production endpoint, and release artifacts are signed.
-- M2 auth storage: Supabase auth persistence now uses Tauri Stronghold on desktop, with migration from existing WebView localStorage tokens on first read.
-- Version bump: app/package/Cargo/Tauri config moved to `0.2.0`.
-- Verification: `corepack pnpm typecheck`, `corepack pnpm lint`, `corepack pnpm build`, `cargo check`, `corepack pnpm tauri build --debug`, and signed `corepack pnpm tauri build` pass. Release installer and signature built under `src-tauri/target/release/bundle/nsis/`.
+### H1 - GitHub updater feed is not published yet
 
-## Build Health
+- File: `src-tauri/tauri.conf.json:53`
+- Configured endpoint: `https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json`
+- Verification:
+  - Tauri v2 supports static GitHub `latest.json` endpoints.
+  - Release assets are not yet verified as uploaded/publicly reachable.
+- Impact: the app can be released manually, but the in-app updater will fail until GitHub serves `latest.json` and the signed installer asset.
+- Required fix before calling the updater release-ready:
+  - Add GitHub Actions secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+  - Run `.github/workflows/release.yml` or push a `v0.2.0` tag.
+  - Confirm the workflow uploaded `latest.json`, `Evochia Finance_0.2.0_x64-setup.exe`, and `.sig`.
+  - Ensure the release assets are publicly reachable. A private GitHub repo requires authentication, which the installed updater will not have.
+  - Re-test `https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json`.
 
-| Check | Result | Notes |
-|---|---:|---|
-| `corepack pnpm install` | Pass | Already up to date. Warning: `[ERR_PNPM_META_FETCH_FAIL] GET https://registry.npmjs.org/pnpm: fetch failed`, exit code 0. |
-| `corepack pnpm typecheck` | Pass | `tsc --noEmit`, 0 errors. |
-| `corepack pnpm lint` | Pass | Biome checked 67 files, 0 errors. |
-| `corepack pnpm build` | Pass | Vite production build success. |
-| `cargo check` | Pass | `Finished dev profile`, 0 errors. |
-| `corepack pnpm tauri build --debug` | Pass | Built exe and NSIS debug installer: `src-tauri/target/debug/bundle/nsis/Evochia Finance_0.2.0_x64-setup.exe`. |
+### M1 - Stronghold uses a hardcoded snapshot password
 
-## Static Security
+- File: `src/lib/secureAuthStorage.ts:54`
+- Related salt setup: `src-tauri/src/lib.rs:38`
+- Current state: Supabase auth session is stored via Tauri Stronghold, not plain localStorage in desktop runtime.
+- Risk: the snapshot password string ships in the app bundle. Stronghold still protects better than browser localStorage, but it is not OS/user-secret bound. A local attacker with the snapshot, salt, and app bundle can plausibly derive the same key.
+- Recommendation: for v0.2.0, either document this as "Stronghold-backed local encrypted storage" without overclaiming, or derive the password from a user/OS-held secret before treating it as strong local credential protection.
 
-| Check | Result | Notes |
-|---|---:|---|
-| Hardcoded secrets in `src` / `src-tauri/src` | Pass | No `service_role`, `sk_live`, `sk_test`, obvious `password =` matches. |
-| Tracked `.env` files | Pass | No tracked `.env*`. `.env.local` exists but is ignored by `.gitignore:23`. |
-| CSP | Pass | `src-tauri/tauri.conf.json:28` has non-null CSP scoped to self, Supabase, asset/blob image sources. |
-| Updater pubkey | Medium | No updater plugin/config/pubkey present in `src-tauri/tauri.conf.json`. |
-| `console.log` | Pass | No matches in `src`. |
-| `: any` | Pass | No matches in `src`. |
-| TODO | Pass | No matches in `src`. |
+### L1 - Invalid amount filters are silently ignored
 
-## Findings - Critical
+- File: `src/pages/TransactionsList.tsx:62`, `src/pages/TransactionsList.tsx:275`, `src/pages/TransactionsList.tsx:294`
+- Current state: transaction form amount parsing is strict and shows an error. Filter min/max amounts use `parseGreekAmount(value) ?? undefined`, so malformed filter input becomes "no filter" without visible feedback.
+- Impact: no data corruption, but confusing UX.
+- Recommendation: keep filter input as draft strings and show a small error when min/max amount is malformed.
 
-None found.
+## Checkpoints
 
-## Findings - High
+### 1. Build health
 
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| H1 | Data integrity | SQLite foreign keys are defined in schema but not enforced on the real DB connection. This allows orphan rows if a sync tombstone, import, or future helper bug deletes referenced books/accounts/categories/templates. | `src/lib/db.ts:12`, `src-tauri/migrations/0001_initial.sql:119` | Open `%APPDATA%/gr.evochia.finance/evochia.db` read-only and run `PRAGMA foreign_keys;`. Actual result: `0`. |
+All required build gates passed:
 
-Recommended fix: after `Database.load("sqlite:evochia.db")`, enable and verify FK enforcement for the connection, e.g. execute `PRAGMA foreign_keys = ON` and confirm `PRAGMA foreign_keys` returns `1`. Add a small runtime/dev assertion or integration check.
+- `corepack pnpm install` -> pass, already up to date.
+- `corepack pnpm typecheck` -> pass.
+- `corepack pnpm lint` -> pass, Biome checked 69 files.
+- `corepack pnpm build` -> pass, Vite production build complete.
+- `cargo check` in `src-tauri` -> pass.
 
-## Findings - Medium
+Release artifacts present:
 
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| M1 | Release operations | Auto-updater is not configured. No updater plugin, endpoint, or public key exists. This is fine only if v0.1.0 is intentionally manual installer/sideload. | `src-tauri/tauri.conf.json:47` | `rg -n "updater|pubkey|tauri-plugin-updater"` returns no matches. |
-| M2 | Auth/session storage | Supabase session persists in WebView localStorage. This is workable for early single-user use, but not OS keychain/Stronghold-level protection for finance data. | `src/lib/supabase.ts:12` | `createClient(..., { auth: { persistSession: true } })` with default storage. |
-| M3 | QA coverage | Full authenticated functional CRUD/sync QA was not completed by this agent because no test credentials/native app automation surface were available. | N/A | Tauri runtime starts, but sign-in, CRUD, sync, recurring flows require an authenticated native session/manual pass. |
+- `src-tauri/target/release/bundle/nsis/Evochia Finance_0.2.0_x64-setup.exe`
+- `src-tauri/target/release/bundle/nsis/Evochia Finance_0.2.0_x64-setup.exe.sig`
 
-## Findings - Low
+### 2. Static security analysis
 
-| # | Area | Description | File:Line | Repro steps |
-|---|---|---|---|---|
-| L1 | Tooling/network | `pnpm install` returned success but printed registry metadata fetch warning under restricted network. | N/A | Run `corepack pnpm install`. |
-| L2 | Browser-only dev mode | Opening protected routes in a normal browser with an existing Supabase session causes Tauri SQL IPC errors (`invoke` undefined). This is expected for non-Tauri browser mode, but it makes browser-only QA unreliable after login. | `src/lib/db.ts:12` | Open `http://localhost:1420/` in normal browser with persisted auth session, outside Tauri. |
+Pass:
 
-## Functional Test Outcomes
+- No tracked `.env`, `.key`, `.pem`, `.p12`, `.db`, or `.sig` files found by `git ls-files` scan.
+- `.env.local`, `dist/`, `node_modules/`, `src-tauri/target/`, local DB files are gitignored.
+- No `service_role` key pattern found in source.
+- Tauri CSP is configured at `src-tauri/tauri.conf.json:28`; no `unsafe-eval`.
+- Updater `pubkey` is present at `src-tauri/tauri.conf.json:54`.
+- Tauri updater artifacts enabled at `src-tauri/tauri.conf.json:34`.
+- No TypeScript `any`, `@ts-ignore`, `TODO`, `FIXME`, `console.log`, `console.debug`, or `console.info` found in app source. Expected `console.warn` for sync LWW and `console.error` for failures remain.
 
-| Feature | Result | Notes |
-|---|---:|---|
-| Tauri startup | Pass | `pnpm tauri:dev` compiled and launched `target/debug/evochia-finance.exe`. |
-| Login page rendering | Pass | Browser smoke on `/login`: title `Finance - Evochia`, no console errors, form visible. |
-| Auth sign-in/sign-out | Skipped | No test credentials provided for this fresh QA pass. |
-| Transaction CRUD | Skipped | Requires authenticated native session. Static review shows amount parser and optional description path are wired. |
-| Book switching | Static pass | Dashboard/list/recurring/form use current book state; manual cross-book data verification skipped. |
-| Search & filters | Static pass | Amount filters use `parseGreekAmount`; manual UI verification skipped. |
-| Sync | Skipped | Requires Supabase authenticated session and remote data. |
-| Recurring | Static pass | Worker/form exist; manual generation pass skipped. |
-| Receipt photo | Static pass with caveat | Uses Tauri dialog/fs APIs and app-data `receipts/`; native manual camera/file test skipped. |
+Notes:
 
-## Edge Cases Tested
+- `style-src 'unsafe-inline'` remains in CSP. This is acceptable for the current React/Tauri styling path, but keep it scoped to this need.
+- `updater:default` grants the full update workflow. Acceptable if updater endpoint is trusted and signed, but endpoint must be live first.
 
-| Area | Result | Notes |
-|---|---:|---|
-| Amount parsing | Static pass | `parseGreekAmount` rejects malformed patterns like `12abc`, `1,2,3`, `1..5`; validates Greek thousands grouping. |
-| Tiny VAT | Static pass | `computeVat` rounds to 2 decimals. |
-| Negative/zero amount | Static pass | Forms reject `grossNum === null || grossNum <= 0`. |
-| Empty transaction description | Pass | Current behavior is optional description with category fallback, matching Heraklis's request. |
-| Empty recurring description | Pass | Still required for recurring templates. |
-| Whitespace tag | Pass | `findOrCreateTag` trims and returns `null` for blank. |
-| Tag case dedupe | Pass | Lookup uses `LOWER(name) = LOWER(?)`. |
-| Double submit | Static pass | Transaction/recurring forms guard with `if (submitting) return`. |
-| Greek copy/search | Static pass | Search lowercases description/category/tag; manual Greek UI search skipped. |
-| Responsive UI | Skipped | No native screenshot pass in this QA run. |
+### 3. Runtime smoke
 
-## Data Integrity SQL Audit
+Pass with dev-process caveat:
 
-DB audited read-only:
+- `corepack pnpm tauri dev` started Vite on `http://localhost:1420/`.
+- A Tauri process `evochia-finance.exe` opened with window title `Finance`.
+- Duplicate dev run failed with `os error 5` because the first dev instance still held `src-tauri/target/debug/evochia-finance.exe`. I terminated the spawned dev app process and verified no `evochia-finance` process remained.
 
-`C:/Users/herax/AppData/Roaming/gr.evochia.finance/evochia.db`
+This is not a product runtime bug; it is the normal Windows file-lock behavior when rebuilding while an existing debug exe is still running.
 
-| Query | Result |
-|---|---:|
-| `PRAGMA foreign_keys` | `0` - High finding H1 |
-| transactions count | 0 |
-| sync_outbox count | 0 |
-| categories count | 35 |
-| recurring_templates count | 0 |
-| VAT inconsistency (`gross != net + vat`, tolerance 0.01) | 0 rows |
-| Orphan transaction category/account/book | 0 rows |
-| Stale outbox (`attempts > 3`, older than 1h) | 0 rows |
-| Duplicate transaction PK | 0 rows |
-| Pending transactions vs transaction outbox | 0 / 0 |
+### 4. Functional happy path
 
-Because there are currently 0 transactions, the VAT/orphan checks are clean but low-signal. Re-run after real CRUD test data exists.
+Static/code verification pass:
 
-## Performance
+- Password login + MFA routes are wired through Supabase auth.
+- Supabase session storage uses `secureAuthStorage`.
+- Transaction form:
+  - Description is optional and falls back to category name.
+  - Strict Greek amount parser is used.
+  - VAT hidden for personal book and forced to 0.
+  - VAT label changes to `ΦΠΑ (εισροών)` / `ΦΠΑ (εκροών)`.
+- Dashboard:
+  - Uses current/default book plus book popover.
+  - Uses real monthly aggregation via `getMonthlyTotals`.
+- Transactions list:
+  - Uses `currentBookId`.
+  - Search/filter query goes through helpers.
+- Recurring:
+  - Uses current book.
+  - Uses strict amount parser.
+  - VAT hidden for personal book.
+- Category CRUD:
+  - Create/update/archive/delete helpers exist.
+  - Delete has FK usage guard.
 
-I did not mutate the real app DB for the 1000-row test. I copied it to `C:/tmp/evochia_perf_qa.db`, inserted 1000 synthetic transactions, benchmarked core SQL, then deleted the temp DB.
+Manual limitation in this QA run:
 
-| Operation on temp copy | Result |
-|---|---:|
-| Insert 1000 rows | 16.911 ms |
-| List first 100 transactions | 0.760 ms |
-| Search `perf test` | 2.327 ms |
-| Dashboard totals | 0.800 ms |
-| Monthly totals | 2.676 ms |
+- The real local DB currently has 0 transactions and 0 recurring templates, so I could not re-run a complete UI CRUD/sync happy path against existing real data without creating new user data.
 
-SQL-side performance is fine at 1000 rows. UI load/scroll FPS was not measured because it needs an authenticated native session with test data.
+### 5. Edge cases
 
-## Recommended Fixes Before Release
+Verified:
 
-- Done: SQLite FK enforcement is enabled per Tauri SQL connection in `src/lib/db.ts` and verified during DB initialization.
-- Done: v0.2.0 ships with updater config, generated public key, production endpoint, and signed release artifacts.
-- Done: Supabase session persistence moved from WebView localStorage to Tauri Stronghold on desktop.
-- Open before final tag: run one authenticated native smoke pass: sign in, create/edit/delete transaction, switch book, sync now, create/toggle recurring, receipt photo save/open.
+- `parseGreekAmount("12abc")` -> invalid.
+- `parseGreekAmount("1,2,3")` -> invalid.
+- `parseGreekAmount("1..5")` -> invalid.
+- `parseGreekAmount("1.000,50")` -> `1000.5`.
+- `parseGreekAmount("1 234,56 €")` -> `1234.56`.
+- `computeVat(0.10, 0.06)` -> `{ net: 0.09, vat: 0.01 }`.
+- `computeVat(100, 0.24)` -> `{ net: 80.65, vat: 19.35 }`.
 
-## Open Questions
+### 6. Data integrity SQL audit
 
-- Answered: auto-update is required for v0.2.0 and is now configured/signed. v0.1.0 remains superseded by the v0.2.0 release path.
-- Answered: Stronghold storage is required before real production data and is implemented.
-- Open: authenticated native smoke pass still needs a real logged-in app session. Use `docs/RELEASE_SMOKE_CHECKLIST_v0.2.0.md`.
-- Deployment note: the updater endpoint on `finance.evochia.gr` still needs to serve the release JSON and installer for live update checks.
+Real local DB:
+
+- Path: `C:\Users\herax\AppData\Roaming\gr.evochia.finance\evochia.db`
+- Counts:
+  - books: 2
+  - accounts: 6
+  - categories: 35
+  - tags: 0
+  - recurring_templates: 0
+  - transactions: 0
+  - sync_outbox: 0
+  - sync_metadata: 4
+- Checks:
+  - `PRAGMA foreign_key_check`: 0 rows.
+  - Orphan transaction book/account/category: 0.
+  - Transaction account/category book mismatch: 0.
+  - Personal-book VAT nonzero rows: 0.
+  - Bad amount rows: 0.
+  - VAT net/gross mismatch rows: 0.
+  - Outbox pending/errors: 0.
+- `last_synced_at`: `2026-05-12T04:14:29.894Z`
+
+### 7. Performance smoke
+
+Synthetic temp DB with seed + 10,000 transactions:
+
+- Insert 10k rows: 69.16 ms.
+- Monthly totals 12m query: 6.44 ms.
+- Recent 50 transactions query: 0.42 ms.
+- Search-like query: 6.09 ms.
+- Current-month dashboard totals: 0.25 ms.
+
+Result: current indexes are enough for v0.2 scale.
+
+## Release Decision
+
+Do not publish v0.2.0 as an updater-enabled release until H1 is fixed.
+
+Safe path:
+
+1. Create a GitHub release, e.g. `v0.2.0`.
+2. Or run `.github/workflows/release.yml` with the signing secrets configured.
+3. Confirm the signed installer, `.sig`, and `latest.json` are attached.
+4. Confirm the release assets are publicly reachable by the installed app.
+5. Re-run only updater smoke.
+6. Then publish the installer.
+
+If the installer is distributed manually without promising in-app updates yet, the app code itself is a viable release candidate.
