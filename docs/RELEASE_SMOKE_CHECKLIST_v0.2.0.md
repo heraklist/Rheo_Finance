@@ -69,6 +69,10 @@ Run this against the native Tauri app, not the browser-only Vite page.
 
 ## Updater
 
+- Because the repo is private for now, create/use a GitHub token with read access to
+  `heraklist/evochia_finance`.
+- In Settings -> About -> Private GitHub updater, paste the token and save it.
+
 - In Settings, click `Έλεγχος ενημερώσεων`.
 - Before GitHub release assets are uploaded, expected: update check may report endpoint/release JSON failure.
 - Upload `latest.json`, `Evochia Finance_0.2.0_x64-setup.exe`, and its `.sig` to the GitHub release.

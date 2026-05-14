@@ -60,8 +60,28 @@ function groupTotal(transactions: TransactionWithRelations[]): number {
 }
 
 function parseAmountFilter(value: string): number | undefined {
-  if (!value) return undefined;
-  return parseGreekAmount(value) ?? undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return parseGreekAmount(trimmed) ?? undefined;
+}
+
+function hasInvalidAmountFilter(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && parseGreekAmount(trimmed) === null;
+}
+
+function amountFilterError(minAmount: string, maxAmount: string): string {
+  if (hasInvalidAmountFilter(minAmount) || hasInvalidAmountFilter(maxAmount)) {
+    return "Μη έγκυρο ποσό φίλτρου. Παράδειγμα: 1.234,56";
+  }
+
+  const min = parseAmountFilter(minAmount);
+  const max = parseAmountFilter(maxAmount);
+  if (min !== undefined && max !== undefined && min > max) {
+    return "Το ελάχιστο ποσό δεν μπορεί να είναι μεγαλύτερο από το μέγιστο.";
+  }
+
+  return "";
 }
 
 function bookLabel(bookId: string): string {
@@ -88,13 +108,45 @@ export function TransactionsList() {
   const [filters, setFilters] = useState<TransactionFilters>(() =>
     filtersFromSearchParams(searchParams),
   );
+  const [minAmountInput, setMinAmountInput] = useState(searchParams.get("minAmount") ?? "");
+  const [maxAmountInput, setMaxAmountInput] = useState(searchParams.get("maxAmount") ?? "");
+  const [amountError, setAmountError] = useState(() =>
+    amountFilterError(searchParams.get("minAmount") ?? "", searchParams.get("maxAmount") ?? ""),
+  );
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([]);
   const debouncedSearch = useDebounce(search, 250);
 
   useEffect(() => {
+    const nextMinAmountInput = searchParams.get("minAmount") ?? "";
+    const nextMaxAmountInput = searchParams.get("maxAmount") ?? "";
+
+    setMinAmountInput(nextMinAmountInput);
+    setMaxAmountInput(nextMaxAmountInput);
+    setAmountError(amountFilterError(nextMinAmountInput, nextMaxAmountInput));
     setFilters(filtersFromSearchParams(searchParams));
   }, [searchParams]);
+
+  function handleAmountFilterChange(key: "minAmount" | "maxAmount", value: string) {
+    const nextMinAmountInput = key === "minAmount" ? value : minAmountInput;
+    const nextMaxAmountInput = key === "maxAmount" ? value : maxAmountInput;
+
+    if (key === "minAmount") setMinAmountInput(value);
+    if (key === "maxAmount") setMaxAmountInput(value);
+
+    setAmountError(amountFilterError(nextMinAmountInput, nextMaxAmountInput));
+    setFilters((current) => ({
+      ...current,
+      [key]: parseAmountFilter(value),
+    }));
+  }
+
+  function clearFilters() {
+    setFilters({});
+    setMinAmountInput("");
+    setMaxAmountInput("");
+    setAmountError("");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +200,9 @@ export function TransactionsList() {
     (value) => value !== undefined && value !== "",
   ).length;
   const hasActiveFilters = activeFilterCount > 0;
+  const hasAmountFilterDrafts =
+    minAmountInput.trim().length > 0 || maxAmountInput.trim().length > 0;
+  const canClearFilters = hasActiveFilters || hasAmountFilterDrafts;
 
   return (
     <div className="px-4 pb-24 pt-4">
@@ -272,14 +327,13 @@ export function TransactionsList() {
                     type="text"
                     inputMode="decimal"
                     step="0.01"
-                    value={filters.minAmount ?? ""}
-                    onChange={(event) =>
-                      setFilters((current) => ({
-                        ...current,
-                        minAmount: parseAmountFilter(event.target.value),
-                      }))
-                    }
-                    className="bg-cream border-border-light"
+                    value={minAmountInput}
+                    onChange={(event) => handleAmountFilterChange("minAmount", event.target.value)}
+                    className={cn(
+                      "bg-cream border-border-light",
+                      amountError && "border-expense focus-visible:ring-expense",
+                    )}
+                    aria-invalid={amountError ? true : undefined}
                   />
                 </div>
                 <div>
@@ -291,22 +345,26 @@ export function TransactionsList() {
                     type="text"
                     inputMode="decimal"
                     step="0.01"
-                    value={filters.maxAmount ?? ""}
-                    onChange={(event) =>
-                      setFilters((current) => ({
-                        ...current,
-                        maxAmount: parseAmountFilter(event.target.value),
-                      }))
-                    }
-                    className="bg-cream border-border-light"
+                    value={maxAmountInput}
+                    onChange={(event) => handleAmountFilterChange("maxAmount", event.target.value)}
+                    className={cn(
+                      "bg-cream border-border-light",
+                      amountError && "border-expense focus-visible:ring-expense",
+                    )}
+                    aria-invalid={amountError ? true : undefined}
                   />
                 </div>
               </div>
+              {amountError ? (
+                <p className="text-sm text-expense" role="alert">
+                  {amountError}
+                </p>
+              ) : null}
 
-              {hasActiveFilters ? (
+              {canClearFilters ? (
                 <button
                   type="button"
-                  onClick={() => setFilters({})}
+                  onClick={clearFilters}
                   className="w-full flex items-center justify-center gap-2 text-expense text-sm font-medium py-2 border border-expense rounded-md hover:bg-expense-light/30 transition-colors"
                 >
                   <X className="w-4 h-4" strokeWidth={1.7} />

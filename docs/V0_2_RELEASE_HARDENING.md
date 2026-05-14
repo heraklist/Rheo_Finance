@@ -7,6 +7,8 @@
 - Stronghold uses the native plugin with Argon2 key derivation and an app-local salt file.
 - Tauri updater plugin is registered on desktop builds and exposed from Settings.
 - Tauri updater public key, endpoint, and artifact generation are configured for v0.2.0.
+- Private GitHub updater checks can use a user-provided token stored locally in Stronghold.
+- Transaction amount filters now show validation errors instead of silently ignoring malformed amounts.
 - SQLite foreign key enforcement is enabled and verified when the local DB connection opens.
 
 ## Updater signing material
@@ -64,9 +66,14 @@ The app checks the latest release asset at:
 https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json
 ```
 
-Important: the updater runs outside a logged-in browser session. If the code repository
-stays private, GitHub release assets are not publicly readable by the installed app.
-Use either a public release-only repository or make the release assets publicly reachable.
+The repository currently stays private. In the installed app, go to Settings -> About ->
+Private GitHub updater and paste a GitHub token with read access to
+`heraklist/evochia_finance`. The token is stored only in the desktop runtime through
+Stronghold and is sent as an `Authorization: Bearer ...` header during updater checks.
+
+Do not bake this token into the binary, commit it to git, or put it in `tauri.conf.json`.
+If GitHub rejects authenticated access through the static release download endpoint, the
+fallback is a public release-only repository or a small authenticated feed endpoint.
 
 For the current Windows x64 artifact, `latest.json` should be uploaded as a release asset:
 

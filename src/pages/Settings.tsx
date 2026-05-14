@@ -21,6 +21,11 @@ import { supabase } from "@/lib/supabase";
 import { getPendingCount, resetSyncStateForFullPull, syncAll } from "@/lib/sync";
 import type { PaymentMethod } from "@/lib/types";
 import { checkForUpdate } from "@/lib/updater";
+import {
+  clearUpdaterGitHubToken,
+  hasUpdaterGitHubToken,
+  setUpdaterGitHubToken,
+} from "@/lib/updaterToken";
 import { formatDateRelative } from "@/lib/utils";
 import {
   Building2,
@@ -30,6 +35,7 @@ import {
   FileSpreadsheet,
   FolderTree,
   Info,
+  KeyRound,
   LogOut,
   RefreshCcw,
   RotateCw,
@@ -97,10 +103,14 @@ export function Settings() {
   const [exportMessage, setExportMessage] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
+  const [githubTokenDraft, setGithubTokenDraft] = useState("");
+  const [githubTokenSaved, setGithubTokenSaved] = useState(false);
+  const [githubTokenMessage, setGithubTokenMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
   const [exportRunning, setExportRunning] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [savingGithubToken, setSavingGithubToken] = useState(false);
   const [periodKey, setPeriodKey] = useState<PeriodKey>("q1");
   const [customFromDate, setCustomFromDate] = useState(`${CURRENT_YEAR}-01-01`);
   const [customToDate, setCustomToDate] = useState(`${CURRENT_YEAR}-12-31`);
@@ -133,6 +143,24 @@ export function Settings() {
       }
     );
   }, [customFromDate, customToDate, periodKey, quarterPeriods]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUpdaterTokenState() {
+      try {
+        const hasToken = await hasUpdaterGitHubToken();
+        if (!cancelled) setGithubTokenSaved(hasToken);
+      } catch (err) {
+        console.error("Failed to load updater token state:", err);
+      }
+    }
+
+    void loadUpdaterTokenState();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -320,6 +348,50 @@ export function Settings() {
       setUpdateMessage(result.message);
     } finally {
       setCheckingUpdate(false);
+    }
+  }
+
+  async function handleSaveGithubToken() {
+    if (savingGithubToken) return;
+
+    const token = githubTokenDraft.trim();
+    if (!token) {
+      setGithubTokenMessage("Βάλε ένα GitHub token ή καθάρισε το αποθηκευμένο token.");
+      return;
+    }
+
+    setSavingGithubToken(true);
+    setGithubTokenMessage("");
+
+    try {
+      await setUpdaterGitHubToken(token);
+      setGithubTokenDraft("");
+      setGithubTokenSaved(true);
+      setGithubTokenMessage("Το updater token αποθηκεύτηκε τοπικά.");
+    } catch (err) {
+      console.error("Failed to save updater token:", err);
+      setGithubTokenMessage("Δεν αποθηκεύτηκε το updater token.");
+    } finally {
+      setSavingGithubToken(false);
+    }
+  }
+
+  async function handleClearGithubToken() {
+    if (savingGithubToken) return;
+
+    setSavingGithubToken(true);
+    setGithubTokenMessage("");
+
+    try {
+      await clearUpdaterGitHubToken();
+      setGithubTokenDraft("");
+      setGithubTokenSaved(false);
+      setGithubTokenMessage("Το updater token διαγράφηκε από την τοπική αποθήκευση.");
+    } catch (err) {
+      console.error("Failed to clear updater token:", err);
+      setGithubTokenMessage("Δεν διαγράφηκε το updater token.");
+    } finally {
+      setSavingGithubToken(false);
     }
   }
 
@@ -720,6 +792,52 @@ export function Settings() {
           <div className="flex items-start gap-2 text-text-muted">
             <ShieldAlert className="w-4 h-4 mt-0.5 text-gold" strokeWidth={1.7} />
             <p>Άδεια: ιδιωτική χρήση Heraklis / {displayCompanyName}.</p>
+          </div>
+          <div className="rounded-md border border-border-light bg-sand p-3">
+            <div className="mb-3 flex items-start gap-2 text-text-muted">
+              <KeyRound className="mt-0.5 h-4 w-4 text-gold" strokeWidth={1.7} />
+              <div>
+                <p className="text-sm font-medium text-text-primary">Private GitHub updater</p>
+                <p className="text-caption">
+                  {githubTokenSaved
+                    ? "Υπάρχει αποθηκευμένο token για έλεγχο ενημερώσεων από private repo."
+                    : "Το repo είναι private. Χρειάζεται token με read access για το updater feed."}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="password"
+                value={githubTokenDraft}
+                onChange={(event) => setGithubTokenDraft(event.target.value)}
+                placeholder="GitHub token"
+                className="min-w-0 flex-1 rounded-md border border-border-light bg-cream px-3 py-2 text-sm focus:border-charcoal focus:outline-none"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={handleSaveGithubToken}
+                disabled={savingGithubToken}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-charcoal px-3 py-2 text-sm font-medium text-text-on-dark disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" strokeWidth={1.7} />
+                Αποθήκευση
+              </button>
+              {githubTokenSaved ? (
+                <button
+                  type="button"
+                  onClick={handleClearGithubToken}
+                  disabled={savingGithubToken}
+                  className="inline-flex items-center justify-center gap-2 text-sm font-medium text-expense hover:underline disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.7} />
+                  Διαγραφή
+                </button>
+              ) : null}
+            </div>
+            {githubTokenMessage ? (
+              <p className="mt-2 text-caption text-text-muted">{githubTokenMessage}</p>
+            ) : null}
           </div>
           <button
             type="button"

@@ -6,26 +6,28 @@ Fresh QA audit before v0.2.0 release. I did not use the previous QA reports as i
 
 **App code/build: PASS.**
 
-**Release with updater: NOT READY until GitHub release assets are uploaded and publicly reachable.**
+**Release with updater: NOT READY until GitHub release assets are uploaded and authenticated updater smoke passes.**
 
-The desktop app builds, typechecks, lints, starts, has a signed installer artifact, and the local SQLite integrity/performance checks are clean. The updater no longer depends on `finance.evochia.gr`; it is configured to read GitHub Releases via `latest.json`.
+The desktop app builds, typechecks, lints, starts, has a signed installer artifact, and the local SQLite integrity/performance checks are clean. The updater no longer depends on `finance.evochia.gr`; it is configured to read GitHub Releases via `latest.json`. Because the repo is private for now, the app supports a locally stored GitHub updater token from Settings.
 
 ## Findings
 
 ### H1 - GitHub updater feed is not published yet
 
 - File: `src-tauri/tauri.conf.json:53`
+- Token support: `src/lib/updaterToken.ts`, `src/lib/updater.ts`, `src/pages/Settings.tsx`
 - Configured endpoint: `https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json`
 - Verification:
   - Tauri v2 supports static GitHub `latest.json` endpoints.
-  - Release assets are not yet verified as uploaded/publicly reachable.
-- Impact: the app can be released manually, but the in-app updater will fail until GitHub serves `latest.json` and the signed installer asset.
+  - Release assets are not yet verified as uploaded/reachable from the installed app.
+  - Private repo access is now attempted with a locally stored token sent as an `Authorization: Bearer ...` header.
+- Impact: the app can be released manually, but the in-app updater must be smoke-tested with a real GitHub token after the release assets exist.
 - Required fix before calling the updater release-ready:
   - Add GitHub Actions secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
   - Run `.github/workflows/release.yml` or push a `v0.2.0` tag.
   - Confirm the workflow uploaded `latest.json`, `Evochia Finance_0.2.0_x64-setup.exe`, and `.sig`.
-  - Ensure the release assets are publicly reachable. A private GitHub repo requires authentication, which the installed updater will not have.
-  - Re-test `https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json`.
+  - In Settings -> About -> Private GitHub updater, save a GitHub token with read access to the private repo.
+  - Re-test updater check from the installed desktop app.
 
 ### M1 - Stronghold uses a hardcoded snapshot password
 
@@ -35,12 +37,11 @@ The desktop app builds, typechecks, lints, starts, has a signed installer artifa
 - Risk: the snapshot password string ships in the app bundle. Stronghold still protects better than browser localStorage, but it is not OS/user-secret bound. A local attacker with the snapshot, salt, and app bundle can plausibly derive the same key.
 - Recommendation: for v0.2.0, either document this as "Stronghold-backed local encrypted storage" without overclaiming, or derive the password from a user/OS-held secret before treating it as strong local credential protection.
 
-### L1 - Invalid amount filters are silently ignored
+### L1 - Invalid amount filters are silently ignored - fixed
 
 - File: `src/pages/TransactionsList.tsx:62`, `src/pages/TransactionsList.tsx:275`, `src/pages/TransactionsList.tsx:294`
-- Current state: transaction form amount parsing is strict and shows an error. Filter min/max amounts use `parseGreekAmount(value) ?? undefined`, so malformed filter input becomes "no filter" without visible feedback.
-- Impact: no data corruption, but confusing UX.
-- Recommendation: keep filter input as draft strings and show a small error when min/max amount is malformed.
+- Current state: transaction form amount parsing is strict and shows an error. Filter min/max amounts now keep draft strings and show visible validation errors for malformed values or min > max.
+- Impact: fixed in code; verify manually with `12abc`, `1,2,3`, and `1..5`.
 
 ## Checkpoints
 
@@ -165,15 +166,16 @@ Result: current indexes are enough for v0.2 scale.
 
 ## Release Decision
 
-Do not publish v0.2.0 as an updater-enabled release until H1 is fixed.
+Do not publish v0.2.0 as an updater-enabled release until H1 is smoke-tested with the private GitHub token flow.
 
 Safe path:
 
 1. Create a GitHub release, e.g. `v0.2.0`.
 2. Or run `.github/workflows/release.yml` with the signing secrets configured.
 3. Confirm the signed installer, `.sig`, and `latest.json` are attached.
-4. Confirm the release assets are publicly reachable by the installed app.
-5. Re-run only updater smoke.
-6. Then publish the installer.
+4. Save a GitHub token in Settings -> About -> Private GitHub updater.
+5. Confirm the installed app can read the release feed and reports no update for v0.2.0 clients.
+6. For future v0.2.1, confirm an older installed client sees the update.
+7. Then publish the installer.
 
 If the installer is distributed manually without promising in-app updates yet, the app code itself is a viable release candidate.
