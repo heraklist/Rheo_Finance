@@ -140,13 +140,14 @@ SQL-side performance is fine at 1000 rows. UI load/scroll FPS was not measured b
 
 ## Recommended Fixes Before Release
 
-- High: Enable SQLite FK enforcement per connection and verify `PRAGMA foreign_keys = 1`.
-- Medium: Decide whether v0.1.0 ships with manual installer only or restore Tauri updater config with signing pubkey.
-- Medium: Decide whether localStorage Supabase session is acceptable for v0.1.0 or move auth storage to Stronghold/keychain.
-- QA: Run one authenticated native smoke pass: sign in, create/edit/delete transaction, switch book, sync now, create/toggle recurring, receipt photo save/open.
+- Done: SQLite FK enforcement is enabled per Tauri SQL connection in `src/lib/db.ts` and verified during DB initialization.
+- Done: v0.2.0 ships with updater config, generated public key, production endpoint, and signed release artifacts.
+- Done: Supabase session persistence moved from WebView localStorage to Tauri Stronghold on desktop.
+- Open before final tag: run one authenticated native smoke pass: sign in, create/edit/delete transaction, switch book, sync now, create/toggle recurring, receipt photo save/open.
 
 ## Open Questions
 
-- Is auto-update required for v0.1.0, or is manual installer/sideload the intended release path?
-- Do you want keychain/Stronghold session storage before real production data, or is localStorage accepted for the private first release?
-- Can you provide a temporary test login or run the native authenticated checklist manually so the skipped CRUD/sync rows become pass/fail?
+- Answered: auto-update is required for v0.2.0 and is now configured/signed. v0.1.0 remains superseded by the v0.2.0 release path.
+- Answered: Stronghold storage is required before real production data and is implemented.
+- Open: authenticated native smoke pass still needs a real logged-in app session. Use `docs/RELEASE_SMOKE_CHECKLIST_v0.2.0.md`.
+- Deployment note: the updater endpoint on `finance.evochia.gr` still needs to serve the release JSON and installer for live update checks.
