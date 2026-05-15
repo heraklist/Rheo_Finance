@@ -110,11 +110,11 @@ export async function getTotals(opts: {
   toDate: string;
 }) {
   const db = await getDb();
-  const conditions: string[] = ["date >= ?", "date <= ?"];
+  const conditions: string[] = ["t.date >= ?", "t.date <= ?"];
   const params: (string | number)[] = [opts.fromDate, opts.toDate];
 
   if (opts.bookId) {
-    conditions.push("book_id = ?");
+    conditions.push("t.book_id = ?");
     params.push(opts.bookId);
   }
 
