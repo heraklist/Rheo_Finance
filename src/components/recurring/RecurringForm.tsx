@@ -1,4 +1,11 @@
 import {
+  DateField,
+  type EntryType,
+  EntryTypeSelector,
+  MoneyAmountField,
+  VatRateSelector,
+} from "@/components/forms/FinanceFormFields";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -9,17 +16,9 @@ import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { parseGreekAmount } from "@/lib/money";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
-import type { Account, Category, CategoryType, Frequency } from "@/lib/types";
-import { formatDateRelative } from "@/lib/utils";
+import type { Account, Category, Frequency } from "@/lib/types";
 import { CalendarClock, Check, Pause } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const VAT_RATES = [
-  { label: "24%", value: 0.24 },
-  { label: "13%", value: 0.13 },
-  { label: "6%", value: 0.06 },
-  { label: "0%", value: 0 },
-];
 
 const FREQUENCIES: Array<{ label: string; value: Frequency }> = [
   { label: "Μήνα", value: "monthly" },
@@ -38,7 +37,7 @@ const WEEKDAYS = [
   { label: "Κυριακή", value: 7 },
 ];
 
-type RecurringType = Extract<CategoryType, "income" | "expense" | "reserve">;
+type RecurringType = EntryType;
 
 export interface RecurringFormValues {
   active: boolean;
@@ -262,52 +261,15 @@ export function RecurringForm({
           />
         </div>
 
-        <div>
-          <label className="form-label" htmlFor="rec-amount">
-            Ποσό
-          </label>
-          <input
-            id="rec-amount"
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => {
-              setAmount(event.target.value);
-              setAmountError("");
-            }}
-            placeholder="0,00 €"
-            className={`w-full bg-cream border rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none transition-colors ${
-              amountError
-                ? "border-expense focus:border-expense"
-                : "border-border-light focus:border-charcoal"
-            }`}
-          />
-          {amountError ? (
-            <p className="mt-1.5 text-sm text-expense" role="alert">
-              {amountError}
-            </p>
-          ) : null}
-        </div>
+        <MoneyAmountField
+          id="rec-amount"
+          value={amount}
+          error={amountError}
+          onValueChange={setAmount}
+          onErrorClear={() => setAmountError("")}
+        />
 
-        <div>
-          <div className="form-label">Είδος</div>
-          <div className="grid grid-cols-3 bg-sand p-0.5 rounded-md border border-border-light">
-            {(["income", "expense", "reserve"] as RecurringType[]).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setType(item)}
-                className={`text-sm py-2 px-3 rounded-md transition-all ${
-                  type === item
-                    ? "bg-cream text-text-primary shadow-sm font-medium"
-                    : "text-text-secondary"
-                }`}
-              >
-                {item === "income" ? "Έσοδο" : item === "expense" ? "Έξοδο" : "Άλλο"}
-              </button>
-            ))}
-          </div>
-        </div>
+        <EntryTypeSelector value={type} onChange={setType} />
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -363,32 +325,14 @@ export function RecurringForm({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="form-label" htmlFor="rec-start-date">
-              Έναρξη
-            </label>
-            <input
-              id="rec-start-date"
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal"
-            />
-            <p className="text-caption mt-1">{formatDateRelative(startDate)}</p>
-          </div>
-          <div>
-            <label className="form-label" htmlFor="rec-end-date">
-              Λήξη
-            </label>
-            <input
-              id="rec-end-date"
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal"
-            />
-            <p className="text-caption mt-1">Προαιρετικό</p>
-          </div>
+          <DateField id="rec-start-date" label="Έναρξη" value={startDate} onChange={setStartDate} />
+          <DateField
+            id="rec-end-date"
+            label="Λήξη"
+            value={endDate}
+            caption="Προαιρετικό"
+            onChange={setEndDate}
+          />
         </div>
 
         <div>
@@ -432,21 +376,7 @@ export function RecurringForm({
         </div>
 
         {showVat ? (
-          <div>
-            <div className="form-label">{vatLabel}</div>
-            <div className="flex gap-1.5">
-              {VAT_RATES.map((vat) => (
-                <button
-                  key={vat.value}
-                  type="button"
-                  onClick={() => setVatRate(vat.value)}
-                  className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
-                >
-                  {vat.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <VatRateSelector label={vatLabel} value={vatRate} onChange={setVatRate} />
         ) : null}
 
         <div>

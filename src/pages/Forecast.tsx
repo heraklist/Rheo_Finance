@@ -1,9 +1,13 @@
-import { ForecastLineChart } from "@/components/charts/ForecastLineChart";
 import { type ForecastResult, getForecast } from "@/lib/analytics";
 import { useAppStore } from "@/lib/store";
 import { cn, formatEuro } from "@/lib/utils";
 import { AlertCircle, ArrowLeft, ArrowRight, Info, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+
+const LazyForecastLineChart = lazy(async () => {
+  const module = await import("@/components/charts/ForecastLineChart");
+  return { default: module.ForecastLineChart };
+});
 
 function startDateForYear(year: number): string {
   const now = new Date();
@@ -122,7 +126,9 @@ export function Forecast() {
         {loading ? (
           <div className="skel h-44" />
         ) : forecast ? (
-          <ForecastLineChart data={forecast.months} />
+          <Suspense fallback={<div className="skel h-44" />}>
+            <LazyForecastLineChart data={forecast.months} />
+          </Suspense>
         ) : null}
       </section>
 

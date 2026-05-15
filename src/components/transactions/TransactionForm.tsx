@@ -1,4 +1,12 @@
 import {
+  BookSelector,
+  DateField,
+  type EntryType,
+  EntryTypeSelector,
+  MoneyAmountField,
+  VatRateSelector,
+} from "@/components/forms/FinanceFormFields";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -12,25 +20,12 @@ import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
-import { formatDateRelative } from "@/lib/utils";
 import { Camera, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const VAT_RATES = [
-  { label: "24%", value: 0.24 },
-  { label: "13%", value: 0.13 },
-  { label: "6%", value: 0.06 },
-  { label: "0%", value: 0 },
-];
-
 const PAYMENT_METHODS: PaymentMethod[] = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά", "IRIS", "Άλλο"];
 
-const BOOK_OPTIONS = [
-  { label: "Επαγγελματικά", value: "book-business" },
-  { label: "Προσωπικά", value: "book-personal" },
-];
-
-type TxType = "income" | "expense" | "reserve";
+type TxType = EntryType;
 
 export interface TransactionFormValues {
   date: string;
@@ -233,74 +228,18 @@ export function TransactionForm({
   return (
     <>
       <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
-        <div>
-          <div className="form-label">Βιβλίο</div>
-          <div className="grid grid-cols-2 bg-sand p-0.5 rounded-md border border-border-light">
-            {BOOK_OPTIONS.map((book) => (
-              <button
-                key={book.value}
-                type="button"
-                onClick={() => setBookId(book.value)}
-                className={`text-sm py-2 px-3 rounded-md transition-all ${
-                  bookId === book.value
-                    ? "bg-cream text-text-primary shadow-sm font-medium"
-                    : "text-text-secondary"
-                }`}
-              >
-                {book.label}
-              </button>
-            ))}
-          </div>
-          {!showVat ? <p className="text-caption mt-1">Στα προσωπικά δεν τηρείται ΦΠΑ.</p> : null}
-        </div>
+        <BookSelector bookId={bookId} showVat={showVat} onBookIdChange={setBookId} />
 
-        <div>
-          <label className="form-label" htmlFor="tx-amount">
-            Ποσό
-          </label>
-          <input
-            id="tx-amount"
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => {
-              setAmount(event.target.value);
-              setAmountError("");
-            }}
-            placeholder="0,00 €"
-            autoFocus={autoFocusAmount}
-            className={`w-full bg-cream border rounded-md text-[32px] font-bold tracking-tight tabular-nums px-3.5 py-4 focus:outline-none transition-colors ${
-              amountError
-                ? "border-expense focus:border-expense"
-                : "border-border-light focus:border-charcoal"
-            }`}
-          />
-          {amountError ? (
-            <p className="mt-1.5 text-sm text-expense" role="alert">
-              {amountError}
-            </p>
-          ) : null}
-        </div>
+        <MoneyAmountField
+          id="tx-amount"
+          value={amount}
+          error={amountError}
+          autoFocus={autoFocusAmount}
+          onValueChange={setAmount}
+          onErrorClear={() => setAmountError("")}
+        />
 
-        <div>
-          <div className="form-label">Είδος</div>
-          <div className="grid grid-cols-3 bg-sand p-0.5 rounded-md border border-border-light">
-            {(["income", "expense", "reserve"] as TxType[]).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setType(item)}
-                className={`text-sm py-2 px-3 rounded-md transition-all ${
-                  type === item
-                    ? "bg-cream text-text-primary shadow-sm font-medium"
-                    : "text-text-secondary"
-                }`}
-              >
-                {item === "income" ? "Έσοδο" : item === "expense" ? "Έξοδο" : "Άλλο"}
-              </button>
-            ))}
-          </div>
-        </div>
+        <EntryTypeSelector value={type} onChange={setType} />
 
         <div>
           <label className="form-label" htmlFor="tx-description">
@@ -353,36 +292,10 @@ export function TransactionForm({
           </div>
         </div>
 
-        <div>
-          <label className="form-label" htmlFor="tx-date">
-            Ημερομηνία
-          </label>
-          <input
-            id="tx-date"
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal"
-          />
-          <p className="text-caption mt-1">{formatDateRelative(date)}</p>
-        </div>
+        <DateField id="tx-date" label="Ημερομηνία" value={date} onChange={setDate} />
 
         {showVat ? (
-          <div>
-            <div className="form-label">{vatLabel}</div>
-            <div className="flex gap-1.5">
-              {VAT_RATES.map((vat) => (
-                <button
-                  key={vat.value}
-                  type="button"
-                  onClick={() => setVatRate(vat.value)}
-                  className={`flex-1 chip py-2 justify-center ${vatRate === vat.value ? "active" : ""}`}
-                >
-                  {vat.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <VatRateSelector label={vatLabel} value={vatRate} onChange={setVatRate} />
         ) : null}
 
         <div>
