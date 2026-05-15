@@ -10,7 +10,7 @@
 
 **Owner:** Heraklis, Greek-speaking, με dev background. Θέλει concrete deliverables, όχι ατελείωτο planning.
 
-**Current state:** v0.2.4 release candidate. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token.
+**Current state:** v0.2.4 release candidate. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token. Android arm64 debug APK builds locally.
 
 **Repo:** `github.com/heraklist/evochia_finance` private.
 
@@ -68,6 +68,7 @@ Do not reopen these unless Heraklis explicitly asks.
 - Backup: manual JSON + weekly auto-backup worker.
 - Export: XLSX with rounded VAT and category breakdown.
 - Updater: signed Tauri updater config, GitHub private token support.
+- Android: arm64 debug APK builds; Stronghold/updater are desktop-only in Rust for now, Android uses frontend storage fallback until Android Keystore/signing is finalized.
 - Release pipeline: GitHub Actions builds signed Windows installer from `v*` tags.
 
 ---
@@ -89,6 +90,7 @@ Pre-release QA fixed:
 - `parseGreekAmount("1.234")` now parses as `1234`.
 - VAT and export sums round to 2 decimals.
 - Stronghold read/write/remove fallback to localStorage on failure.
+- Android build excludes Stronghold/updater Rust plugins to avoid mobile cross-compile blockers.
 
 Before shipping a public/manual installer, create/push tag `v0.2.4`, wait for GitHub Actions release, install that artifact, then smoke test updater.
 

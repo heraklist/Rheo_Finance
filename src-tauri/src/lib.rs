@@ -2,6 +2,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -32,17 +33,20 @@ pub fn run() {
                 .add_migrations("sqlite:evochia.db", migrations)
                 .build(),
         )
-        .setup(|app| {
-            let app_local_data_dir = app.path().app_local_data_dir()?;
-            std::fs::create_dir_all(&app_local_data_dir)?;
-            let stronghold_salt_path = app_local_data_dir.join("stronghold-salt.bin");
+        .setup(|_app| {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            {
+                let app_local_data_dir = _app.path().app_local_data_dir()?;
+                std::fs::create_dir_all(&app_local_data_dir)?;
+                let stronghold_salt_path = app_local_data_dir.join("stronghold-salt.bin");
 
-            app.handle().plugin(
-                tauri_plugin_stronghold::Builder::with_argon2(&stronghold_salt_path).build(),
-            )?;
+                _app.handle().plugin(
+                    tauri_plugin_stronghold::Builder::with_argon2(&stronghold_salt_path).build(),
+                )?;
+            }
 
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
-            app.handle()
+            _app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
 
             Ok(())

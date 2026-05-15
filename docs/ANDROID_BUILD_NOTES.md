@@ -1,6 +1,6 @@
 # Android build notes
 
-Updated: 2026-05-11
+Updated: 2026-05-15
 
 ## Current status
 
@@ -9,8 +9,12 @@ Updated: 2026-05-11
 - SDK packages installed: platform-tools, Android API 35/36, build-tools 35/36, NDK `27.3.13750724`.
 - Rust Android targets installed: `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`, `x86_64-linux-android`.
 - `corepack pnpm tauri android init` generated `src-tauri/gen/android/`.
-- Arm64 debug APK built successfully:
+- Arm64 debug APK built successfully for v0.2.4:
   `src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk`
+- APK metadata verified with `aapt`: package `gr.evochia.finance`, `versionName=0.2.4`,
+  `versionCode=2004`, `minSdk=24`, `targetSdk=36`, native code `arm64-v8a`.
+- Stronghold and updater are desktop-only in Rust. Android currently uses the existing
+  frontend `localStorage` fallback for Supabase auth/updater token storage.
 
 `src-tauri/gen/` is ignored by git, so the generated Gradle project and APK are local build artifacts.
 
@@ -61,6 +65,8 @@ The APK output is:
 ```text
 src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk
 ```
+
+Current v0.2.4 debug build used that workaround successfully.
 
 ## Sideload
 

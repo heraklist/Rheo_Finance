@@ -27,7 +27,6 @@ tauri-plugin-os = "2.0"
 tauri-plugin-dialog = "2.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-stronghold = "2"
 
 [profile.release]
 panic = "abort"
@@ -38,4 +37,5 @@ opt-level = "s"
 strip = true
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-stronghold = "2"
 tauri-plugin-updater = "2"
