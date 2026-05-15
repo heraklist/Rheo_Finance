@@ -10,7 +10,7 @@
 
 **Owner:** Heraklis, Greek-speaking, με dev background. Θέλει concrete deliverables, όχι ατελείωτο planning.
 
-**Current state:** v0.2.2 release candidate. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token.
+**Current state:** v0.2.3 release candidate. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token.
 
 **Repo:** `github.com/heraklist/evochia_finance` private.
 
@@ -74,7 +74,7 @@ Do not reopen these unless Heraklis explicitly asks.
 
 ## Current Release State
 
-Source version is `0.2.2` in:
+Source version is `0.2.3` in:
 
 - `package.json`
 - `src-tauri/Cargo.toml`
@@ -90,7 +90,7 @@ Pre-release QA fixed:
 - VAT and export sums round to 2 decimals.
 - Stronghold read/write/remove fallback to localStorage on failure.
 
-Before shipping a public/manual installer, create/push tag `v0.2.2`, wait for GitHub Actions release, install that artifact, then smoke test updater.
+Before shipping a public/manual installer, create/push tag `v0.2.3`, wait for GitHub Actions release, install that artifact, then smoke test updater.
 
 ---
 
@@ -145,8 +145,8 @@ cargo check
 Release:
 
 ```bash
-git tag v0.2.2
-git push origin v0.2.2
+git tag v0.2.3
+git push origin v0.2.3
 ```
 
 The `release.yml` workflow creates the signed GitHub Release and `latest.json`.

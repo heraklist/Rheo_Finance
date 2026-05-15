@@ -1,6 +1,6 @@
 [package]
 name = "evochia-finance"
-version = "0.2.2"
+version = "0.2.3"
 description = "Evochia Finance — local-first finance tracker"
 authors = ["Heraklis"]
 edition = "2021"
