@@ -588,17 +588,15 @@ export async function pushChanges(): Promise<number> {
           continue;
         }
 
-        if (entry.entity_type === "transaction") {
-          if (payload.receipt_photo_path) {
-            await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
-          }
-        }
-
         const { error } = await supabase
           .from(config.table)
           .update({ deleted_at: localDeletedAt })
           .eq("id", entry.entity_id);
         if (error) throw error;
+
+        if (entry.entity_type === "transaction" && payload.receipt_photo_path) {
+          await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
+        }
       }
 
       await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);

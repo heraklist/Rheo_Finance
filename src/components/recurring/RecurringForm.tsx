@@ -215,6 +215,7 @@ export function RecurringForm({
     } catch (err) {
       console.error("Failed to save recurring template:", err);
       setFormError("Δεν αποθηκεύτηκε το πάγιο. Δοκίμασε ξανά.");
+    } finally {
       setSubmitting(false);
     }
   }

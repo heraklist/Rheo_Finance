@@ -225,6 +225,7 @@ export function TransactionForm({
     } catch (err) {
       console.error("Failed to save transaction:", err);
       setFormError("Δεν αποθηκεύτηκε η συναλλαγή. Δοκίμασε ξανά.");
+    } finally {
       setSubmitting(false);
     }
   }

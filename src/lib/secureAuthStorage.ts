@@ -40,6 +40,13 @@ function strongholdKey(key: string): string {
   return `${STORAGE_KEY_PREFIX}${key}`;
 }
 
+function logStrongholdFallback(operation: string, error: unknown): void {
+  console.error(
+    `Stronghold auth storage ${operation} failed. Falling back to localStorage.`,
+    error,
+  );
+}
+
 async function loadOrCreateClient(stronghold: Stronghold): Promise<Client> {
   try {
     return await stronghold.loadClient(CLIENT_NAME);
@@ -88,19 +95,28 @@ export const secureAuthStorage: AuthStorage = {
   async getItem(key) {
     if (!isTauri()) return localGetItem(key);
 
-    const { store } = await getStrongholdState();
-    const value = await store.get(strongholdKey(key));
+    try {
+      const { store } = await getStrongholdState();
+      const value = await store.get(strongholdKey(key));
 
-    if (value !== null) {
-      return new TextDecoder().decode(value);
+      if (value !== null) {
+        return new TextDecoder().decode(value);
+      }
+
+      const legacyValue = localGetItem(key);
+      if (legacyValue !== null) {
+        try {
+          await writeStrongholdItem(key, legacyValue);
+        } catch (error) {
+          logStrongholdFallback("migration", error);
+        }
+      }
+
+      return legacyValue;
+    } catch (error) {
+      logStrongholdFallback("read", error);
+      return localGetItem(key);
     }
-
-    const legacyValue = localGetItem(key);
-    if (legacyValue !== null) {
-      await writeStrongholdItem(key, legacyValue);
-    }
-
-    return legacyValue;
   },
   async setItem(key, value) {
     if (!isTauri()) {
@@ -108,7 +124,12 @@ export const secureAuthStorage: AuthStorage = {
       return;
     }
 
-    await writeStrongholdItem(key, value);
+    try {
+      await writeStrongholdItem(key, value);
+    } catch (error) {
+      logStrongholdFallback("write", error);
+      localSetItem(key, value);
+    }
   },
   async removeItem(key) {
     if (!isTauri()) {
@@ -116,6 +137,11 @@ export const secureAuthStorage: AuthStorage = {
       return;
     }
 
-    await removeStrongholdItem(key);
+    try {
+      await removeStrongholdItem(key);
+    } catch (error) {
+      logStrongholdFallback("remove", error);
+      localRemoveItem(key);
+    }
   },
 };

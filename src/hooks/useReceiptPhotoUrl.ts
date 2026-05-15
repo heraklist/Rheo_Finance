@@ -19,18 +19,21 @@ export function useReceiptPhotoUrl(
       };
     }
 
-    void getReceiptPhotoObjectUrl(path, transactionId)
-      .then((value) => {
+    async function loadPhotoUrl() {
+      try {
+        const value = await getReceiptPhotoObjectUrl(path, transactionId);
         nextUrl = value;
         if (active) {
           setUrl(value);
         } else if (value) {
           URL.revokeObjectURL(value);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Failed to load receipt photo:", err);
-      });
+      }
+    }
+
+    void loadPhotoUrl();
 
     return () => {
       active = false;

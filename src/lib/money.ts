@@ -30,6 +30,8 @@ export function parseGreekAmount(input: string): number | null {
     if (dots > 1) {
       if (!hasValidThousandsGroups(trimmed)) return null;
       normalized = trimmed.replace(/\./g, "");
+    } else if (hasValidThousandsGroups(trimmed)) {
+      normalized = trimmed.replace(/\./g, "");
     } else {
       normalized = trimmed;
     }

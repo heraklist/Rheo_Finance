@@ -4,6 +4,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 
 import { getDb } from "@/lib/db";
 import type { CategoryType } from "@/lib/types";
+import { round2 } from "@/lib/utils";
 import { type WorkbookSheet, createXlsxWorkbook } from "@/lib/xlsx";
 
 export type ExportBookScope = "business" | "personal" | "both";
@@ -203,10 +204,10 @@ function transactionsSheet(rows: ExportTransactionRow[]): WorkbookSheet {
         row.tag_name ?? "",
         row.description,
         row.payment_method,
-        row.amount_gross,
-        row.vat_rate * 100,
-        row.amount_vat,
-        row.amount_net,
+        round2(row.amount_gross),
+        round2(row.vat_rate * 100),
+        round2(row.amount_vat),
+        round2(row.amount_net),
         row.receipt_photo_path ? "Ναι" : "Όχι",
         row.recurring_template_id ? "Ναι" : "Όχι",
         row.notes ?? "",
@@ -236,9 +237,9 @@ function vatSummarySheet(rows: ExportTransactionRow[]): WorkbookSheet {
         count: 0,
       } satisfies VatBucket);
 
-    if (row.category_type === "income") bucket.output += row.amount_vat;
-    if (row.category_type === "expense") bucket.input += row.amount_vat;
-    bucket.net = bucket.output - bucket.input;
+    if (row.category_type === "income") bucket.output = round2(bucket.output + row.amount_vat);
+    if (row.category_type === "expense") bucket.input = round2(bucket.input + row.amount_vat);
+    bucket.net = round2(bucket.output - bucket.input);
     bucket.count++;
     buckets.set(key, bucket);
   }
@@ -282,7 +283,7 @@ function categoriesBreakdownSheet(
       } satisfies { label: string; type: string; book: string; values: Map<string, number> });
     const month = row.date.slice(0, 7);
     const current = bucket.values.get(month) ?? 0;
-    bucket.values.set(month, current + row.amount_gross);
+    bucket.values.set(month, round2(current + row.amount_gross));
     buckets.set(key, bucket);
   }
 
@@ -292,7 +293,7 @@ function categoriesBreakdownSheet(
       ["Book", "Κατηγορία", "Τύπος", ...months.map(monthLabel), "Σύνολο"],
       ...Array.from(buckets.values()).map((bucket) => {
         const values = months.map((month) => bucket.values.get(month) ?? 0);
-        const total = values.reduce((sum, value) => sum + value, 0);
+        const total = round2(values.reduce((sum, value) => sum + value, 0));
         return [bucket.book, bucket.label, bucket.type, ...values, total];
       }),
     ],
