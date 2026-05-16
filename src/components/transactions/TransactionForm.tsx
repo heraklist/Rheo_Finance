@@ -384,7 +384,7 @@ export function TransactionForm({
         ) : null}
       </div>
 
-      <div className="shrink-0 p-4 bg-cream border-t border-border-light">
+      <div className="bottom-action-bar shrink-0 p-4 bg-cream border-t border-border-light">
         <button
           type="button"
           onClick={handleSubmit}

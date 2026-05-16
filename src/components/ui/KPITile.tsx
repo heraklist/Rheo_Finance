@@ -36,7 +36,7 @@ export function KPITile({
         accent === "expense" && "is-expense",
       )}
     >
-      <div className="text-label uppercase text-text-muted">{label}</div>
+      <div className="truncate text-label uppercase text-text-muted">{label}</div>
       {loading ? (
         <div className="skel h-7 w-3/5" />
       ) : (

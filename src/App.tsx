@@ -41,6 +41,23 @@ const router = createBrowserRouter([
   },
 ]);
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function App() {
   const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
   useAutoBackupWorker();
@@ -57,7 +74,20 @@ export function App() {
       }
 
       setMfaStatus(false, true);
-      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      let result: Awaited<ReturnType<typeof supabase.auth.mfa.getAuthenticatorAssuranceLevel>>;
+      try {
+        result = await withTimeout(
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          5000,
+          "MFA status check timed out",
+        );
+      } catch (err) {
+        console.error("Failed to check MFA status:", err);
+        if (!cancelled) setMfaStatus(false, false);
+        return;
+      }
+
+      const { data, error } = result;
 
       if (cancelled) return;
 

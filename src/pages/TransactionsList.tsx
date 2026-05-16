@@ -206,8 +206,8 @@ export function TransactionsList() {
 
   return (
     <div className="px-4 pb-24 pt-4">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-light">
-        <div>
+      <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-border-light">
+        <div className="min-w-0">
           <h1 className="text-h2">Συναλλαγές</h1>
           <p className="text-caption mt-0.5">{bookLabel(currentBookId)}</p>
         </div>

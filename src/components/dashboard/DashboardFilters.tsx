@@ -43,13 +43,13 @@ export function DashboardFilters({
   onPickerYearChange,
 }: DashboardFiltersProps) {
   return (
-    <div className="flex gap-2 mb-6 pb-4 border-b border-border-light">
+    <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-border-light">
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className="chip active py-2 px-3">
-            <Calendar className="w-3 h-3" strokeWidth={2} />
-            {selectedRange.label}
-            <ChevronDown className="w-3 h-3" strokeWidth={2} />
+          <button type="button" className="chip active max-w-full min-w-0 py-2 px-3">
+            <Calendar className="h-3 w-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">{selectedRange.label}</span>
+            <ChevronDown className="h-3 w-3 shrink-0" strokeWidth={2} />
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -175,9 +175,9 @@ export function DashboardFilters({
 
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className="chip py-2 px-3">
-            {bookLabel(bookFilter)}
-            <ChevronDown className="w-3 h-3" strokeWidth={2} />
+          <button type="button" className="chip max-w-full min-w-0 py-2 px-3">
+            <span className="truncate">{bookLabel(bookFilter)}</span>
+            <ChevronDown className="h-3 w-3 shrink-0" strokeWidth={2} />
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-64 border-border-light bg-cream p-1.5">

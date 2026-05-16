@@ -287,7 +287,7 @@ export function CategorySettings() {
 
   return (
     <div className="px-4 pb-24 pt-4">
-      <div className="topbar -mx-4 -mt-4 mb-4">
+      <div className="topbar flow-topbar -mx-4 -mt-4 mb-4">
         <div className="flex items-center gap-3">
           <Link to="/settings" aria-label="Πίσω" className="text-charcoal">
             <ArrowLeft className="h-5 w-5" strokeWidth={1.5} />

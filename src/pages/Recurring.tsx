@@ -233,8 +233,8 @@ export function Recurring() {
 
   return (
     <div className="px-4 pb-24 pt-4">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-light">
-        <div>
+      <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-border-light">
+        <div className="min-w-0">
           <h1 className="text-h2">Πάγια</h1>
           <p className="text-caption mt-0.5">Επαναλαμβανόμενες εγγραφές</p>
         </div>
@@ -360,13 +360,13 @@ export function Recurring() {
                 </div>
               </button>
 
-              <div className="flex items-center justify-between border-t border-border-light px-4 py-2.5">
-                <span className="text-caption text-text-muted">
+              <div className="flex items-center justify-between gap-3 border-t border-border-light px-4 py-2.5">
+                <span className="min-w-0 truncate text-caption text-text-muted">
                   {template.last_generated
                     ? `Τελευταίο: ${formatDateRelative(template.last_generated)}`
                     : "Δεν έχει δημιουργηθεί ακόμα"}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {

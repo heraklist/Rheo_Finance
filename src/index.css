@@ -38,6 +38,8 @@
   body,
   #root {
     height: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -46,6 +48,12 @@
     font-size: 14px;
     line-height: 1.45;
     font-feature-settings: "ss01", "cv11";
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  main {
+    min-width: 0;
   }
 
   /* tabular-nums on all numeric elements via class */
@@ -78,6 +86,7 @@
 
   .kpi-value {
     @apply text-num-xl text-text-primary leading-none;
+    overflow-wrap: anywhere;
   }
 
   .kpi-tile.is-income .kpi-value {
@@ -119,6 +128,7 @@
   .tx-row {
     @apply flex items-center gap-3 px-3.5 py-3;
     @apply border-b border-border-light last:border-b-0;
+    @apply min-w-0;
   }
 
   .tx-thumb {
@@ -128,7 +138,7 @@
   }
 
   .tx-amount {
-    @apply text-sm font-semibold whitespace-nowrap;
+    @apply max-w-[42%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-sm font-semibold;
     font-variant-numeric: tabular-nums;
   }
 
@@ -152,6 +162,8 @@
     @apply bg-charcoal text-text-on-dark border-0 cursor-pointer;
     @apply flex items-center justify-center shadow-soft;
     @apply transition-transform duration-150 hover:-translate-y-px;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 
   /* Brand mark */
@@ -168,6 +180,15 @@
   .topbar {
     @apply flex items-center justify-between px-4 py-3.5;
     @apply border-b border-border-light bg-cream;
+  }
+
+  .app-topbar,
+  .flow-topbar {
+    padding-top: max(0.875rem, env(safe-area-inset-top));
+  }
+
+  .bottom-action-bar {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 
   /* Form labels (uppercase with letter spacing) */

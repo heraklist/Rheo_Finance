@@ -71,8 +71,8 @@ export function Forecast() {
 
   return (
     <div className="px-4 pb-24 pt-4">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border-light">
-        <div>
+      <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-border-light">
+        <div className="min-w-0">
           <h1 className="text-h2">Πρόβλεψη</h1>
           <p className="text-caption mt-0.5">Προβολή cashflow 12 μηνών</p>
         </div>
@@ -154,46 +154,52 @@ export function Forecast() {
         </div>
       ) : forecast ? (
         <section className="overflow-hidden rounded-md border border-border-light bg-cream">
-          <div className="grid grid-cols-[1.15fr_0.9fr_0.9fr_0.9fr_1fr] gap-2 border-b border-border-light bg-sand px-3 py-2 text-[11px] font-semibold uppercase text-text-muted">
-            <span>Μήνας</span>
-            <span className="text-right">Έσοδα</span>
-            <span className="text-right">Έξοδα</span>
-            <span className="text-right">Καθαρό</span>
-            <span className="text-right">Σωρευτικό</span>
-          </div>
-          {forecast.months.map((month) => (
-            <div
-              key={month.month}
-              className="grid grid-cols-[1.15fr_0.9fr_0.9fr_0.9fr_1fr] gap-2 border-b border-border-light px-3 py-3 text-xs last:border-b-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-medium text-text-primary">{month.label}</p>
-                <p className="text-[10px] text-text-muted">
-                  Πάγια{" "}
-                  {formatEuro(month.recurringIncome - month.recurringExpense, {
-                    compact: true,
-                  })}
-                </p>
+          <div className="overflow-x-auto">
+            <div className="min-w-[560px]">
+              <div className="grid grid-cols-[1.15fr_0.9fr_0.9fr_0.9fr_1fr] gap-2 border-b border-border-light bg-sand px-3 py-2 text-[11px] font-semibold uppercase text-text-muted">
+                <span>Μήνας</span>
+                <span className="text-right">Έσοδα</span>
+                <span className="text-right">Έξοδα</span>
+                <span className="text-right">Καθαρό</span>
+                <span className="text-right">Σωρευτικό</span>
               </div>
-              <span className="text-right tabular-nums text-income">
-                {formatEuro(month.income, { compact: true })}
-              </span>
-              <span className="text-right tabular-nums text-expense">
-                {formatEuro(month.expense, { compact: true })}
-              </span>
-              <span className={cn("text-right tabular-nums font-medium", amountClass(month.net))}>
-                {formatEuro(month.net, { compact: true })}
-              </span>
-              <span
-                className={cn(
-                  "text-right tabular-nums font-semibold",
-                  amountClass(month.cumulative),
-                )}
-              >
-                {formatEuro(month.cumulative, { compact: true })}
-              </span>
+              {forecast.months.map((month) => (
+                <div
+                  key={month.month}
+                  className="grid grid-cols-[1.15fr_0.9fr_0.9fr_0.9fr_1fr] gap-2 border-b border-border-light px-3 py-3 text-xs last:border-b-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-text-primary">{month.label}</p>
+                    <p className="text-[10px] text-text-muted">
+                      Πάγια{" "}
+                      {formatEuro(month.recurringIncome - month.recurringExpense, {
+                        compact: true,
+                      })}
+                    </p>
+                  </div>
+                  <span className="text-right tabular-nums text-income">
+                    {formatEuro(month.income, { compact: true })}
+                  </span>
+                  <span className="text-right tabular-nums text-expense">
+                    {formatEuro(month.expense, { compact: true })}
+                  </span>
+                  <span
+                    className={cn("text-right tabular-nums font-medium", amountClass(month.net))}
+                  >
+                    {formatEuro(month.net, { compact: true })}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-right tabular-nums font-semibold",
+                      amountClass(month.cumulative),
+                    )}
+                  >
+                    {formatEuro(month.cumulative, { compact: true })}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </section>
       ) : null}
     </div>

@@ -135,7 +135,7 @@ export function TransactionDetail() {
   if (!transaction) {
     return (
       <div className="px-4 pb-24 pt-4">
-        <div className="topbar -mx-4 -mt-4 mb-4">
+        <div className="topbar flow-topbar -mx-4 -mt-4 mb-4">
           <Link to="/transactions" aria-label="Πίσω" className="text-charcoal">
             <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
           </Link>
@@ -161,7 +161,7 @@ export function TransactionDetail() {
   if (editing) {
     return (
       <div className="flex flex-col h-full">
-        <div className="topbar">
+        <div className="topbar flow-topbar">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -203,7 +203,7 @@ export function TransactionDetail() {
 
   return (
     <div className="px-4 pb-24 pt-4">
-      <div className="topbar -mx-4 -mt-4 mb-4">
+      <div className="topbar flow-topbar -mx-4 -mt-4 mb-4">
         <div className="flex items-center gap-3">
           <Link to="/transactions" aria-label="Πίσω" className="text-charcoal">
             <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />

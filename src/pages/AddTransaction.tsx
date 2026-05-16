@@ -15,8 +15,8 @@ export function AddTransaction() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-57px)] flex-col overflow-hidden">
-      <div className="topbar">
+    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden">
+      <div className="topbar flow-topbar">
         <div className="flex items-center gap-3">
           <Link to="/" aria-label="Πίσω" className="text-charcoal">
             <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />

@@ -11,6 +11,10 @@ export function AppLayout() {
   const { currentBookId, syncState, pendingCount } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const showVat = currentBookId === "book-business";
+  const hideAppHeader =
+    location.pathname === "/add" ||
+    location.pathname.startsWith("/transactions/") ||
+    location.pathname.startsWith("/settings/categories");
   const navItems = [
     {
       to: "/recurring",
@@ -49,44 +53,15 @@ export function AppLayout() {
     !location.pathname.startsWith("/settings/categories");
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream">
-      <header className="topbar sticky top-0 z-10">
-        <Link to="/" aria-label="Αρχική">
-          <BrandMark />
-        </Link>
-        <div className="flex items-center gap-2">
-          <SyncPill status={syncState} pendingCount={pendingCount} />
-          <div className="hidden items-center gap-2 sm:flex">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = location.pathname.startsWith(item.to);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`p-1 rounded-md transition-colors ${
-                    active
-                      ? "bg-sand text-charcoal"
-                      : "text-text-secondary hover:text-charcoal hover:bg-sand"
-                  }`}
-                  aria-label={item.label}
-                >
-                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
-                </Link>
-              );
-            })}
-          </div>
-          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="rounded-md bg-sand p-1 text-charcoal transition-colors hover:bg-cream sm:hidden"
-                aria-label="Περισσότερα"
-              >
-                <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-64 border-border-light bg-cream p-1.5">
+    <div className="flex min-h-[100dvh] flex-col bg-cream">
+      {!hideAppHeader ? (
+        <header className="topbar app-topbar sticky top-0 z-10">
+          <Link to="/" aria-label="Αρχική">
+            <BrandMark />
+          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <SyncPill status={syncState} pendingCount={pendingCount} />
+            <div className="hidden items-center gap-2 sm:flex">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = location.pathname.startsWith(item.to);
@@ -94,27 +69,58 @@ export function AppLayout() {
                   <Link
                     key={item.to}
                     to={item.to}
-                    onClick={() => setMenuOpen(false)}
-                    className={`flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors ${
-                      active ? "bg-sand text-charcoal" : "text-text-secondary hover:bg-sand"
+                    className={`p-1 rounded-md transition-colors ${
+                      active
+                        ? "bg-sand text-charcoal"
+                        : "text-text-secondary hover:text-charcoal hover:bg-sand"
                     }`}
+                    aria-label={item.label}
                   >
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-light bg-sand text-charcoal">
-                      <Icon className="h-4 w-4" strokeWidth={1.6} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-text-primary">
-                        {item.label}
-                      </span>
-                      <span className="block text-caption">{item.description}</span>
-                    </span>
+                    <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
                   </Link>
                 );
               })}
-            </PopoverContent>
-          </Popover>
-        </div>
-      </header>
+            </div>
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-md bg-sand p-1 text-charcoal transition-colors hover:bg-cream sm:hidden"
+                  aria-label="Περισσότερα"
+                >
+                  <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64 border-border-light bg-cream p-1.5">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = location.pathname.startsWith(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMenuOpen(false)}
+                      className={`flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors ${
+                        active ? "bg-sand text-charcoal" : "text-text-secondary hover:bg-sand"
+                      }`}
+                    >
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-light bg-sand text-charcoal">
+                        <Icon className="h-4 w-4" strokeWidth={1.6} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-text-primary">
+                          {item.label}
+                        </span>
+                        <span className="block text-caption">{item.description}</span>
+                      </span>
+                    </Link>
+                  );
+                })}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </header>
+      ) : null}
 
       <main className="flex-1">
         <Outlet />

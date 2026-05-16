@@ -220,7 +220,7 @@ export function RecurringForm({
   }
 
   return (
-    <div className="flex h-[calc(100vh-57px)] flex-col overflow-hidden">
+    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden">
       <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
         <div className="flex items-center justify-between rounded-md border border-border-light bg-cream p-3">
           <div className="flex items-center gap-2.5">
@@ -400,7 +400,7 @@ export function RecurringForm({
         ) : null}
       </div>
 
-      <div className="shrink-0 grid grid-cols-[1fr_1.5fr] gap-2 p-4 bg-cream border-t border-border-light">
+      <div className="bottom-action-bar shrink-0 grid grid-cols-[1fr_1.5fr] gap-2 p-4 bg-cream border-t border-border-light">
         <button
           type="button"
           onClick={onCancel}

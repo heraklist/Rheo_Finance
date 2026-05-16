@@ -29,9 +29,12 @@ export function SyncPill({ status = "synced", pendingCount, className }: SyncPil
     label = `Offline · ${pendingCount} ${pendingCount === 1 ? "αλλαγή" : "αλλαγές"}`;
   }
   return (
-    <span className={cn("sync-pill", status, className)}>
-      <Icon className={cn("w-3 h-3", status === "syncing" && "animate-spin")} strokeWidth={2} />
-      {label}
+    <span className={cn("sync-pill max-w-[9.5rem] min-w-0 sm:max-w-none", status, className)}>
+      <Icon
+        className={cn("h-3 w-3 shrink-0", status === "syncing" && "animate-spin")}
+        strokeWidth={2}
+      />
+      <span className="truncate">{label}</span>
     </span>
   );
 }

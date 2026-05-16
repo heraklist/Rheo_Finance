@@ -40,7 +40,7 @@ export function TransactionRow({ tx, onClick }: TransactionRowProps) {
         <div className="text-sm font-medium text-text-primary truncate mb-0.5">
           {tx.description}
         </div>
-        <div className="text-caption text-text-muted">
+        <div className="truncate text-caption text-text-muted">
           {tx.category_name}
           {accountName && ` · ${accountName}`}
           {` · ${formatDateRelative(tx.date)}`}
