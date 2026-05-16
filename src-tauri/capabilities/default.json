@@ -14,7 +14,11 @@
     "updater:default",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$APPDATA/receipts/**" }, { "path": "$DOCUMENT/Evochia_Backups/**" }]
+      "allow": [
+        { "path": "$APPDATA/receipts/**" },
+        { "path": "$DOCUMENT/Evochia_Backups" },
+        { "path": "$DOCUMENT/Evochia_Backups/**" }
+      ]
     },
     "fs:allow-read-file",
     "fs:allow-write-file",

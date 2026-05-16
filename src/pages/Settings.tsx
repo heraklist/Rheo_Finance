@@ -20,7 +20,7 @@ import {
   resolveExportPeriod,
 } from "@/components/settings/settingsOptions";
 import { deleteCurrentAccount } from "@/lib/account";
-import { createJsonBackup, getLastAutoBackupAt } from "@/lib/backup";
+import { createJsonBackup, getLastAutoBackupAt, restoreFromBackupPath } from "@/lib/backup";
 import { normalizeCompanyName } from "@/lib/company";
 import { type ExportBookScope, currentQuarterPeriods, saveFinanceExport } from "@/lib/export";
 import { type EditableCategoryType, listCategoryCounts } from "@/lib/reference";
@@ -33,8 +33,14 @@ import {
   hasUpdaterGitHubToken,
   setUpdaterGitHubToken,
 } from "@/lib/updaterToken";
+import { documentDir, join } from "@tauri-apps/api/path";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+function messageFromError(err: unknown): string {
+  return err instanceof Error && err.message ? err.message : "Άγνωστο σφάλμα.";
+}
 
 export function Settings() {
   const {
@@ -70,6 +76,7 @@ export function Settings() {
   const [githubTokenSaved, setGithubTokenSaved] = useState(false);
   const [githubTokenMessage, setGithubTokenMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
+  const [restoreRunning, setRestoreRunning] = useState(false);
   const [exportRunning, setExportRunning] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -255,9 +262,50 @@ export function Settings() {
       setBackupMessage(`Δημιουργήθηκε backup: ${result.path}`);
     } catch (err) {
       console.error("Backup failed:", err);
-      setBackupMessage("Δεν δημιουργήθηκε backup.");
+      setBackupMessage(`Δεν δημιουργήθηκε backup: ${messageFromError(err)}`);
     } finally {
       setBackupRunning(false);
+    }
+  }
+
+  async function handleRestoreBackup() {
+    if (restoreRunning) return;
+
+    setRestoreRunning(true);
+    setBackupMessage("");
+
+    try {
+      const backupDir = await join(await documentDir(), "Evochia_Backups");
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        defaultPath: backupDir,
+        filters: [{ name: "Evochia Finance backup", extensions: ["json"] }],
+      });
+
+      if (!selected || Array.isArray(selected)) {
+        setBackupMessage("Η επαναφορά ακυρώθηκε.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Προσοχή: η επαναφορά θα αντικαταστήσει ΟΛΑ τα τοπικά δεδομένα. Συνέχεια;",
+      );
+      if (!confirmed) {
+        setBackupMessage("Η επαναφορά ακυρώθηκε.");
+        return;
+      }
+
+      const result = await restoreFromBackupPath(selected);
+      setBackupMessage(
+        `Η επαναφορά ολοκληρώθηκε: ${result.rowsRestored} εγγραφές σε ${result.tablesRestored} πίνακες. Η εφαρμογή θα ανανεωθεί.`,
+      );
+      window.setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      console.error("Restore backup failed:", err);
+      setBackupMessage(`Δεν έγινε επαναφορά: ${messageFromError(err)}`);
+    } finally {
+      setRestoreRunning(false);
     }
   }
 
@@ -388,8 +436,10 @@ export function Settings() {
         backupMessage={backupMessage}
         backupRunning={backupRunning}
         lastAutoBackupAt={lastAutoBackupAt}
+        restoreRunning={restoreRunning}
         onBackup={handleBackup}
         onAutoBackupChange={setAutoBackupEnabled}
+        onRestore={handleRestoreBackup}
       />
 
       <ExportSection

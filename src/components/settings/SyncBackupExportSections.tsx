@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import type { ExportBookScope, ExportPeriod } from "@/lib/export";
 import { formatDateRelative } from "@/lib/utils";
-import { DatabaseBackup, FileSpreadsheet, RefreshCcw, RotateCw } from "lucide-react";
+import { DatabaseBackup, FileSpreadsheet, RefreshCcw, RotateCw, Upload } from "lucide-react";
 
 type Option<T extends string | number> = { label: string; value: T };
 
@@ -83,8 +83,10 @@ interface BackupSectionProps {
   backupMessage: string;
   backupRunning: boolean;
   lastAutoBackupAt: string | null;
+  restoreRunning: boolean;
   onBackup: () => void;
   onAutoBackupChange: (enabled: boolean) => void;
+  onRestore: () => void;
 }
 
 export function BackupSection({
@@ -92,8 +94,10 @@ export function BackupSection({
   backupMessage,
   backupRunning,
   lastAutoBackupAt,
+  restoreRunning,
   onBackup,
   onAutoBackupChange,
+  onRestore,
 }: BackupSectionProps) {
   return (
     <section className={sectionClassName()}>
@@ -114,6 +118,15 @@ export function BackupSection({
           <DatabaseBackup className="w-4 h-4" strokeWidth={1.7} />
           {backupRunning ? "Backup..." : "Δημιουργία backup"}
         </button>
+        <button
+          type="button"
+          onClick={onRestore}
+          disabled={restoreRunning}
+          className="inline-flex items-center gap-2 rounded-md border border-border-light px-3 py-2 text-sm font-medium text-charcoal disabled:opacity-50"
+        >
+          <Upload className="w-4 h-4" strokeWidth={1.7} />
+          {restoreRunning ? "Επαναφορά..." : "Επαναφορά από backup"}
+        </button>
         <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
           <input
             type="checkbox"
@@ -132,8 +145,7 @@ export function BackupSection({
         </p>
       ) : null}
       <p className="text-caption mt-3 text-text-muted">
-        Restore από backup θα μπει σε ξεχωριστό ασφαλές flow για να αποφύγουμε κατά λάθος απώλεια
-        δεδομένων.
+        Η επαναφορά αντικαθιστά τα τοπικά δεδομένα μετά από επιβεβαίωση.
       </p>
     </section>
   );
