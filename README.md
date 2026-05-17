@@ -1,4 +1,4 @@
-# Evochia Finance
+# Rheo — Financial flow under control
 
 Local-first διαχείριση οικονομικών για το Evochia (επαγγελματικά + προσωπικά).
 Tauri 2 + React + TypeScript + Tailwind + SQLite.
