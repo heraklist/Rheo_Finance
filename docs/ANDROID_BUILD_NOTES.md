@@ -9,14 +9,14 @@ Updated: 2026-05-15
 - SDK packages installed: platform-tools, Android API 35/36, build-tools 35/36, NDK `27.3.13750724`.
 - Rust Android targets installed: `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`, `x86_64-linux-android`.
 - `corepack pnpm tauri android init` generated `src-tauri/gen/android/`.
-- Arm64 debug APK built successfully for v0.2.4:
+- Arm64 debug APK built successfully for v0.2.5:
   `src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk`
-- APK metadata verified with `aapt`: package `gr.evochia.finance`, `versionName=0.2.4`,
-  `versionCode=2004`, `minSdk=24`, `targetSdk=36`, native code `arm64-v8a`.
+- APK metadata verified with `aapt`: package `app.rheo.finance`, `versionName=0.2.5`,
+  `versionCode=2005`, `minSdk=24`, `targetSdk=36`, native code `arm64-v8a`.
 - Stronghold and updater are desktop-only in Rust. Android currently uses the existing
   frontend `localStorage` fallback for Supabase auth/updater token storage.
 
-`src-tauri/gen/` is ignored by git, so the generated Gradle project and APK are local build artifacts.
+`src-tauri/gen/` is ignored by git, so the generated Gradle project and APK are local build artifacts. After changing the package identifier, delete `src-tauri/gen/android` and run `tauri android init` again so the generated Java package tree matches `app.rheo.finance`.
 
 ## Environment
 
@@ -51,10 +51,10 @@ On this Windows machine the Rust library compiled, but Tauri failed when creatin
 Temporary workaround used after the Rust `.so` was built:
 
 ```powershell
-$src = "src-tauri\target\aarch64-linux-android\debug\libevochia_finance_lib.so"
+$src = "src-tauri\target\aarch64-linux-android\debug\librheo_finance_lib.so"
 $destDir = "src-tauri\gen\android\app\src\main\jniLibs\arm64-v8a"
 New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-Copy-Item -LiteralPath $src -Destination (Join-Path $destDir "libevochia_finance_lib.so") -Force
+Copy-Item -LiteralPath $src -Destination (Join-Path $destDir "librheo_finance_lib.so") -Force
 
 Set-Location "src-tauri\gen\android"
 .\gradlew.bat :app:assembleArm64Debug -x :app:rustBuildArm64Debug
@@ -66,16 +66,11 @@ The APK output is:
 src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk
 ```
 
-Current v0.2.4 debug build used that workaround successfully.
+Current v0.2.5 debug build used that workaround successfully.
 
 ## Sideload
 
-No Android device was attached/authorized during the build check:
-
-```text
-adb devices -l
-List of devices attached
-```
+Latest wireless ADB smoke used device `CPH2609` with package `app.rheo.finance`.
 
 When the device is connected with USB debugging enabled:
 
@@ -91,7 +86,7 @@ Release APK signing is intentionally not configured yet because it needs a priva
 Create the keystore once, then back it up in a password manager:
 
 ```powershell
-keytool -genkeypair -v -keystore evochia-release.jks -alias evochia -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkeypair -v -keystore rheo-release.jks -alias rheo -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 Do not commit the keystore or passwords. Suggested environment variables:

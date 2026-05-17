@@ -1,7 +1,13 @@
-# Rheo — Financial flow under control
+# Rheo Finance
 
-Local-first διαχείριση οικονομικών για το Evochia (επαγγελματικά + προσωπικά).
-Tauri 2 + React + TypeScript + Tailwind + SQLite.
+> Financial flow under control.
+> Local-first finance management for independent professionals.
+
+A desktop and Android app for freelancers, small businesses, creators, and
+self-employed professionals to track income, expenses, receipts, VAT, and
+cashflow — without heavy accounting software.
+
+Tauri 2 + React + TypeScript + Tailwind + SQLite + Supabase.
 
 ---
 
@@ -91,7 +97,7 @@ Output σε `src-tauri/target/release/bundle/`.
 ## Project structure
 
 ```
-evochia_finance/
+rheo-finance/
 ├── package.json                    # JS deps + scripts
 ├── tsconfig.json                   # TypeScript strict config
 ├── tailwind.config.ts              # Tokens mapped to Tailwind theme
@@ -204,8 +210,15 @@ To change a color: update both. Or remove duplication later by importing tokens 
 
 - [Project Plan v1.1](./docs/Evochia_Finance_Project_Plan_v1.1.md) — full architecture
 - [Claude Design Brief](./docs/Claude_Design_Brief.md) — visual direction
-- Original Excel V2: `Evochia_Finance_v2.xlsx` (legacy reference)
 
 ---
 
-*Owner: Heraklis · Repository: heraklist/evochia_finance · Domain: finance.evochia.gr*
+## About
+
+Rheo started as an internal tool for Evochia (premium private chef + catering, Athens).
+It evolved into an independent product as the patterns generalized to other
+independent professionals. Built by Heraklis.
+
+---
+
+*Owner: Heraklis · Repository: heraklist/Rheo_Finance*

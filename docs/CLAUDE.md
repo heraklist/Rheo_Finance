@@ -6,15 +6,21 @@
 
 ## TL;DR
 
-**Project:** Evochia Finance — Tauri 2 desktop + Android app για local-first οικονομική διαχείριση στον χώρο της εστίασης.
+**Project:** Rheo Finance — Tauri 2 desktop + Android app για διαχείριση
+οικονομικών independent professionals (freelancers, creators, small business).
+
+**Story:** Ξεκίνησε ως internal tool για το Evochia (Heraklis's catering brand,
+Athens), εξελίχθηκε σε ανεξάρτητο προϊόν.
 
 **Owner:** Heraklis, Greek-speaking, με dev background. Θέλει concrete deliverables, όχι ατελείωτο planning.
 
-**Current state:** v0.2.4 release candidate. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token. Android arm64 debug APK builds locally.
+**Current state:** Rheo Finance v0.2.5. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token. Android arm64 debug APK builds locally.
 
-**Repo:** `github.com/heraklist/evochia_finance` private.
+**Repo:** `github.com/heraklist/Rheo_Finance` private.
 
-**BrandMark locked:** `◆ Finance`. Μην το αλλάξεις σε `Evochia Finance`.
+**App identifier/package:** `app.rheo.finance`.
+
+**BrandMark locked:** `◆ Rheo`. Μην το αλλάξεις.
 
 ---
 
@@ -22,7 +28,7 @@
 
 1. `AGENTS.md`
 2. `docs/CODEX_HANDOFF.md`
-3. `docs/Evochia_Finance_Project_Plan_v1.1.md`
+3. `docs/Evochia_Finance_Project_Plan_v1.1.md` (legacy name, content still valid)
 4. `docs/Claude_Design_Brief.md`
 5. Latest QA report in `docs/QA_FINAL_*.md`
 6. Active session prompt
@@ -45,8 +51,9 @@
 | Secure local auth storage | Tauri Stronghold with localStorage fallback |
 | Distribution | Manual sideload + signed GitHub Releases |
 | Updater | GitHub Releases `latest.json`; private repo uses user-provided read token |
+| App identifier/package | `app.rheo.finance` |
 | Repo visibility | Private |
-| Brand mark | `◆ Finance` |
+| Brand mark | `◆ Rheo` |
 | iOS | Not in scope |
 
 Do not reopen these unless Heraklis explicitly asks.
@@ -75,7 +82,7 @@ Do not reopen these unless Heraklis explicitly asks.
 
 ## Current Release State
 
-Source version is `0.2.4` in:
+Source version is `0.2.5` in:
 
 - `package.json`
 - `src-tauri/Cargo.toml`
@@ -92,7 +99,7 @@ Pre-release QA fixed:
 - Stronghold read/write/remove fallback to localStorage on failure.
 - Android build excludes Stronghold/updater Rust plugins to avoid mobile cross-compile blockers.
 
-Before shipping a public/manual installer, create/push tag `v0.2.4`, wait for GitHub Actions release, install that artifact, then smoke test updater.
+Before shipping a public/manual installer, create/push tag `v0.2.5`, wait for GitHub Actions release, install that artifact, then smoke test updater.
 
 ---
 
@@ -119,7 +126,7 @@ Before shipping a public/manual installer, create/push tag `v0.2.4`, wait for Gi
 - Cards use borders and sand/cream backgrounds, not drop shadows.
 - Use lucide icons for icon actions.
 - No landing pages inside the app. Build usable screens.
-- BrandMark stays `◆ Finance`.
+- BrandMark stays `◆ Rheo`.
 
 ---
 
@@ -147,8 +154,8 @@ cargo check
 Release:
 
 ```bash
-git tag v0.2.4
-git push origin v0.2.4
+git tag v0.2.5
+git push origin v0.2.5
 ```
 
 The `release.yml` workflow creates the signed GitHub Release and `latest.json`.

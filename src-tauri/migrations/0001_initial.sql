@@ -1,4 +1,4 @@
--- Evochia Finance: initial schema migration
+-- Rheo Finance: initial schema migration
 -- Local SQLite version (mirror of Postgres + sync columns)
 
 -- ============================================================

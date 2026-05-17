@@ -118,7 +118,7 @@ export function BackupSection({
   onGoogleDriveBackup,
   onRestore,
 }: BackupSectionProps) {
-  const backupDirectoryLabel = backupDirectory ?? "Documents/Evochia_Backups";
+  const backupDirectoryLabel = backupDirectory ?? "Documents/Rheo_Backups";
   const backupDirectoryState = backupDirectory
     ? "Προσαρμοσμένος φάκελος"
     : "Προεπιλεγμένος φάκελος";

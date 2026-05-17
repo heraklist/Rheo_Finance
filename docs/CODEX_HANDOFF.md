@@ -1,4 +1,4 @@
-# Codex Handoff — Evochia Finance
+# Codex Handoff — Rheo Finance
 
 > **Σκοπός:** Αυτό το έγγραφο επιτρέπει σε έναν fresh coding agent (Codex, Claude Code, ή οποιονδήποτε άλλο) να συνεχίσει το project από εκεί που είμαστε τώρα. Διάβασέ το ολόκληρο πριν γράψεις κώδικα.
 
@@ -219,7 +219,7 @@ pnpm tauri:dev
 - Dates: `formatDateRelative()` ("Σήμερα", "Χθες", ή "06 Μαΐ")
 
 ### Brand
-- BrandMark είναι **σκοπίμως** μόνο "◆ Finance" (χωρίς "Evochia"). Ο Heraklis το ζήτησε ρητά. Μην το αλλάξεις.
+- BrandMark είναι **σκοπίμως** μόνο "◆ Rheo". Μην το αλλάξεις.
 - Παλέτα: charcoal/gold/cream + functional (income green, expense red). Μην προσθέσεις άλλα colors.
 
 ### Conventions ονομάτων
@@ -309,7 +309,7 @@ pnpm tauri:dev
 - Ολοκλήρωσε **πλήρως** ένα feature πριν προχωρήσεις στο επόμενο
 - ΟΧΙ "θα το τελειώσω αργότερα" στιλ — αν δεν είναι ready, μην το merge-άρεις
 - Test σε πραγματικό device όπου εφικτό
-- Tag releases (`v0.1.0`, `v0.2.0`...) όταν ζωντανεύει νέο feature
+- Tag releases (`v0.2.5`, `v0.2.6`...) όταν ζωντανεύει νέο feature
 
 ---
 
@@ -328,10 +328,10 @@ pnpm tauri:dev
 | Auth | Email/password + TOTP MFA |
 | Local DB | SQLite via tauri-plugin-sql |
 | Domain | finance.evochia.gr |
-| Repo | heraklist/evochia_finance (private) |
+| Repo | heraklist/Rheo_Finance (private) |
 | Distribution | Sideload για Heraklis (no Google Play) |
 | Greek-first UI | ναι |
-| Brand mark | "◆ Finance" (χωρίς "Evochia") |
+| Brand mark | "◆ Rheo" |
 | Excel export | ναι, Phase 4, για λογιστή |
 
 ---

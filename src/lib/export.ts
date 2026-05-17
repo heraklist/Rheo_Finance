@@ -320,7 +320,7 @@ export async function saveFinanceExport(
 ): Promise<FinanceExportResult | null> {
   const rows = await loadExportRows(options);
   const workbook = buildWorkbook(rows, options);
-  const fileName = `evochia-${options.bookScope}-${safeFilePart(options.period.label)}.xlsx`;
+  const fileName = `rheo-${options.bookScope}-${safeFilePart(options.period.label)}.xlsx`;
   const defaultPath = await join(await downloadDir(), fileName);
   const path = await save({
     defaultPath,

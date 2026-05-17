@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Evochia Finance",
+  "productName": "Rheo Finance",
   "version": "0.2.5",
-  "identifier": "gr.evochia.finance",
+  "identifier": "app.rheo.finance",
   "build": {
     "beforeDevCommand": "corepack pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Finance",
+        "title": "Rheo Finance",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -39,19 +39,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "Evochia",
-    "copyright": "© 2026 Heraklis · Evochia",
+    "publisher": "Rheo",
+    "copyright": "Copyright © 2026 Heraklis. All rights reserved.",
     "category": "Finance",
-    "shortDescription": "Local-first διαχείριση οικονομικών",
-    "longDescription": "Native app για διαχείριση των οικονομικών του Evochia (επαγγελματικά + προσωπικά). Local-first με sync σε cloud."
+    "shortDescription": "Local-first finance for independent professionals",
+    "longDescription": "Native app for freelancers, small businesses, and independent professionals to track income, expenses, receipts, VAT, and cashflow. Local-first with cloud sync."
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:evochia.db"]
+      "preload": ["sqlite:rheo.db"]
     },
     "updater": {
       "endpoints": [
-        "https://github.com/heraklist/evochia_finance/releases/latest/download/latest.json"
+        "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlCRDQ4NEU3ODJCMThGQTMKUldTamo3R0M1NFRVbXhmWHpVM0hVeDNQNG53L0VTT0FTdzRKck1ERzFmQytUZkJvd3ZpQVBqL1MK"
     }

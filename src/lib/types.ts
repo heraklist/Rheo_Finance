@@ -1,4 +1,4 @@
-// Evochia Finance — entity type definitions
+// Rheo Finance — entity type definitions
 
 export type SyncStatus = "pending" | "synced" | "error";
 

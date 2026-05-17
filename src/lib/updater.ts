@@ -30,7 +30,7 @@ interface TauriLatestJson {
   version?: string;
 }
 
-const GITHUB_API_BASE = "https://api.github.com/repos/heraklist/evochia_finance";
+const GITHUB_API_BASE = "https://api.github.com/repos/heraklist/Rheo_Finance";
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;

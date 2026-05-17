@@ -7,7 +7,15 @@ export function useDisplayAccountName(): (value: string | null | undefined) => s
   const companyName = useCompanyName();
 
   return useCallback(
-    (value) => (value ? replaceCompanyToken(value, companyName) : ""),
+    (value) => {
+      if (!value) return "";
+      // If user has a company name set, replace the Rheo token with it.
+      // If empty (new users), keep the stored name as-is.
+      if (companyName.trim()) {
+        return replaceCompanyToken(value, companyName);
+      }
+      return value;
+    },
     [companyName],
   );
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/android-schema.json",
   "identifier": "android",
-  "description": "Android permissions for Evochia Finance",
+  "description": "Android permissions for Rheo Finance",
   "platforms": ["android"],
   "windows": ["main"],
   "permissions": [
@@ -13,8 +13,8 @@
       "identifier": "fs:scope",
       "allow": [
         { "path": "$APPDATA/receipts/**" },
-        { "path": "$DOCUMENT/Evochia_Backups" },
-        { "path": "$DOCUMENT/Evochia_Backups/**" }
+        { "path": "$DOCUMENT/Rheo_Backups" },
+        { "path": "$DOCUMENT/Rheo_Backups/**" }
       ]
     },
     "fs:allow-read-file",

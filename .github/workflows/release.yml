@@ -51,8 +51,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         with:
           tagName: v__VERSION__
-          releaseName: Evochia Finance v__VERSION__
-          releaseBody: Signed Evochia Finance desktop release. Upload includes installer, signature, and latest.json for the Tauri updater.
+          releaseName: Rheo Finance v__VERSION__
+          releaseBody: Signed Rheo Finance desktop release. Upload includes installer, signature, and latest.json for the Tauri updater.
           releaseDraft: false
           prerelease: false
           tauriScript: pnpm tauri

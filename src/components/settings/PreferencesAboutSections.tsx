@@ -122,7 +122,6 @@ export function PreferencesSection({
 interface AboutSectionProps {
   appVersion: string;
   checkingUpdate: boolean;
-  displayCompanyName: string;
   githubTokenDraft: string;
   githubTokenMessage: string;
   githubTokenSaved: boolean;
@@ -137,7 +136,6 @@ interface AboutSectionProps {
 export function AboutSection({
   appVersion,
   checkingUpdate,
-  displayCompanyName,
   githubTokenDraft,
   githubTokenMessage,
   githubTokenSaved,
@@ -153,22 +151,22 @@ export function AboutSection({
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="text-h3">Σχετικά</h2>
-          <p className="text-caption mt-1">Finance v{appVersion}</p>
+          <p className="text-caption mt-1">Rheo Finance v{appVersion}</p>
         </div>
         <Info className="w-5 h-5 text-gold" strokeWidth={1.7} />
       </div>
       <div className="space-y-3 text-sm">
         <button
           type="button"
-          onClick={() => window.open("https://github.com/heraklist/evochia_finance", "_blank")}
+          onClick={() => window.open("https://github.com/heraklist/Rheo_Finance", "_blank")}
           className="inline-flex items-center gap-2 text-gold font-medium hover:underline"
         >
           <ExternalLink className="w-4 h-4" strokeWidth={1.7} />
-          Άνοιγμα repo για {displayCompanyName}
+          GitHub repo
         </button>
         <div className="flex items-start gap-2 text-text-muted">
           <ShieldAlert className="w-4 h-4 mt-0.5 text-gold" strokeWidth={1.7} />
-          <p>Άδεια: ιδιωτική χρήση Heraklis / {displayCompanyName}.</p>
+          <p>Άδεια: ιδιωτική χρήση Heraklis.</p>
         </div>
         <div className="rounded-md border border-border-light bg-sand p-3">
           <div className="mb-3 flex items-start gap-2 text-text-muted">

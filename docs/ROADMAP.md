@@ -1,4 +1,4 @@
-# Roadmap — Evochia Finance
+# Roadmap — Rheo Finance
 
 > Master index για την υπόλοιπη πορεία του project. Ενημερώνεται μετά από κάθε session.
 
@@ -20,6 +20,7 @@
 | 009 | VAT summary + Forecast | ✅ Done — VAT drill-down + 12-month cashflow |
 | 010 | Settings + Excel export + production polish | ✅ Done — settings, export, backup, CSP |
 | 011 | Android port + sideload | ✅ Done — toolchain + arm64 debug APK; sideload pending device |
+| v0.2.5 | Rheo rebrand + release refresh | ✅ In progress — product rebrand, `app.rheo.finance`, desktop/Android rebuild |
 
 **Legend:** ✅ Complete · ⏳ Pending detailed prompt · 📋 Skeleton (full prompt γράφεται when we get there)
 

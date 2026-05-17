@@ -68,14 +68,23 @@ export function BusinessSection({
   onEdit,
   onSave,
 }: BusinessSectionProps) {
+  const isEmpty = !displayCompanyName.trim();
+
   return (
     <section className={sectionClassName()}>
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-h3">Επιχείρηση</h2>
-          <p className="text-caption mt-1">
-            Το όνομα εμφανίζεται σε welcome copy και labels λογαριασμών.
-          </p>
+          {isEmpty ? (
+            <p className="text-caption mt-1 text-warning">
+              Δεν έχεις ορίσει όνομα επιχείρησης. Πρόσθεσέ το ώστε να εμφανίζεται σε λογαριασμούς
+              και export.
+            </p>
+          ) : (
+            <p className="text-caption mt-1">
+              Το όνομα εμφανίζεται σε ονόματα λογαριασμών και στο export.
+            </p>
+          )}
         </div>
         <Building2 className="h-5 w-5 text-gold" strokeWidth={1.7} />
       </div>
@@ -89,6 +98,7 @@ export function BusinessSection({
               id="company-name"
               value={companyDraft}
               onChange={(event) => onDraftChange(event.target.value)}
+              placeholder="π.χ. Acme Catering, Studio Smith, κλπ."
               className="w-full rounded-md border border-border-light bg-cream px-3 py-2.5 text-sm focus:border-charcoal focus:outline-none"
               autoFocus
             />
@@ -115,15 +125,18 @@ export function BusinessSection({
       ) : (
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-text-primary">{displayCompanyName}</p>
-            <p className="text-caption">BrandMark: ◆ Finance</p>
+            {isEmpty ? (
+              <p className="text-sm text-text-muted italic">Δεν έχει οριστεί</p>
+            ) : (
+              <p className="truncate text-sm font-medium text-text-primary">{displayCompanyName}</p>
+            )}
           </div>
           <button
             type="button"
             onClick={onEdit}
             className="text-sm font-medium text-gold hover:underline"
           >
-            Επεξεργασία
+            {isEmpty ? "Προσθήκη" : "Επεξεργασία"}
           </button>
         </div>
       )}

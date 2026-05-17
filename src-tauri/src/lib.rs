@@ -1,4 +1,4 @@
-// Evochia Finance — Tauri main entry
+// Rheo Finance — Tauri main entry
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -30,7 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:evochia.db", migrations)
+                .add_migrations("sqlite:rheo.db", migrations)
                 .build(),
         )
         .setup(|_app| {

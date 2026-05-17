@@ -1,9 +1,9 @@
 {
-  "name": "evochia-finance",
+  "name": "rheo-finance",
   "private": true,
   "version": "0.2.5",
   "type": "module",
-  "description": "Evochia Finance — local-first finance tracker (desktop + Android)",
+  "description": "Rheo Finance — local-first finance management for independent professionals",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

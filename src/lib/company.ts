@@ -1,12 +1,14 @@
-export const DEFAULT_COMPANY_NAME = "Evochia";
+export const DEFAULT_COMPANY_NAME = "";
 
-const COMPANY_TOKEN = /\bEvochia\b/g;
+const COMPANY_TOKEN = /\bRheo\b/g;
 
 export function normalizeCompanyName(value: string): string {
-  const trimmed = value.trim();
-  return trimmed || DEFAULT_COMPANY_NAME;
+  return value.trim();
 }
 
 export function replaceCompanyToken(value: string, companyName: string): string {
-  return value.replace(COMPANY_TOKEN, normalizeCompanyName(companyName));
+  const normalized = normalizeCompanyName(companyName);
+  // If user hasn't set a company name, keep stored names as-is
+  if (!normalized) return value;
+  return value.replace(COMPANY_TOKEN, normalized);
 }

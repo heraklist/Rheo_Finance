@@ -1,4 +1,4 @@
--- Evochia Finance: seed default data
+-- Rheo Finance: seed default data
 -- Idempotent — uses INSERT OR IGNORE
 
 -- ============================================================
@@ -12,9 +12,9 @@ INSERT OR IGNORE INTO books (id, slug, name, created_at, local_updated_at) VALUE
 -- ACCOUNTS
 -- ============================================================
 INSERT OR IGNORE INTO accounts (id, book_id, name, type, initial_balance, created_at, local_updated_at) VALUES
-  ('acc-biz-cash', 'book-business', 'Ταμείο Evochia', 'cash', 0, datetime('now'), datetime('now')),
-  ('acc-biz-bank', 'book-business', 'Τράπεζα Evochia', 'bank', 0, datetime('now'), datetime('now')),
-  ('acc-biz-card', 'book-business', 'Κάρτα Evochia', 'card', 0, datetime('now'), datetime('now')),
+  ('acc-biz-cash', 'book-business', 'Ταμείο Rheo', 'cash', 0, datetime('now'), datetime('now')),
+  ('acc-biz-bank', 'book-business', 'Τράπεζα Rheo', 'bank', 0, datetime('now'), datetime('now')),
+  ('acc-biz-card', 'book-business', 'Κάρτα Rheo', 'card', 0, datetime('now'), datetime('now')),
   ('acc-pers-cash', 'book-personal', 'Ταμείο Προσωπικό', 'cash', 0, datetime('now'), datetime('now')),
   ('acc-pers-bank', 'book-personal', 'Τράπεζα Προσωπική', 'bank', 0, datetime('now'), datetime('now')),
   ('acc-pers-card', 'book-personal', 'Κάρτα Προσωπική', 'card', 0, datetime('now'), datetime('now'));

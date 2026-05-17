@@ -28,7 +28,6 @@ import {
   restoreFromBackupPath,
   saveJsonBackupToPath,
 } from "@/lib/backup";
-import { normalizeCompanyName } from "@/lib/company";
 import { type ExportBookScope, currentQuarterPeriods, saveFinanceExport } from "@/lib/export";
 import { type EditableCategoryType, listCategoryCounts } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
@@ -95,7 +94,7 @@ export function Settings() {
   const [customFromDate, setCustomFromDate] = useState(`${CURRENT_YEAR}-01-01`);
   const [customToDate, setCustomToDate] = useState(`${CURRENT_YEAR}-12-31`);
   const [exportBookScope, setExportBookScope] = useState<ExportBookScope>("business");
-  const displayCompanyName = normalizeCompanyName(companyName);
+  const displayCompanyName = companyName.trim();
   const [companyDraft, setCompanyDraft] = useState(displayCompanyName);
   const [companyEditing, setCompanyEditing] = useState(false);
   const [categoryCounts, setCategoryCounts] = useState<Record<EditableCategoryType, number>>({
@@ -169,7 +168,7 @@ export function Settings() {
   }, [currentBookId]);
 
   function handleSaveCompanyName() {
-    const nextCompanyName = normalizeCompanyName(companyDraft);
+    const nextCompanyName = companyDraft.trim();
     setCompanyName(nextCompanyName);
     setCompanyDraft(nextCompanyName);
     setCompanyEditing(false);
@@ -298,7 +297,7 @@ export function Settings() {
 
   function handleClearBackupDirectory() {
     setBackupDirectory(null);
-    setBackupMessage("Ο φάκελος backup γύρισε στην προεπιλογή Documents/Evochia_Backups.");
+    setBackupMessage("Ο φάκελος backup γύρισε στην προεπιλογή Documents/Rheo_Backups.");
   }
 
   async function handleGoogleDriveBackup() {
@@ -314,7 +313,7 @@ export function Settings() {
       );
       const path = await save({
         defaultPath,
-        filters: [{ name: "Evochia Finance backup", extensions: ["json"] }],
+        filters: [{ name: "Rheo Finance backup", extensions: ["json"] }],
       });
 
       if (!path) {
@@ -339,12 +338,12 @@ export function Settings() {
     setBackupMessage("");
 
     try {
-      const backupDir = await join(await documentDir(), "Evochia_Backups");
+      const backupDir = await join(await documentDir(), "Rheo_Backups");
       const selected = await open({
         multiple: false,
         directory: false,
         defaultPath: backupDir,
-        filters: [{ name: "Evochia Finance backup", extensions: ["json"] }],
+        filters: [{ name: "Rheo Finance backup", extensions: ["json"] }],
       });
 
       if (!selected || Array.isArray(selected)) {
@@ -542,7 +541,6 @@ export function Settings() {
       <AboutSection
         appVersion={APP_VERSION}
         checkingUpdate={checkingUpdate}
-        displayCompanyName={displayCompanyName}
         githubTokenDraft={githubTokenDraft}
         githubTokenMessage={githubTokenMessage}
         githubTokenSaved={githubTokenSaved}

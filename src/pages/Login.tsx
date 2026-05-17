@@ -1,8 +1,7 @@
-import { BrandMark } from "@/components/ui/BrandMark";
+import { APP_VERSION } from "@/components/settings/settingsOptions";
 import { Input } from "@/components/ui/input";
-import { useCompanyName } from "@/hooks/useCompanyName";
 import { supabase } from "@/lib/supabase";
-import { LockKeyhole } from "lucide-react";
+import { LockKeyhole, User } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,7 +23,6 @@ function authErrorMessage(message: string): string {
 
 export function Login() {
   const navigate = useNavigate();
-  const companyName = useCompanyName();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -64,12 +62,24 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-cream">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <div className="inline-flex">
-            <BrandMark />
+      <div className="relative w-full max-w-sm space-y-6">
+        {/* Decorative diamond */}
+        <div
+          className="absolute bottom-8 right-8 text-gold opacity-10 text-6xl font-bold pointer-events-none select-none"
+          aria-hidden
+        >
+          ◆
+        </div>
+
+        <div className="text-center mb-10">
+          <div className="w-14 h-14 rounded-full bg-charcoal text-gold-soft inline-flex items-center justify-center mb-4">
+            <User className="w-6 h-6" strokeWidth={1.5} />
           </div>
-          <p className="text-text-muted mt-2">Διαχείριση οικονομικών για {companyName}</p>
+          <div className="text-display">Rheo</div>
+          <div className="text-body-lg text-text-secondary">Finance</div>
+          <div className="text-caption mt-2 text-text-muted">
+            Local-first finance for independent professionals
+          </div>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -82,7 +92,7 @@ export function Login() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="example@evochia.gr"
+              placeholder="you@example.com"
               autoComplete="email"
               autoFocus
               className="bg-cream border-border-light"
@@ -123,6 +133,10 @@ export function Login() {
             Με ενεργό authenticator θα ζητηθεί 6ψήφιος κωδικός στο επόμενο βήμα.
           </p>
         </form>
+
+        <div className="text-center text-caption mt-8 text-text-muted">
+          v{APP_VERSION} · Tauri · Local SQLite
+        </div>
       </div>
     </div>
   );

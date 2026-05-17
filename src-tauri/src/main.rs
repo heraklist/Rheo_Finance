@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    evochia_finance_lib::run();
+    rheo_finance_lib::run();
 }

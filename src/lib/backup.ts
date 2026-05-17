@@ -134,7 +134,7 @@ export interface BackupOptions {
 export const LAST_AUTO_BACKUP_KEY = "last_auto_backup_at";
 
 function backupFileName(timestamp: string, auto: boolean): string {
-  const prefix = auto ? "evochia-auto-backup" : "evochia-backup";
+  const prefix = auto ? "rheo-auto-backup" : "rheo-backup";
   return `${prefix}-${timestamp.replace(/[:.]/g, "-")}.json`;
 }
 
@@ -143,7 +143,7 @@ export function createBackupFileName(options: BackupOptions = {}): string {
 }
 
 export async function getDefaultBackupDirectory(): Promise<string> {
-  return join(await documentDir(), "Evochia_Backups");
+  return join(await documentDir(), "Rheo_Backups");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -167,7 +167,7 @@ function parseBackupPayload(text: string): Record<RestoreTable, BackupRow[]> {
   }
 
   if (!isRecord(parsed) || !isRecord(parsed.tables)) {
-    throw new Error("Το αρχείο δεν είναι Evochia Finance backup.");
+    throw new Error("Το αρχείο δεν είναι Rheo Finance backup.");
   }
 
   const tables = {} as Record<RestoreTable, BackupRow[]>;
@@ -267,9 +267,9 @@ export async function createJsonBackup(options: BackupOptions = {}): Promise<Bac
     return { path };
   }
 
-  await mkdir("Evochia_Backups", { baseDir: BaseDirectory.Document, recursive: true });
+  await mkdir("Rheo_Backups", { baseDir: BaseDirectory.Document, recursive: true });
   const path = await join(await getDefaultBackupDirectory(), fileName);
-  await writeFile(`Evochia_Backups/${fileName}`, bytes, {
+  await writeFile(`Rheo_Backups/${fileName}`, bytes, {
     baseDir: BaseDirectory.Document,
   });
   return { path };
@@ -284,7 +284,7 @@ async function createBackupPayload(timestamp: string) {
   }
 
   return {
-    app: "Evochia Finance",
+    app: "Rheo Finance",
     version: 1,
     created_at: timestamp,
     tables,
