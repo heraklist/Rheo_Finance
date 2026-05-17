@@ -30,8 +30,16 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate icons
+        run: pnpm tauri icon src-tauri/tauri-icons.json
 
       - name: Validate Vite release env
         env:
@@ -52,9 +60,94 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Rheo Finance v__VERSION__
-          releaseBody: Signed Rheo Finance desktop release. Upload includes installer, signature, and latest.json for the Tauri updater.
+          releaseBody: |
+            Rheo Finance desktop release.
+            Includes NSIS installer, update signature, and latest.json for the Tauri auto-updater.
           releaseDraft: false
           prerelease: false
           tauriScript: pnpm tauri
           uploadUpdaterJson: true
           updaterJsonPreferNsis: true
+
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;27.0.12077973"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Init Android project
+        run: pnpm tauri android init
+
+      - name: Generate icons
+        run: pnpm tauri icon src-tauri/tauri-icons.json
+
+      - name: Build Android APK
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          RUST_MIN_STACK: "8388608"
+        run: pnpm tauri android build --apk
+
+      - name: Find APK
+        id: apk
+        run: |
+          APK_PATH=$(find src-tauri/gen/android -name "*.apk" -path "*/release/*" | head -1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find src-tauri/gen/android -name "*.apk" | head -1)
+          fi
+          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK_PATH"
+
+      - name: Upload APK to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.path }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK artifact
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: rheo-finance-android
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 14

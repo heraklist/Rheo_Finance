@@ -1,0 +1,7 @@
+{
+  "default": "icons/android/rheo_launcher_1024.png",
+  "android_bg": "icons/android/rheo_android_background_1024.png",
+  "android_fg": "icons/android/rheo_android_foreground_1024.png",
+  "android_fg_scale": 85,
+  "android_monochrome": "icons/android/rheo_android_monochrome_1024.png"
+}
