@@ -60,6 +60,16 @@ Set-Location "src-tauri\gen\android"
 .\gradlew.bat :app:assembleArm64Debug -x :app:rustBuildArm64Debug
 ```
 
+If `src-tauri/gen/android` is regenerated, refresh launcher icons before the
+Gradle assemble step:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\refresh-android-icons.ps1
+```
+
+This replaces the generated Android launcher/adaptive icon resources from the
+tracked source layers in `src-tauri/icons/android/`.
+
 The APK output is:
 
 ```text

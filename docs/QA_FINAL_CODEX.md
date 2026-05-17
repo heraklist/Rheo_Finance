@@ -13,6 +13,7 @@ This run rechecked the rebrand from Evochia to Rheo, kept the app at version
 - Version: `0.2.5`
 - Desktop identifier: `app.rheo.finance`
 - Android package: `app.rheo.finance`
+- Android launcher icon: refreshed from tracked Rheo adaptive icon layers
 - Rust package/lib: `rheo-finance` / `rheo_finance_lib`
 - Local SQLite database: `sqlite:rheo.db`
 - Zustand persisted store: `rheo-app-state`
@@ -73,6 +74,9 @@ Installed APK:
 - Explicit launch with `am start -n app.rheo.finance/.MainActivity` succeeded.
 - Focus check: `app.rheo.finance/app.rheo.finance.MainActivity`.
 - Screenshot confirmed rendered Rheo UI and no white screen.
+- Icon follow-up: APK inspected with `aapt`; launcher icons now resolve through
+  `mipmap-anydpi-v26/ic_launcher.xml`, and extracted `xxxhdpi` icon is the black
+  Rheo production icon.
 
 ## Release decision
 
