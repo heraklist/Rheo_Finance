@@ -51,6 +51,7 @@ jobs:
 
       - name: Build signed Tauri release
         id: tauri
+        continue-on-error: true
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,7 +70,7 @@ jobs:
           tauriScript: pnpm tauri
 
       - name: Build and upload latest.json
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: always() && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
