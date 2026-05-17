@@ -1,6 +1,6 @@
 export const DEFAULT_COMPANY_NAME = "";
 
-const COMPANY_TOKEN = /\bRheo\b/g;
+const COMPANY_TOKEN = /\bEvochia\b/g;
 
 export function normalizeCompanyName(value: string): string {
   return value.trim();

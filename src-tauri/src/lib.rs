@@ -30,7 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:rheo.db", migrations)
+                .add_migrations("sqlite:evochia.db", migrations)
                 .build(),
         )
         .setup(|_app| {

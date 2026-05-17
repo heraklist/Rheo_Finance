@@ -47,7 +47,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:rheo.db"]
+      "preload": ["sqlite:evochia.db"]
     },
     "updater": {
       "endpoints": [

@@ -22,7 +22,7 @@ async function enableForeignKeyChecks(db: Database): Promise<void> {
  */
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
-  const db = await Database.load("sqlite:rheo.db");
+  const db = await Database.load("sqlite:evochia.db");
   await enableForeignKeyChecks(db);
   dbInstance = db;
   return dbInstance;

@@ -73,7 +73,7 @@ export const useAppStore = create<AppState>()(
       setPendingCount: (pendingCount) => set({ pendingCount }),
     }),
     {
-      name: "rheo-app-state",
+      name: "evochia-app-state",
       partialize: (state) => ({
         currentBookId: state.currentBookId,
         companyName: state.companyName,
