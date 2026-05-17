@@ -1,7 +1,7 @@
 import type { ExportBookScope, ExportPeriod } from "@/lib/export";
 import type { PaymentMethod } from "@/lib/types";
 
-export const APP_VERSION = "0.2.4";
+export const APP_VERSION = "0.2.5";
 export const CURRENT_YEAR = new Date().getFullYear();
 export const VAT_RATES = [
   { label: "24%", value: 0.24 },

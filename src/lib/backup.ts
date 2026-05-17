@@ -128,6 +128,7 @@ export interface RestoreResult {
 
 export interface BackupOptions {
   auto?: boolean;
+  directoryPath?: string | null;
 }
 
 export const LAST_AUTO_BACKUP_KEY = "last_auto_backup_at";
@@ -135,6 +136,14 @@ export const LAST_AUTO_BACKUP_KEY = "last_auto_backup_at";
 function backupFileName(timestamp: string, auto: boolean): string {
   const prefix = auto ? "evochia-auto-backup" : "evochia-backup";
   return `${prefix}-${timestamp.replace(/[:.]/g, "-")}.json`;
+}
+
+export function createBackupFileName(options: BackupOptions = {}): string {
+  return backupFileName(now(), options.auto ?? false);
+}
+
+export async function getDefaultBackupDirectory(): Promise<string> {
+  return join(await documentDir(), "Evochia_Backups");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -247,6 +256,26 @@ export async function markAutoBackupCompleted(timestamp = now()): Promise<string
 }
 
 export async function createJsonBackup(options: BackupOptions = {}): Promise<BackupResult> {
+  const timestamp = now();
+  const fileName = backupFileName(timestamp, options.auto ?? false);
+  const payload = await createBackupPayload(timestamp);
+  const bytes = new TextEncoder().encode(JSON.stringify(payload, null, 2));
+
+  if (options.directoryPath) {
+    const path = await join(options.directoryPath, fileName);
+    await writeFile(path, bytes);
+    return { path };
+  }
+
+  await mkdir("Evochia_Backups", { baseDir: BaseDirectory.Document, recursive: true });
+  const path = await join(await getDefaultBackupDirectory(), fileName);
+  await writeFile(`Evochia_Backups/${fileName}`, bytes, {
+    baseDir: BaseDirectory.Document,
+  });
+  return { path };
+}
+
+async function createBackupPayload(timestamp: string) {
   const db = await getDb();
   const tables: Record<BackupTable, BackupRow[]> = {} as Record<BackupTable, BackupRow[]>;
 
@@ -254,24 +283,17 @@ export async function createJsonBackup(options: BackupOptions = {}): Promise<Bac
     tables[table] = await db.select<BackupRow[]>(`SELECT * FROM ${table}`);
   }
 
-  const timestamp = now();
-  const documents = await documentDir();
-  const backupDir = await join(documents, "Evochia_Backups");
-  const fileName = backupFileName(timestamp, options.auto ?? false);
-  const relativePath = `Evochia_Backups/${fileName}`;
-  await mkdir("Evochia_Backups", { baseDir: BaseDirectory.Document, recursive: true });
-
-  const path = await join(backupDir, fileName);
-  const payload = {
+  return {
     app: "Evochia Finance",
     version: 1,
     created_at: timestamp,
     tables,
   };
+}
 
-  await writeFile(relativePath, new TextEncoder().encode(JSON.stringify(payload, null, 2)), {
-    baseDir: BaseDirectory.Document,
-  });
+export async function saveJsonBackupToPath(path: string): Promise<BackupResult> {
+  const payload = await createBackupPayload(now());
+  await writeFile(path, new TextEncoder().encode(JSON.stringify(payload, null, 2)));
   return { path };
 }
 

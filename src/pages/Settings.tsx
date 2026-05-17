@@ -20,7 +20,14 @@ import {
   resolveExportPeriod,
 } from "@/components/settings/settingsOptions";
 import { deleteCurrentAccount } from "@/lib/account";
-import { createJsonBackup, getLastAutoBackupAt, restoreFromBackupPath } from "@/lib/backup";
+import {
+  createBackupFileName,
+  createJsonBackup,
+  getDefaultBackupDirectory,
+  getLastAutoBackupAt,
+  restoreFromBackupPath,
+  saveJsonBackupToPath,
+} from "@/lib/backup";
 import { normalizeCompanyName } from "@/lib/company";
 import { type ExportBookScope, currentQuarterPeriods, saveFinanceExport } from "@/lib/export";
 import { type EditableCategoryType, listCategoryCounts } from "@/lib/reference";
@@ -34,7 +41,7 @@ import {
   setUpdaterGitHubToken,
 } from "@/lib/updaterToken";
 import { documentDir, join } from "@tauri-apps/api/path";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -53,8 +60,10 @@ export function Settings() {
     defaultVatRate,
     defaultPaymentMethod,
     autoBackupEnabled,
+    backupDirectory,
     setCurrentBookId,
     setCompanyName,
+    setBackupDirectory,
     setDefaultPaymentMethod,
     setDefaultVatRate,
     setAutoBackupEnabled,
@@ -76,6 +85,7 @@ export function Settings() {
   const [githubTokenSaved, setGithubTokenSaved] = useState(false);
   const [githubTokenMessage, setGithubTokenMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
+  const [driveBackupRunning, setDriveBackupRunning] = useState(false);
   const [restoreRunning, setRestoreRunning] = useState(false);
   const [exportRunning, setExportRunning] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -258,13 +268,67 @@ export function Settings() {
     setBackupMessage("");
 
     try {
-      const result = await createJsonBackup();
+      const result = await createJsonBackup({ directoryPath: backupDirectory });
       setBackupMessage(`Δημιουργήθηκε backup: ${result.path}`);
     } catch (err) {
       console.error("Backup failed:", err);
       setBackupMessage(`Δεν δημιουργήθηκε backup: ${messageFromError(err)}`);
     } finally {
       setBackupRunning(false);
+    }
+  }
+
+  async function handleChooseBackupDirectory() {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: true,
+        defaultPath: backupDirectory ?? (await getDefaultBackupDirectory()),
+      });
+
+      if (!selected || Array.isArray(selected)) return;
+
+      setBackupDirectory(selected);
+      setBackupMessage(`Ο φάκελος backup ορίστηκε: ${selected}`);
+    } catch (err) {
+      console.error("Choose backup directory failed:", err);
+      setBackupMessage(`Δεν ορίστηκε φάκελος backup: ${messageFromError(err)}`);
+    }
+  }
+
+  function handleClearBackupDirectory() {
+    setBackupDirectory(null);
+    setBackupMessage("Ο φάκελος backup γύρισε στην προεπιλογή Documents/Evochia_Backups.");
+  }
+
+  async function handleGoogleDriveBackup() {
+    if (driveBackupRunning) return;
+
+    setDriveBackupRunning(true);
+    setBackupMessage("");
+
+    try {
+      const defaultPath = await join(
+        backupDirectory ?? (await getDefaultBackupDirectory()),
+        createBackupFileName(),
+      );
+      const path = await save({
+        defaultPath,
+        filters: [{ name: "Evochia Finance backup", extensions: ["json"] }],
+      });
+
+      if (!path) {
+        setBackupMessage("Το backup σε Google Drive ακυρώθηκε.");
+        return;
+      }
+
+      const result = await saveJsonBackupToPath(path);
+      setBackupMessage(`Αποθηκεύτηκε backup: ${result.path}`);
+    } catch (err) {
+      console.error("Google Drive backup failed:", err);
+      setBackupMessage(`Δεν αποθηκεύτηκε backup σε Google Drive: ${messageFromError(err)}`);
+    } finally {
+      setDriveBackupRunning(false);
     }
   }
 
@@ -433,12 +497,17 @@ export function Settings() {
 
       <BackupSection
         autoBackupEnabled={autoBackupEnabled}
+        backupDirectory={backupDirectory}
         backupMessage={backupMessage}
         backupRunning={backupRunning}
+        driveBackupRunning={driveBackupRunning}
         lastAutoBackupAt={lastAutoBackupAt}
         restoreRunning={restoreRunning}
         onBackup={handleBackup}
         onAutoBackupChange={setAutoBackupEnabled}
+        onChooseBackupDirectory={handleChooseBackupDirectory}
+        onClearBackupDirectory={handleClearBackupDirectory}
+        onGoogleDriveBackup={handleGoogleDriveBackup}
         onRestore={handleRestoreBackup}
       />
 

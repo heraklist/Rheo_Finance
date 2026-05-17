@@ -9,6 +9,7 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export function useAutoBackupWorker() {
   const user = useAppStore((state) => state.user);
   const autoBackupEnabled = useAppStore((state) => state.autoBackupEnabled);
+  const backupDirectory = useAppStore((state) => state.backupDirectory);
 
   useEffect(() => {
     if (!user || !autoBackupEnabled) return;
@@ -23,7 +24,7 @@ export function useAutoBackupWorker() {
         const lastBackupMs = lastBackup ? Date.parse(lastBackup) : 0;
 
         if (Date.now() - lastBackupMs >= ONE_WEEK_MS) {
-          await createJsonBackup({ auto: true });
+          await createJsonBackup({ auto: true, directoryPath: backupDirectory });
           await markAutoBackupCompleted();
         }
       } catch (err) {
@@ -38,5 +39,5 @@ export function useAutoBackupWorker() {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [user, autoBackupEnabled]);
+  }, [user, autoBackupEnabled, backupDirectory]);
 }

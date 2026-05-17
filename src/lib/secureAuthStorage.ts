@@ -1,5 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { appLocalDataDir, join } from "@tauri-apps/api/path";
+import { platform } from "@tauri-apps/plugin-os";
 import { type Client, type Store, Stronghold } from "@tauri-apps/plugin-stronghold";
 
 interface AuthStorage {
@@ -19,6 +20,7 @@ const STORAGE_KEY_PREFIX = "supabase:";
 const LEGACY_KEY_PREFIX = "evochia-auth:";
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
+let strongholdAvailable: boolean | null = null;
 
 function localGetItem(key: string): string | null {
   return (
@@ -45,6 +47,20 @@ function logStrongholdFallback(operation: string, error: unknown): void {
     `Stronghold auth storage ${operation} failed. Falling back to localStorage.`,
     error,
   );
+}
+
+async function canUseStronghold(): Promise<boolean> {
+  if (!isTauri()) return false;
+  if (strongholdAvailable !== null) return strongholdAvailable;
+
+  try {
+    const currentPlatform = platform();
+    strongholdAvailable = currentPlatform !== "android" && currentPlatform !== "ios";
+  } catch {
+    strongholdAvailable = false;
+  }
+
+  return strongholdAvailable;
 }
 
 async function loadOrCreateClient(stronghold: Stronghold): Promise<Client> {
@@ -93,7 +109,7 @@ async function removeStrongholdItem(key: string): Promise<void> {
 
 export const secureAuthStorage: AuthStorage = {
   async getItem(key) {
-    if (!isTauri()) return localGetItem(key);
+    if (!(await canUseStronghold())) return localGetItem(key);
 
     try {
       const { store } = await getStrongholdState();
@@ -119,7 +135,7 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async setItem(key, value) {
-    if (!isTauri()) {
+    if (!(await canUseStronghold())) {
       localSetItem(key, value);
       return;
     }
@@ -132,7 +148,7 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async removeItem(key) {
-    if (!isTauri()) {
+    if (!(await canUseStronghold())) {
       localRemoveItem(key);
       return;
     }

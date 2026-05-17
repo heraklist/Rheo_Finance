@@ -7,7 +7,16 @@ import {
 } from "@/components/ui/select";
 import type { ExportBookScope, ExportPeriod } from "@/lib/export";
 import { formatDateRelative } from "@/lib/utils";
-import { DatabaseBackup, FileSpreadsheet, RefreshCcw, RotateCw, Upload } from "lucide-react";
+import {
+  CloudUpload,
+  DatabaseBackup,
+  FileSpreadsheet,
+  FolderOpen,
+  RefreshCcw,
+  RotateCw,
+  Upload,
+  X,
+} from "lucide-react";
 
 type Option<T extends string | number> = { label: string; value: T };
 
@@ -80,35 +89,76 @@ export function SyncSection({
 
 interface BackupSectionProps {
   autoBackupEnabled: boolean;
+  backupDirectory: string | null;
   backupMessage: string;
   backupRunning: boolean;
+  driveBackupRunning: boolean;
   lastAutoBackupAt: string | null;
   restoreRunning: boolean;
   onBackup: () => void;
   onAutoBackupChange: (enabled: boolean) => void;
+  onChooseBackupDirectory: () => void;
+  onClearBackupDirectory: () => void;
+  onGoogleDriveBackup: () => void;
   onRestore: () => void;
 }
 
 export function BackupSection({
   autoBackupEnabled,
+  backupDirectory,
   backupMessage,
   backupRunning,
+  driveBackupRunning,
   lastAutoBackupAt,
   restoreRunning,
   onBackup,
   onAutoBackupChange,
+  onChooseBackupDirectory,
+  onClearBackupDirectory,
+  onGoogleDriveBackup,
   onRestore,
 }: BackupSectionProps) {
+  const backupDirectoryLabel = backupDirectory ?? "Documents/Evochia_Backups";
+  const backupDirectoryState = backupDirectory
+    ? "Προσαρμοσμένος φάκελος"
+    : "Προεπιλεγμένος φάκελος";
+
   return (
     <section className={sectionClassName()}>
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="text-h3">Backup</h2>
-          <p className="text-caption mt-1">Τοπικό JSON snapshot στο Documents/Evochia_Backups.</p>
+          <p className="text-caption mt-1">
+            JSON snapshot σε τοπικό φάκελο ή σε Google Drive μέσω native picker.
+          </p>
         </div>
         <DatabaseBackup className="w-5 h-5 text-gold" strokeWidth={1.7} />
       </div>
+      <div className="mb-3 rounded-md border border-border-light bg-sand px-3 py-2.5">
+        <p className="text-caption text-text-muted">{backupDirectoryState}</p>
+        <p className="mt-1 break-words text-xs leading-relaxed text-text-primary">
+          {backupDirectoryLabel}
+        </p>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onChooseBackupDirectory}
+          className="inline-flex items-center gap-2 rounded-md border border-border-light px-3 py-2 text-sm font-medium text-charcoal"
+        >
+          <FolderOpen className="w-4 h-4" strokeWidth={1.7} />
+          Επιλογή φακέλου
+        </button>
+        {backupDirectory ? (
+          <button
+            type="button"
+            onClick={onClearBackupDirectory}
+            className="inline-flex items-center gap-2 rounded-md border border-border-light px-3 py-2 text-sm font-medium text-text-secondary"
+          >
+            <X className="w-4 h-4" strokeWidth={1.7} />
+            Προεπιλογή
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onBackup}
@@ -117,6 +167,15 @@ export function BackupSection({
         >
           <DatabaseBackup className="w-4 h-4" strokeWidth={1.7} />
           {backupRunning ? "Backup..." : "Δημιουργία backup"}
+        </button>
+        <button
+          type="button"
+          onClick={onGoogleDriveBackup}
+          disabled={driveBackupRunning}
+          className="inline-flex items-center gap-2 rounded-md bg-gold px-3 py-2 text-sm font-medium text-charcoal disabled:opacity-50"
+        >
+          <CloudUpload className="w-4 h-4" strokeWidth={1.7} />
+          {driveBackupRunning ? "Αποθήκευση..." : "Backup σε Google Drive"}
         </button>
         <button
           type="button"

@@ -18,6 +18,8 @@ interface AppState {
   setDefaultPaymentMethod: (method: PaymentMethod) => void;
   autoBackupEnabled: boolean;
   setAutoBackupEnabled: (enabled: boolean) => void;
+  backupDirectory: string | null;
+  setBackupDirectory: (path: string | null) => void;
   user: User | null;
   session: Session | null;
   authLoading: boolean;
@@ -47,6 +49,8 @@ export const useAppStore = create<AppState>()(
       setDefaultPaymentMethod: (defaultPaymentMethod) => set({ defaultPaymentMethod }),
       autoBackupEnabled: false,
       setAutoBackupEnabled: (autoBackupEnabled) => set({ autoBackupEnabled }),
+      backupDirectory: null,
+      setBackupDirectory: (backupDirectory) => set({ backupDirectory }),
       user: null,
       session: null,
       authLoading: true,
@@ -76,6 +80,7 @@ export const useAppStore = create<AppState>()(
         defaultVatRate: state.defaultVatRate,
         defaultPaymentMethod: state.defaultPaymentMethod,
         autoBackupEnabled: state.autoBackupEnabled,
+        backupDirectory: state.backupDirectory,
       }),
     },
   ),
