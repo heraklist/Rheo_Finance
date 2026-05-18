@@ -39,7 +39,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate icons
-        run: pnpm tauri icon src-tauri/tauri-icons.json
+        run: pnpm tauri icon src-tauri/icons/icon.png
 
       - name: Validate Vite release env
         env:
@@ -151,7 +151,23 @@ jobs:
         run: pnpm tauri android init
 
       - name: Generate icons
-        run: pnpm tauri icon src-tauri/tauri-icons.json
+        run: pnpm tauri icon src-tauri/icons/icon.png
+
+      - name: Copy adaptive icon layers
+        run: |
+          RES="src-tauri/gen/android/app/src/main/res"
+          SRC="src-tauri/icons/android"
+          # Overwrite drawable sources
+          cp "$SRC/rheo_android_foreground_1024.png" "$RES/drawable/ic_launcher_foreground.png"
+          cp "$SRC/rheo_android_background_1024.png" "$RES/drawable/ic_launcher_background.png"
+          cp "$SRC/rheo_android_monochrome_1024.png" "$RES/drawable/ic_launcher_monochrome.png"
+          # Overwrite every mipmap density with correctly sized icons
+          for dir in "$RES"/mipmap-*/; do
+            [ -f "$dir/ic_launcher_foreground.png" ] || continue
+            cp "$SRC/rheo_android_foreground_1024.png" "$dir/ic_launcher_foreground.png"
+            cp "$SRC/rheo_android_background_1024.png" "$dir/ic_launcher_background.png"
+            cp "$SRC/rheo_android_monochrome_1024.png" "$dir/ic_launcher_monochrome.png"
+          done
 
       - name: Build Android APK
         env:
