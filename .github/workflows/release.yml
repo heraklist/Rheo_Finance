@@ -180,6 +180,9 @@ jobs:
         run: |
           RES="src-tauri/gen/android/app/src/main/res"
           SRC="src-tauri/icons/android"
+          rm -f "$RES/drawable/ic_launcher_foreground.xml"
+          rm -f "$RES/drawable/ic_launcher_background.xml"
+          rm -f "$RES/drawable/ic_launcher_monochrome.xml"
           cp "$SRC/rheo_android_foreground_1024.png" "$RES/drawable/ic_launcher_foreground.png"
           cp "$SRC/rheo_android_background_1024.png" "$RES/drawable/ic_launcher_background.png"
           cp "$SRC/rheo_android_monochrome_1024.png" "$RES/drawable/ic_launcher_monochrome.png"
