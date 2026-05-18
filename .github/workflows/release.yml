@@ -1,21 +1,37 @@
-name: release
+name: Release
 
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
   contents: write
 
+env:
+  PNPM_VERSION: 11.0.9
+
 jobs:
-  windows:
+  build-windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}".StartsWith("refs/tags/v")) {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -23,9 +39,10 @@ jobs:
           node-version: 22
 
       - name: Setup pnpm
+        shell: pwsh
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -41,71 +58,45 @@ jobs:
       - name: Generate icons
         run: pnpm tauri icon src-tauri/icons/icon.png
 
-      - name: Validate Vite release env
+      - name: Validate release secrets
+        shell: pwsh
         env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || secrets.TAURI_KEY_PASSWORD }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw "Missing TAURI_SIGNING_PRIVATE_KEY or TAURI_PRIVATE_KEY secret" }
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { throw "Missing TAURI_SIGNING_PRIVATE_KEY_PASSWORD or TAURI_KEY_PASSWORD secret" }
           if (-not $env:VITE_SUPABASE_URL) { throw "Missing VITE_SUPABASE_URL secret" }
           if (-not $env:VITE_SUPABASE_ANON_KEY) { throw "Missing VITE_SUPABASE_ANON_KEY secret" }
 
-      - name: Build signed Tauri release
-        id: tauri
-        continue-on-error: true
-        uses: tauri-apps/tauri-action@v0
+      - name: Build signed Windows installer
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || secrets.TAURI_KEY_PASSWORD }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        with:
-          tagName: v__VERSION__
-          releaseName: Rheo Finance v__VERSION__
-          releaseBody: |
-            Rheo Finance desktop release.
-            Includes NSIS installer, update signature, and latest.json for the Tauri auto-updater.
-          releaseDraft: false
-          prerelease: false
-          tauriScript: pnpm tauri
+        run: pnpm tauri build
 
-      - name: Build and upload latest.json
-        if: always() && startsWith(github.ref, 'refs/tags/v')
+      - name: Stage Windows artifacts
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
-          $tag = "v$version"
-          $repo = "${{ github.repository }}"
-          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.nsis.zip.sig" | Select-Object -First 1
-          if (-not $sigFile) {
-            $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe.sig" | Select-Object -First 1
-          }
-          $signature = Get-Content $sigFile.FullName -Raw
-          $nsisZip = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.nsis.zip" | Select-Object -First 1
-          if ($nsisZip) {
-            $url = "https://github.com/$repo/releases/download/$tag/$($nsisZip.Name)"
-          } else {
-            $exe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
-            $url = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
-          }
-          $json = @{
-            version = $version
-            notes = "Rheo Finance $tag"
-            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = $signature.Trim()
-                url = $url
-              }
-            }
-          } | ConvertTo-Json -Depth 5
-          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-          [System.IO.File]::WriteAllText("latest.json", $json, $utf8NoBom)
-          gh release upload $tag latest.json --clobber
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "src-tauri/target/release/bundle/nsis/*-setup.exe" dist/
+          Copy-Item "src-tauri/target/release/bundle/nsis/*.sig" dist/
+          $zip = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*.nsis.zip" -ErrorAction SilentlyContinue
+          if ($zip) { Copy-Item "src-tauri/target/release/bundle/nsis/*.nsis.zip" dist/ }
+          Get-ChildItem dist
 
-  android:
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist/*
+          retention-days: 7
+
+  build-android:
     runs-on: ubuntu-latest
 
     steps:
@@ -120,7 +111,7 @@ jobs:
       - name: Setup pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -147,8 +138,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate release secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing ANDROID_KEYSTORE_BASE64 secret" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing ANDROID_KEYSTORE_PASSWORD secret" && exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing ANDROID_KEY_ALIAS secret" && exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing ANDROID_KEY_PASSWORD secret" && exit 1)
+          test -n "$VITE_SUPABASE_URL" || (echo "Missing VITE_SUPABASE_URL secret" && exit 1)
+          test -n "$VITE_SUPABASE_ANON_KEY" || (echo "Missing VITE_SUPABASE_ANON_KEY secret" && exit 1)
+
+      - name: Decode Android keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/rheo-release.jks"
+          echo "ANDROID_RELEASE_KEYSTORE=$RUNNER_TEMP/rheo-release.jks" >> "$GITHUB_ENV"
+
       - name: Init Android project
-        run: pnpm tauri android init
+        run: pnpm tauri android init --ci
 
       - name: Generate icons
         run: pnpm tauri icon src-tauri/icons/icon.png
@@ -157,49 +171,163 @@ jobs:
         run: |
           RES="src-tauri/gen/android/app/src/main/res"
           SRC="src-tauri/icons/android"
-          # Overwrite drawable sources
           cp "$SRC/rheo_android_foreground_1024.png" "$RES/drawable/ic_launcher_foreground.png"
           cp "$SRC/rheo_android_background_1024.png" "$RES/drawable/ic_launcher_background.png"
           cp "$SRC/rheo_android_monochrome_1024.png" "$RES/drawable/ic_launcher_monochrome.png"
-          # Overwrite every mipmap density with correctly sized icons
           for dir in "$RES"/mipmap-*/; do
-            [ -f "$dir/ic_launcher_foreground.png" ] || continue
-            cp "$SRC/rheo_android_foreground_1024.png" "$dir/ic_launcher_foreground.png"
-            cp "$SRC/rheo_android_background_1024.png" "$dir/ic_launcher_background.png"
-            cp "$SRC/rheo_android_monochrome_1024.png" "$dir/ic_launcher_monochrome.png"
+            [ -d "$dir" ] || continue
+            cp "$SRC/rheo_android_foreground_1024.png" "$dir/ic_launcher_foreground.png" || true
+            cp "$SRC/rheo_android_background_1024.png" "$dir/ic_launcher_background.png" || true
+            cp "$SRC/rheo_android_monochrome_1024.png" "$dir/ic_launcher_monochrome.png" || true
           done
 
-      - name: Build Android APK
+      - name: Patch Android release signing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src-tauri/gen/android/app/build.gradle.kts")
+          text = path.read_text()
+          signing = '''android {
+              signingConfigs {
+                  create("release") {
+                      val keystorePath = System.getenv("ANDROID_RELEASE_KEYSTORE")
+                      if (keystorePath != null) {
+                          storeFile = file(keystorePath)
+                          storePassword = System.getenv("ANDROID_RELEASE_STORE_PASSWORD")
+                          keyAlias = System.getenv("ANDROID_RELEASE_KEY_ALIAS")
+                          keyPassword = System.getenv("ANDROID_RELEASE_KEY_PASSWORD")
+                      }
+                  }
+              }
+          '''
+          if "signingConfigs" not in text:
+              text = text.replace("android {\n", signing, 1)
+          if "signingConfig = signingConfigs.getByName(\"release\")" not in text:
+              text = text.replace(
+                  '        getByName("release") {\n            isMinifyEnabled = true\n',
+                  '        getByName("release") {\n            isMinifyEnabled = true\n            signingConfig = signingConfigs.getByName("release")\n',
+                  1,
+              )
+          path.write_text(text)
+          PY
+
+      - name: Build signed Android APK
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           RUST_MIN_STACK: "8388608"
-        run: pnpm tauri android build --apk
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: pnpm tauri android build --apk --ci
 
-      - name: Find APK
-        id: apk
+      - name: Stage Android artifact
         run: |
-          APK_PATH=$(find src-tauri/gen/android -name "*.apk" -path "*/release/*" | head -1)
-          if [ -z "$APK_PATH" ]; then
-            APK_PATH=$(find src-tauri/gen/android -name "*.apk" | head -1)
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION=$(node -e "console.log(require('./package.json').version)")
           fi
-          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
-          echo "Found APK: $APK_PATH"
+          mkdir -p dist
+          APK_PATH=$(find src-tauri/gen/android -name "*.apk" -path "*/release/*" -print -quit)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find src-tauri/gen/android -name "*.apk" -print -quit)
+          fi
+          cp "$APK_PATH" "dist/Rheo-Finance-v${VERSION}-android.apk"
+          ls -la dist
 
-      - name: Upload APK to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.apk.outputs.path }}
-          tag_name: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK artifact
-        if: "!startsWith(github.ref, 'refs/tags/v')"
+      - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rheo-finance-android
-          path: ${{ steps.apk.outputs.path }}
-          retention-days: 14
+          name: android-artifacts
+          path: dist/*
+          retention-days: 7
+
+  publish:
+    needs: [build-windows, build-android]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifacts
+          path: dist
+
+      - name: Extract release metadata
+        id: meta
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
+            VERSION="${{ needs.build-windows.outputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk -v ver="v$VERSION" '
+              /^## / { if (found) exit; if ($0 ~ ver) found=1; next }
+              found { print }
+            ' CHANGELOG.md)
+          fi
+          if [ -z "$NOTES" ]; then NOTES="Rheo Finance v$VERSION"; fi
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Find release artifacts
+        id: artifacts
+        run: |
+          WIN_PACKAGE=$(find dist -name "*.nsis.zip" -print -quit)
+          if [ -z "$WIN_PACKAGE" ]; then
+            WIN_PACKAGE=$(find dist -name "*-setup.exe" -print -quit)
+          fi
+          WIN_SIG="$WIN_PACKAGE.sig"
+          if [ ! -f "$WIN_SIG" ]; then
+            WIN_SIG=$(find dist -name "*.sig" -print -quit)
+          fi
+          APK=$(find dist -name "*.apk" -print -quit)
+          test -n "$WIN_PACKAGE" || (echo "Missing Windows update package" && exit 1)
+          test -n "$WIN_SIG" || (echo "Missing Windows signature" && exit 1)
+          test -n "$APK" || (echo "Missing Android APK" && exit 1)
+          echo "win_package=$WIN_PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "win_sig=$WIN_SIG" >> "$GITHUB_OUTPUT"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+
+      - name: Generate updater manifests
+        run: |
+          node scripts/generate-manifests.mjs \
+            --version "${{ steps.meta.outputs.version }}" \
+            --notes "${{ steps.meta.outputs.notes }}" \
+            --windows-package "${{ steps.artifacts.outputs.win_package }}" \
+            --windows-signature "${{ steps.artifacts.outputs.win_sig }}" \
+            --android-apk "${{ steps.artifacts.outputs.apk }}" \
+            --release-url "https://github.com/${{ github.repository }}/releases/download/v${{ steps.meta.outputs.version }}" \
+            --output dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: Rheo Finance v${{ steps.meta.outputs.version }}
+          body: ${{ steps.meta.outputs.notes }}
+          files: |
+            dist/*
+          overwrite_files: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

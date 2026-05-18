@@ -1,5 +1,6 @@
 import { BrandMark } from "@/components/ui/BrandMark";
 import { SyncPill } from "@/components/ui/SyncPill";
+import { UpdateBanner } from "@/components/ui/UpdateBanner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppStore } from "@/lib/store";
 import { Calculator, MoreHorizontal, Plus, Repeat2, Settings, TrendingUp } from "lucide-react";
@@ -54,6 +55,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-cream">
+      <UpdateBanner />
       {!hideAppHeader ? (
         <header className="topbar app-topbar sticky top-0 z-10">
           <Link to="/" aria-label="Αρχική">

@@ -74,9 +74,9 @@ Do not reopen these unless Heraklis explicitly asks.
 - Settings: account, company name, category CRUD links, MFA, sync, backup, export, preferences, updater token.
 - Backup: manual JSON + weekly auto-backup worker.
 - Export: XLSX with rounded VAT and category breakdown.
-- Updater: signed Tauri updater config, GitHub private token support.
+- Updater: signed Tauri updater config, GitHub private token support, desktop install flow, Android assisted-update manifest.
 - Android: arm64 debug APK builds; Stronghold/updater are desktop-only in Rust for now, Android uses frontend storage fallback until Android Keystore/signing is finalized.
-- Release pipeline: GitHub Actions builds signed Windows installer from `v*` tags.
+- Release pipeline: GitHub Actions builds signed Windows installer, signed Android APK, `latest-desktop.json`, legacy `latest.json`, and `latest-android.json` from `v*.*.*` tags.
 
 ---
 
