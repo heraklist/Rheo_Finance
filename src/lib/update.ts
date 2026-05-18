@@ -21,6 +21,7 @@ export interface UpdateCheckResult {
 export interface UpdateInfo {
   available: boolean;
   currentVersion: string;
+  installMode?: "manual" | "tauri";
   latestVersion?: string;
   releaseUrl?: string;
   releaseNotes?: string;
@@ -42,8 +43,21 @@ interface GitHubReleaseAsset {
 
 interface GitHubLatestRelease {
   assets: GitHubReleaseAsset[];
+  body?: string;
   html_url: string;
   tag_name: string;
+}
+
+interface DesktopManifestPlatform {
+  signature?: string;
+  url?: string;
+}
+
+interface DesktopManifest {
+  notes?: string;
+  platforms?: Record<string, DesktopManifestPlatform>;
+  pub_date?: string;
+  version?: string;
 }
 
 interface AndroidManifest {
@@ -57,6 +71,13 @@ const GITHUB_API_BASE = "https://api.github.com/repos/heraklist/Rheo_Finance";
 const RELEASES_PAGE_URL = "https://github.com/heraklist/Rheo_Finance/releases/latest";
 const ANDROID_MANIFEST_URL =
   "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest-android.json";
+
+function openExternalUrl(url: string): void {
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    window.location.href = url;
+  }
+}
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -134,22 +155,66 @@ async function fetchReleaseAssetJson<T>(
   return fetchGitHubJson<T>(asset.url, token, "application/octet-stream");
 }
 
-async function checkDesktop(currentVersion: string, token: string | null): Promise<UpdateInfo> {
+async function checkDesktopWithTauri(
+  currentVersion: string,
+  token: string | null,
+): Promise<UpdateInfo> {
   const headers = token ? createUpdaterHeaders(token) : undefined;
   const update = await check(headers ? { headers } : undefined);
 
   if (!update) {
-    return { available: false, currentVersion, isDesktop: true };
+    return { available: false, currentVersion, installMode: "tauri", isDesktop: true };
   }
 
   return {
     available: true,
     currentVersion,
+    installMode: "tauri",
     latestVersion: update.version,
     releaseNotes: update.body ?? "",
     releaseUrl: RELEASES_PAGE_URL,
     isDesktop: true,
   };
+}
+
+async function checkDesktopFromGitHubApi(
+  currentVersion: string,
+  token: string,
+): Promise<UpdateInfo> {
+  const release = await fetchRelease(token);
+  const manifest = await fetchReleaseAssetJson<DesktopManifest>(release, token, [
+    "latest-desktop.json",
+    "latest.json",
+  ]);
+  const latestVersion = manifest?.version ?? release.tag_name.replace(/^v/, "");
+
+  return {
+    available: compareVersions(latestVersion, currentVersion) > 0,
+    currentVersion,
+    installMode: "manual",
+    latestVersion,
+    releaseNotes: manifest?.notes ?? release.body ?? "",
+    releaseUrl: release.html_url,
+    isDesktop: true,
+  };
+}
+
+async function checkDesktop(currentVersion: string, token: string | null): Promise<UpdateInfo> {
+  if (token) return checkDesktopFromGitHubApi(currentVersion, token);
+
+  try {
+    return await checkDesktopWithTauri(currentVersion, null);
+  } catch (error) {
+    if (isGitHubAccessError(errorMessage(error))) {
+      return {
+        available: false,
+        currentVersion,
+        isDesktop: true,
+        needsToken: true,
+      };
+    }
+    throw error;
+  }
 }
 
 async function checkAndroidFromGitHubApi(
@@ -229,14 +294,12 @@ export async function installUpdate(
   if (!info.available) return;
 
   if (!info.isDesktop) {
-    const opened = window.open(
-      info.releaseUrl ?? RELEASES_PAGE_URL,
-      "_blank",
-      "noopener,noreferrer",
-    );
-    if (!opened) {
-      window.location.href = info.releaseUrl ?? RELEASES_PAGE_URL;
-    }
+    openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
+    return;
+  }
+
+  if (info.installMode === "manual") {
+    openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
     return;
   }
 

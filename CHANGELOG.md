@@ -4,6 +4,17 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.8 - 2026-05-18
+
+### Changed
+
+- Desktop update checks now read private GitHub Releases through the GitHub API when an updater token is saved.
+- Desktop update action now opens the GitHub release for manual installer download while the repo remains private.
+
+### Fixed
+
+- Settings update check no longer fails on private GitHub release download URLs that return 404 outside the GitHub API.
+
 ## v0.2.7 - 2026-05-18
 
 ### Changed

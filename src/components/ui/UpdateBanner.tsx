@@ -18,6 +18,20 @@ function formatProgress(progress: InstallProgress | null): string {
   return `Λήψη ${pct}%`;
 }
 
+function formatInstallLabel(
+  info: UpdateInfo,
+  installing: boolean,
+  progress: InstallProgress | null,
+): string {
+  if (installing) {
+    if (info.installMode === "manual") return "Άνοιγμα...";
+    return formatProgress(progress);
+  }
+
+  if (info.installMode === "manual") return "Άνοιγμα";
+  return info.isDesktop ? "Αναβάθμιση" : "Κατέβασε";
+}
+
 export function UpdateBanner() {
   const [info, setInfo] = useState<UpdateInfo | null>(null);
   const [installing, setInstalling] = useState(false);
@@ -63,7 +77,10 @@ export function UpdateBanner() {
 
     try {
       await installUpdate(info, setProgress);
-      if (!info.isDesktop) setInfo(null);
+      if (!info.isDesktop || info.installMode === "manual") {
+        setInfo(null);
+        setInstalling(false);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Άγνωστο σφάλμα.";
       setError(message);
@@ -98,7 +115,7 @@ export function UpdateBanner() {
             disabled={installing}
             className="rounded-md bg-gold px-3 py-1.5 text-xs font-medium text-charcoal transition-colors hover:bg-gold-soft disabled:opacity-50"
           >
-            {installing ? formatProgress(progress) : info.isDesktop ? "Αναβάθμιση" : "Κατέβασε"}
+            {formatInstallLabel(info, installing, progress)}
           </button>
           <button
             type="button"

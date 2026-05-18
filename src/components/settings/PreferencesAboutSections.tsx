@@ -183,8 +183,8 @@ export function AboutSection({
                   : "Το repo είναι private. Χρειάζεται token με read access για έλεγχο ενημερώσεων."}
               </p>
               <p className="text-caption mt-1">
-                Desktop: αυτόματη signed εγκατάσταση. Android: ανοίγει το τελευταίο APK για
-                sideload.
+                Desktop: ανοίγει το τελευταίο signed installer από GitHub Releases. Android: ανοίγει
+                το τελευταίο APK για sideload.
               </p>
             </div>
           </div>
