@@ -4,7 +4,7 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
-## Unreleased
+## v0.2.6 - 2026-05-18
 
 ### Added
 
