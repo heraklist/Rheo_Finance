@@ -180,17 +180,34 @@ jobs:
         run: |
           RES="src-tauri/gen/android/app/src/main/res"
           SRC="src-tauri/icons/android"
+          mkdir -p "$RES/mipmap-anydpi-v26"
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@mipmap/ic_launcher_background"/>
+            <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          XML
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher_round.xml" <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@mipmap/ic_launcher_background"/>
+            <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          XML
           rm -f "$RES/drawable/ic_launcher_foreground.xml"
           rm -f "$RES/drawable/ic_launcher_background.xml"
           rm -f "$RES/drawable/ic_launcher_monochrome.xml"
+          rm -f "$RES/drawable/ic_launcher_monochrome.png"
           cp "$SRC/rheo_android_foreground_1024.png" "$RES/drawable/ic_launcher_foreground.png"
           cp "$SRC/rheo_android_background_1024.png" "$RES/drawable/ic_launcher_background.png"
-          cp "$SRC/rheo_android_monochrome_1024.png" "$RES/drawable/ic_launcher_monochrome.png"
           for dir in "$RES"/mipmap-*/; do
             [ -d "$dir" ] || continue
+            cp "$SRC/rheo_launcher_1024.png" "$dir/ic_launcher.png" || true
+            cp "$SRC/rheo_launcher_1024.png" "$dir/ic_launcher_round.png" || true
             cp "$SRC/rheo_android_foreground_1024.png" "$dir/ic_launcher_foreground.png" || true
             cp "$SRC/rheo_android_background_1024.png" "$dir/ic_launcher_background.png" || true
-            cp "$SRC/rheo_android_monochrome_1024.png" "$dir/ic_launcher_monochrome.png" || true
+            rm -f "$dir/ic_launcher_monochrome.png" "$dir/ic_launcher_monochrome.xml"
           done
 
       - name: Patch Android release signing

@@ -158,11 +158,13 @@ export function AboutSection({
       <div className="space-y-3 text-sm">
         <button
           type="button"
-          onClick={() => window.open("https://github.com/heraklist/Rheo_Finance", "_blank")}
+          onClick={() =>
+            window.open("https://github.com/heraklist/Rheo_Finance/releases/latest", "_blank")
+          }
           className="inline-flex items-center gap-2 text-gold font-medium hover:underline"
         >
           <ExternalLink className="w-4 h-4" strokeWidth={1.7} />
-          GitHub repo
+          GitHub Releases
         </button>
         <div className="flex items-start gap-2 text-text-muted">
           <ShieldAlert className="w-4 h-4 mt-0.5 text-gold" strokeWidth={1.7} />
@@ -172,11 +174,17 @@ export function AboutSection({
           <div className="mb-3 flex items-start gap-2 text-text-muted">
             <KeyRound className="mt-0.5 h-4 w-4 text-gold" strokeWidth={1.7} />
             <div>
-              <p className="text-sm font-medium text-text-primary">Private GitHub updater</p>
+              <p className="text-sm font-medium text-text-primary">
+                Ενημερώσεις από GitHub Releases
+              </p>
               <p className="text-caption">
                 {githubTokenSaved
-                  ? "Υπάρχει αποθηκευμένο token για έλεγχο ενημερώσεων από private repo."
-                  : "Το repo είναι private. Χρειάζεται token με read access για το updater feed."}
+                  ? "Υπάρχει αποθηκευμένο token για πρόσβαση στο private release feed."
+                  : "Το repo είναι private. Χρειάζεται token με read access για έλεγχο ενημερώσεων."}
+              </p>
+              <p className="text-caption mt-1">
+                Desktop: αυτόματη signed εγκατάσταση. Android: ανοίγει το τελευταίο APK για
+                sideload.
               </p>
             </div>
           </div>

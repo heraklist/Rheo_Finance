@@ -4,6 +4,17 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.7 - 2026-05-18
+
+### Changed
+
+- Settings About copy now describes the GitHub Releases update flow for desktop and Android.
+- About version now comes from the app package version to avoid stale labels.
+
+### Fixed
+
+- Android launcher icon no longer exposes a monochrome themed-icon layer that could render as a white mark without the Rheo background.
+
 ## v0.2.6 - 2026-05-18
 
 ### Added

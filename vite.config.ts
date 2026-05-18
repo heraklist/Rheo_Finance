@@ -1,12 +1,18 @@
+import fs from "node:fs";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
+const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8")) as { version: string };
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: react(),
+
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
 
   resolve: {
     alias: {
