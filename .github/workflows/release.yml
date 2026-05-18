@@ -203,6 +203,14 @@ jobs:
           cp "$SRC/rheo_android_background_1024.png" "$RES/drawable/ic_launcher_background.png"
           for dir in "$RES"/mipmap-*/; do
             [ -d "$dir" ] || continue
+            case "$dir" in
+              *mipmap-anydpi-v26*)
+                rm -f "$dir/ic_launcher.png" "$dir/ic_launcher_round.png"
+                rm -f "$dir/ic_launcher_foreground.png" "$dir/ic_launcher_background.png"
+                rm -f "$dir/ic_launcher_monochrome.png" "$dir/ic_launcher_monochrome.xml"
+                continue
+                ;;
+            esac
             cp "$SRC/rheo_launcher_1024.png" "$dir/ic_launcher.png" || true
             cp "$SRC/rheo_launcher_1024.png" "$dir/ic_launcher_round.png" || true
             cp "$SRC/rheo_android_foreground_1024.png" "$dir/ic_launcher_foreground.png" || true
