@@ -41,6 +41,11 @@ for (const path of [windowsPackage, windowsSignature, androidApk]) {
 const signature = readFileSync(windowsSignature, "utf8").trim();
 const pubDate = new Date().toISOString();
 
+function releaseAssetName(filePath) {
+  // softprops/action-gh-release normalizes spaces in uploaded asset names to dots.
+  return basename(filePath).replaceAll(" ", ".");
+}
+
 const desktopManifest = {
   version,
   notes,
@@ -48,7 +53,7 @@ const desktopManifest = {
   platforms: {
     "windows-x86_64": {
       signature,
-      url: `${releaseUrl}/${basename(windowsPackage)}`,
+      url: `${releaseUrl}/${releaseAssetName(windowsPackage)}`,
     },
   },
 };
@@ -57,7 +62,7 @@ const androidManifest = {
   version,
   pub_date: pubDate,
   notes,
-  url: `${releaseUrl}/${basename(androidApk)}`,
+  url: `${releaseUrl}/${releaseAssetName(androidApk)}`,
 };
 
 writeFileSync(join(output, "latest-desktop.json"), `${JSON.stringify(desktopManifest, null, 2)}\n`);
