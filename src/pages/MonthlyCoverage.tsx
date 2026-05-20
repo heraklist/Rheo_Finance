@@ -174,6 +174,21 @@ export function MonthlyCoverage() {
     }
   }
 
+  async function handleCoverageAction(action: () => Promise<void>, errorMessage: string) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      await refreshPendingAndCoverage();
+    } catch (err) {
+      console.error("Failed to update monthly coverage:", err);
+      setError(errorMessage);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="px-4 pb-24 pt-4">
       <MonthNavigator
@@ -221,8 +236,18 @@ export function MonthlyCoverage() {
                 dateLabel={dayLabel(item.due_date, monthDate)}
                 meta={item.type === "recurring" ? "Πάγιο" : "Μη πάγιο"}
                 disabled={busy}
-                onToggle={() => void toggleExpensePaid(item.id).then(refreshPendingAndCoverage)}
-                onDelete={() => void deleteCoverageExpense(item.id).then(refreshPendingAndCoverage)}
+                onToggle={() =>
+                  void handleCoverageAction(
+                    () => toggleExpensePaid(item.id),
+                    "Δεν ενημερώθηκε το έξοδο.",
+                  )
+                }
+                onDelete={() =>
+                  void handleCoverageAction(
+                    () => deleteCoverageExpense(item.id),
+                    "Δεν διαγράφηκε το έξοδο.",
+                  )
+                }
               />
             ))
           ) : (
@@ -288,8 +313,18 @@ export function MonthlyCoverage() {
                 dateLabel={dayLabel(item.expected_date, monthDate)}
                 meta={`Εμπιστοσύνη ${item.confidence}`}
                 disabled={busy}
-                onToggle={() => void toggleIncomeReceived(item.id).then(refreshPendingAndCoverage)}
-                onDelete={() => void deleteCoverageIncome(item.id).then(refreshPendingAndCoverage)}
+                onToggle={() =>
+                  void handleCoverageAction(
+                    () => toggleIncomeReceived(item.id),
+                    "Δεν ενημερώθηκε το έσοδο.",
+                  )
+                }
+                onDelete={() =>
+                  void handleCoverageAction(
+                    () => deleteCoverageIncome(item.id),
+                    "Δεν διαγράφηκε το έσοδο.",
+                  )
+                }
               />
             ))
           ) : (

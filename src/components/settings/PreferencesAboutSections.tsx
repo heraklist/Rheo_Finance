@@ -6,6 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PaymentMethod } from "@/lib/types";
+import { isTauri } from "@tauri-apps/api/core";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 import {
   ExternalLink,
   Info,
@@ -18,9 +20,23 @@ import {
 } from "lucide-react";
 
 type Option<T extends string | number> = { label: string; value: T };
+const RELEASES_URL = "https://github.com/heraklist/Rheo_Finance/releases/latest";
 
 function sectionClassName(extra = ""): string {
   return `bg-cream border border-border-light rounded-md p-4 ${extra}`;
+}
+
+async function openReleasesPage(): Promise<void> {
+  if (isTauri()) {
+    try {
+      await openExternal(RELEASES_URL);
+      return;
+    } catch (error) {
+      console.error("Failed to open releases page with shell plugin:", error);
+    }
+  }
+
+  window.open(RELEASES_URL, "_blank", "noopener,noreferrer");
 }
 
 interface PreferencesSectionProps {
@@ -158,9 +174,7 @@ export function AboutSection({
       <div className="space-y-3 text-sm">
         <button
           type="button"
-          onClick={() =>
-            window.open("https://github.com/heraklist/Rheo_Finance/releases/latest", "_blank")
-          }
+          onClick={() => void openReleasesPage()}
           className="inline-flex items-center gap-2 text-gold font-medium hover:underline"
         >
           <ExternalLink className="w-4 h-4" strokeWidth={1.7} />

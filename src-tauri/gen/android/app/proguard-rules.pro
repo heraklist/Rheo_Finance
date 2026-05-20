@@ -21,3 +21,5 @@
 #-renamesourcefileattribute SourceFile
 
 -keep class app.rheo.finance.SecureAuthStoragePlugin { *; }
+-keep class app.rheo.finance.SecureStorageKeyArgs { *; }
+-keep class app.rheo.finance.SecureStorageSetArgs { *; }

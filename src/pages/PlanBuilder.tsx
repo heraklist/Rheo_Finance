@@ -289,6 +289,21 @@ export function PlanBuilder() {
     }
   }
 
+  async function handlePlanItemAction(action: () => Promise<void>, errorMessage: string) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      await refreshPendingAndPlan();
+    } catch (err) {
+      console.error("Failed to update plan item:", err);
+      setError(errorMessage);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="px-4 pb-24 pt-4">
@@ -440,8 +455,18 @@ export function PlanBuilder() {
               meta={`${item.category || "Χωρίς κατηγορία"} · μήνας ${item.target_month}`}
               tone="expense"
               disabled={busy}
-              onToggle={() => void togglePlanExpenseIncluded(item.id).then(refreshPendingAndPlan)}
-              onDelete={() => void deletePlanExpenseItem(item.id).then(refreshPendingAndPlan)}
+              onToggle={() =>
+                void handlePlanItemAction(
+                  () => togglePlanExpenseIncluded(item.id),
+                  "Δεν ενημερώθηκε το έξοδο.",
+                )
+              }
+              onDelete={() =>
+                void handlePlanItemAction(
+                  () => deletePlanExpenseItem(item.id),
+                  "Δεν διαγράφηκε το έξοδο.",
+                )
+              }
             />
           ))}
           <form className="grid gap-2 border-t border-border-light p-3" onSubmit={handleAddExpense}>
@@ -495,8 +520,18 @@ export function PlanBuilder() {
               meta={`${item.category || "Χωρίς κατηγορία"} · ${item.confidence}`}
               tone="income"
               disabled={busy}
-              onToggle={() => void togglePlanIncomeIncluded(item.id).then(refreshPendingAndPlan)}
-              onDelete={() => void deletePlanIncomeItem(item.id).then(refreshPendingAndPlan)}
+              onToggle={() =>
+                void handlePlanItemAction(
+                  () => togglePlanIncomeIncluded(item.id),
+                  "Δεν ενημερώθηκε το έσοδο.",
+                )
+              }
+              onDelete={() =>
+                void handlePlanItemAction(
+                  () => deletePlanIncomeItem(item.id),
+                  "Δεν διαγράφηκε το έσοδο.",
+                )
+              }
             />
           ))}
           <form className="grid gap-2 border-t border-border-light p-3" onSubmit={handleAddIncome}>

@@ -15,11 +15,15 @@ interface StrongholdState {
 }
 
 const CLIENT_NAME = "supabase-auth";
-const SNAPSHOT_FILE = "supabase-auth.stronghold";
+const SNAPSHOT_FILE = "supabase-auth-v2.stronghold";
+const LEGACY_SNAPSHOT_FILE = "supabase-auth.stronghold";
+const LEGACY_STRONGHOLD_PASSPHRASE = "app.rheo.finance.supabase-auth.v1";
 const STORAGE_KEY_PREFIX = "supabase:";
+const STRONGHOLD_PASSPHRASE_KEY = "rheo:stronghold-passphrase:v1";
 const ANDROID_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
+let legacyStrongholdStatePromise: Promise<StrongholdState> | null = null;
 let strongholdAvailable: boolean | null = null;
 let tauriPlatformPromise: Promise<string | null> | null = null;
 
@@ -41,6 +45,23 @@ function localRemoveItem(key: string): void {
 
 function strongholdKey(key: string): string {
   return `${STORAGE_KEY_PREFIX}${key}`;
+}
+
+function createStrongholdPassphrase(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function getStrongholdPassphrase(): string {
+  const existing = localGetItem(STRONGHOLD_PASSPHRASE_KEY);
+  if (existing) return existing;
+
+  const passphrase = createStrongholdPassphrase();
+  localSetItem(STRONGHOLD_PASSPHRASE_KEY, passphrase);
+  return passphrase;
 }
 
 function logStrongholdFailure(operation: string, error: unknown): void {
@@ -84,20 +105,37 @@ async function loadOrCreateClient(stronghold: Stronghold): Promise<Client> {
   }
 }
 
-async function initializeStrongholdState(): Promise<StrongholdState> {
+async function initializeStrongholdState(
+  snapshotFile: string,
+  passphrase: string,
+): Promise<StrongholdState> {
   const dataDir = await appLocalDataDir();
-  const snapshotPath = await join(dataDir, SNAPSHOT_FILE);
-  const stronghold = await Stronghold.load(snapshotPath, "app.rheo.finance.supabase-auth.v1");
+  const snapshotPath = await join(dataDir, snapshotFile);
+  const stronghold = await Stronghold.load(snapshotPath, passphrase);
   const client = await loadOrCreateClient(stronghold);
   return { stronghold, store: client.getStore() };
 }
 
 async function getStrongholdState(): Promise<StrongholdState> {
-  strongholdStatePromise ??= initializeStrongholdState().catch((error: unknown) => {
+  strongholdStatePromise ??= initializeStrongholdState(
+    SNAPSHOT_FILE,
+    getStrongholdPassphrase(),
+  ).catch((error: unknown) => {
     strongholdStatePromise = null;
     throw error;
   });
   return strongholdStatePromise;
+}
+
+async function getLegacyStrongholdState(): Promise<StrongholdState> {
+  legacyStrongholdStatePromise ??= initializeStrongholdState(
+    LEGACY_SNAPSHOT_FILE,
+    LEGACY_STRONGHOLD_PASSPHRASE,
+  ).catch((error: unknown) => {
+    legacyStrongholdStatePromise = null;
+    throw error;
+  });
+  return legacyStrongholdStatePromise;
 }
 
 async function writeStrongholdItem(key: string, value: string): Promise<void> {
@@ -106,6 +144,12 @@ async function writeStrongholdItem(key: string, value: string): Promise<void> {
   await store.insert(strongholdKey(key), encoded);
   await stronghold.save();
   localRemoveItem(key);
+}
+
+async function readLegacyStrongholdItem(key: string): Promise<string | null> {
+  const { store } = await getLegacyStrongholdState();
+  const value = await store.get(strongholdKey(key));
+  return value === null ? null : new TextDecoder().decode(value);
 }
 
 async function removeStrongholdItem(key: string): Promise<void> {
@@ -118,6 +162,16 @@ async function removeStrongholdItem(key: string): Promise<void> {
   }
 
   localRemoveItem(key);
+}
+
+async function removeLegacyStrongholdItem(key: string): Promise<void> {
+  const { stronghold, store } = await getLegacyStrongholdState();
+  const existing = await store.get(strongholdKey(key));
+
+  if (existing !== null) {
+    await store.remove(strongholdKey(key));
+    await stronghold.save();
+  }
 }
 
 async function readAndroidSecureItem(key: string): Promise<string | null> {
@@ -181,9 +235,25 @@ export const secureAuthStorage: AuthStorage = {
         } catch (error) {
           logStrongholdFailure("migration", error);
         }
+        return legacyValue;
       }
 
-      return legacyValue;
+      try {
+        const legacyStrongholdValue = await readLegacyStrongholdItem(key);
+        if (legacyStrongholdValue !== null) {
+          try {
+            await writeStrongholdItem(key, legacyStrongholdValue);
+            await removeLegacyStrongholdItem(key);
+          } catch (error) {
+            logStrongholdFailure("legacy migration", error);
+          }
+          return legacyStrongholdValue;
+        }
+      } catch (error) {
+        logStrongholdFailure("legacy read", error);
+      }
+
+      return null;
     } catch (error) {
       logStrongholdFailure("read", error);
       return null;
@@ -230,6 +300,11 @@ export const secureAuthStorage: AuthStorage = {
 
     try {
       await removeStrongholdItem(key);
+      try {
+        await removeLegacyStrongholdItem(key);
+      } catch (error) {
+        logStrongholdFailure("legacy remove", error);
+      }
     } catch (error) {
       logStrongholdFailure("remove", error);
       localRemoveItem(key);

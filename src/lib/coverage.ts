@@ -213,15 +213,6 @@ export async function ensureCoverageMonth(
   const ts = now();
 
   await runInTransaction(async (db) => {
-    const existing = await db.select<CountRow[]>(
-      `SELECT
-         (SELECT COUNT(*) FROM coverage_expense WHERE book_id = ? AND month = ? AND year = ?) +
-         (SELECT COUNT(*) FROM coverage_income WHERE book_id = ? AND month = ? AND year = ?) AS count`,
-      [bookId, normalizedMonth, normalizedYear, bookId, normalizedMonth, normalizedYear],
-    );
-
-    if (Number(existing[0]?.count ?? 0) > 0) return;
-
     const templates = await db.select<RecurringCoverageRow[]>(
       `SELECT rt.id,
               rt.description,
@@ -237,6 +228,14 @@ export async function ensureCoverageMonth(
 
     for (const template of templates) {
       if (template.category_type === "expense") {
+        const existing = await db.select<CountRow[]>(
+          `SELECT COUNT(*) AS count
+           FROM coverage_expense
+           WHERE book_id = ? AND month = ? AND year = ? AND linked_recurring_id = ?`,
+          [bookId, normalizedMonth, normalizedYear, template.id],
+        );
+        if (Number(existing[0]?.count ?? 0) > 0) continue;
+
         const item = buildExpense(
           {
             book_id: bookId,
@@ -253,13 +252,34 @@ export async function ensureCoverageMonth(
         await insertExpense(db, item);
         await enqueueOutbox(db, "coverage_expense", item.id, "create", item, ts);
       } else if (template.category_type === "income") {
+        const expectedDate = clampDay(template.day_of_period);
+        const existing = await db.select<CountRow[]>(
+          `SELECT COUNT(*) AS count
+           FROM coverage_income
+           WHERE book_id = ?
+             AND month = ?
+             AND year = ?
+             AND name = ?
+             AND amount = ?
+             AND expected_date = ?`,
+          [
+            bookId,
+            normalizedMonth,
+            normalizedYear,
+            template.description,
+            normalizeAmount(template.amount_gross),
+            expectedDate,
+          ],
+        );
+        if (Number(existing[0]?.count ?? 0) > 0) continue;
+
         const item = buildIncome(
           {
             book_id: bookId,
             name: template.description,
             amount: template.amount_gross,
             confidence: "high",
-            expected_date: template.day_of_period,
+            expected_date: expectedDate,
             month: normalizedMonth,
             year: normalizedYear,
           },

@@ -343,6 +343,37 @@ export async function deletePlan(id: string): Promise<void> {
 
   const ts = now();
   await runInTransaction(async (db) => {
+    const expenseItems = await db.select<PlanExpenseItemRow[]>(
+      "SELECT * FROM plan_expense_item WHERE plan_id = ?",
+      [id],
+    );
+    const incomeItems = await db.select<PlanIncomeItemRow[]>(
+      "SELECT * FROM plan_income_item WHERE plan_id = ?",
+      [id],
+    );
+
+    for (const item of expenseItems.map(toExpenseItem)) {
+      await enqueueOutbox(
+        db,
+        "plan_expense_item",
+        item.id,
+        "delete",
+        { ...item, deleted_at: ts },
+        ts,
+      );
+    }
+
+    for (const item of incomeItems.map(toIncomeItem)) {
+      await enqueueOutbox(
+        db,
+        "plan_income_item",
+        item.id,
+        "delete",
+        { ...item, deleted_at: ts },
+        ts,
+      );
+    }
+
     await db.execute("DELETE FROM plan WHERE id = ?", [id]);
     await enqueueOutbox(db, "plan", id, "delete", { ...planPayload(existing), deleted_at: ts }, ts);
   });

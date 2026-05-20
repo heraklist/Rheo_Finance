@@ -521,6 +521,17 @@ async function getRemoteRow(config: SyncTableConfig, entityId: string): Promise<
   return data ? (data as SyncRow) : null;
 }
 
+async function hasLocalRow(table: string, id: JsonValue | undefined): Promise<boolean> {
+  if (typeof id !== "string" || id.length === 0) return false;
+
+  const db = await getDb();
+  const rows = await db.select<Array<{ exists: number }>>(
+    `SELECT 1 AS exists FROM ${table} WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  return rows.length > 0;
+}
+
 async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Promise<boolean> {
   const entityId = remoteRow.id;
   const remoteMs = timestampMs(serverUpdatedAt(remoteRow));
@@ -594,18 +605,122 @@ async function prepareRemoteRowForPush(
   return { remoteRow, uploadedReceipt: false };
 }
 
+async function markRemotePlanChildrenDeleted(
+  planId: string,
+  deletedAtValue: string,
+): Promise<void> {
+  for (const table of ["plan_expense_item", "plan_income_item"]) {
+    const { error } = await supabase
+      .from(table)
+      .update({ deleted_at: deletedAtValue })
+      .eq("plan_id", planId)
+      .is("deleted_at", null);
+
+    if (error) throw error;
+  }
+}
+
+async function clearRemoteRecurringReferences(recurringTemplateId: string): Promise<void> {
+  const updates = [
+    supabase
+      .from("transactions")
+      .update({ recurring_template_id: null })
+      .eq("recurring_template_id", recurringTemplateId)
+      .is("deleted_at", null),
+    supabase
+      .from("coverage_expense")
+      .update({ linked_recurring_id: null })
+      .eq("linked_recurring_id", recurringTemplateId)
+      .is("deleted_at", null),
+  ];
+
+  for (const update of updates) {
+    const { error } = await update;
+    if (error) throw error;
+  }
+}
+
+async function clearRemoteTransactionCoverageLinks(transactionId: string): Promise<void> {
+  const updates = [
+    supabase
+      .from("coverage_expense")
+      .update({ linked_transaction_id: null })
+      .eq("linked_transaction_id", transactionId)
+      .is("deleted_at", null),
+    supabase
+      .from("coverage_income")
+      .update({ linked_transaction_id: null })
+      .eq("linked_transaction_id", transactionId)
+      .is("deleted_at", null),
+  ];
+
+  for (const update of updates) {
+    const { error } = await update;
+    if (error) throw error;
+  }
+}
+
 async function preparePulledRowForLocal(
   entityType: SyncEntityType,
   row: SyncRow,
-): Promise<SyncRow> {
-  if (entityType !== "transaction") return row;
+): Promise<SyncRow | null> {
+  let nextRow = row;
 
-  const receiptPath = row.receipt_photo_path;
-  if (typeof receiptPath !== "string" || receiptPath.length === 0) return row;
+  if (entityType === "plan_expense_item" || entityType === "plan_income_item") {
+    if (!(await hasLocalRow("plan", nextRow.plan_id))) {
+      console.warn(
+        `[sync] Skipping orphan ${entityType} ${String(nextRow.id)}; missing plan ${String(
+          nextRow.plan_id,
+        )}.`,
+      );
+      return null;
+    }
+  }
 
-  const localPath = await downloadReceiptPhoto(receiptPath, String(row.id));
+  if (entityType === "plan_expense_item" && nextRow.account_id !== null) {
+    if (!(await hasLocalRow("accounts", nextRow.account_id))) {
+      nextRow = { ...nextRow, account_id: null };
+    }
+  }
+
+  if (entityType === "transaction" && nextRow.recurring_template_id !== null) {
+    if (!(await hasLocalRow("recurring_templates", nextRow.recurring_template_id))) {
+      nextRow = { ...nextRow, recurring_template_id: null };
+    }
+  }
+
+  if (entityType === "coverage_expense") {
+    let sanitized = nextRow;
+
+    if (sanitized.linked_recurring_id !== null) {
+      if (!(await hasLocalRow("recurring_templates", sanitized.linked_recurring_id))) {
+        sanitized = { ...sanitized, linked_recurring_id: null };
+      }
+    }
+
+    if (sanitized.linked_transaction_id !== null) {
+      if (!(await hasLocalRow("transactions", sanitized.linked_transaction_id))) {
+        sanitized = { ...sanitized, linked_transaction_id: null };
+      }
+    }
+
+    nextRow = sanitized;
+  }
+
+  if (entityType === "coverage_income" && nextRow.linked_transaction_id !== null) {
+    if (!(await hasLocalRow("transactions", nextRow.linked_transaction_id))) {
+      nextRow = { ...nextRow, linked_transaction_id: null };
+    }
+  }
+
+  if (entityType !== "transaction") return nextRow;
+
+  const receiptPath = nextRow.receipt_photo_path;
+  if (typeof receiptPath !== "string" || receiptPath.length === 0) return nextRow;
+
+  const localPath = await downloadReceiptPhoto(receiptPath, String(nextRow.id));
   return {
-    ...row,
+    ...nextRow,
     receipt_photo_path: localPath,
   };
 }
@@ -668,6 +783,18 @@ async function deleteLocalForRemoteTombstone(
       "SELECT receipt_photo_path FROM transactions WHERE id = ? LIMIT 1",
       [entityId],
     );
+    await db.execute(
+      `UPDATE coverage_expense
+       SET linked_transaction_id = NULL
+       WHERE linked_transaction_id = ?`,
+      [entityId],
+    );
+    await db.execute(
+      `UPDATE coverage_income
+       SET linked_transaction_id = NULL
+       WHERE linked_transaction_id = ?`,
+      [entityId],
+    );
     await db.execute("DELETE FROM transactions WHERE id = ?", [entityId]);
     await deleteLocalReceiptPhoto(localRows[0]?.receipt_photo_path);
     return;
@@ -694,14 +821,17 @@ async function deleteLocalForRemoteTombstone(
 async function applyRemoteRowToLocal(
   entityType: SyncEntityType,
   remoteRow: SyncRow,
-): Promise<void> {
+): Promise<boolean> {
   if (deletedAt(remoteRow)) {
     await deleteLocalForRemoteTombstone(entityType, remoteRow);
-    return;
+    return true;
   }
 
   const localRow = await preparePulledRowForLocal(entityType, remoteRow);
+  if (localRow === null) return false;
+
   await upsertLocal(entityType, localRow);
+  return true;
 }
 
 async function upsertLocalReferenceData(userId: string) {
@@ -864,6 +994,14 @@ export async function pushChanges(): Promise<number> {
         if (error) throw error;
         syncedAt = data ? remoteUpdatedAtFromResult(data) : localDeletedAt;
 
+        if (entry.entity_type === "plan") {
+          await markRemotePlanChildrenDeleted(entry.entity_id, localDeletedAt);
+        } else if (entry.entity_type === "recurring_template") {
+          await clearRemoteRecurringReferences(entry.entity_id);
+        } else if (entry.entity_type === "transaction") {
+          await clearRemoteTransactionCoverageLinks(entry.entity_id);
+        }
+
         if (entry.entity_type === "transaction" && payload.receipt_photo_path) {
           await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
         }
@@ -942,14 +1080,7 @@ export async function pullChanges(): Promise<number> {
 
       if (await shouldSkipPull(config, remoteRow)) continue;
 
-      if (deletedAt(remoteRow)) {
-        await deleteLocalForRemoteTombstone(entityType, remoteRow);
-        total++;
-        continue;
-      }
-
-      await applyRemoteRowToLocal(entityType, remoteRow);
-      total++;
+      if (await applyRemoteRowToLocal(entityType, remoteRow)) total++;
     }
   }
 
