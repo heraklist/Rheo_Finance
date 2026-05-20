@@ -4,7 +4,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
-const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8")) as { version: string };
+const packageJsonPath = path.resolve(__dirname, "package.json");
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as { version: string };
 
 // https://vitejs.dev/config/
 export default defineConfig({

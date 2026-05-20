@@ -5,6 +5,7 @@ import { createPlan, listPlans } from "@/lib/plans";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
 import type { PlanType, PlanWithTotals } from "@/lib/types";
+import { formatLocalIsoDate } from "@/lib/utils";
 import { AlertCircle, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 function defaultTargetDate(monthsAhead = 3): string {
   const date = new Date();
   date.setMonth(date.getMonth() + monthsAhead);
-  return date.toISOString().slice(0, 10);
+  return formatLocalIsoDate(date);
 }
 
 export function PlanHub() {

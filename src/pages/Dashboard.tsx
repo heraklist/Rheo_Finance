@@ -28,10 +28,20 @@ interface Totals {
   vat_net: number;
 }
 
+function startOfLocalDay(date = new Date()): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function millisecondsUntilNextLocalDay(from = new Date()): number {
+  const nextDay = new Date(from);
+  nextDay.setHours(24, 0, 0, 0);
+  return Math.max(1000, nextDay.getTime() - from.getTime());
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const currentBookId = useAppStore((state) => state.currentBookId);
-  const today = useMemo(() => new Date(), []);
+  const [today, setToday] = useState(startOfLocalDay);
   const [bookFilter, setBookFilter] = useState<BookFilter>(currentBookId as BookFilter);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     kind: "month",
@@ -55,6 +65,30 @@ export function Dashboard() {
   const selectedBookId = bookFilter === "all" ? undefined : bookFilter;
   const selectedRange = useMemo(() => periodToRange(periodFilter), [periodFilter]);
   const showVat = bookFilter !== "book-personal";
+
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    const scheduleNextDayTick = () => {
+      timeoutId = window.setTimeout(() => {
+        setToday(startOfLocalDay());
+        scheduleNextDayTick();
+      }, millisecondsUntilNextLocalDay());
+    };
+
+    scheduleNextDayTick();
+    return () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    setPeriodFilter((filter) => {
+      if (filter.kind === "today" || filter.kind === "week") {
+        return { ...filter, date: today };
+      }
+      return filter;
+    });
+  }, [today]);
 
   useEffect(() => {
     let cancelled = false;

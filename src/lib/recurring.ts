@@ -505,6 +505,7 @@ async function generateDueRecurringTransactionsOnce(
       if (currentTemplate.end_date && compareDates(nextDue, currentTemplate.end_date) > 0) break;
 
       if (await generatedTransactionExists(currentTemplate.id, nextDue)) {
+        await markRecurringGenerated(currentTemplate, nextDue);
         skipped++;
       } else {
         await createTransaction({

@@ -20,6 +20,7 @@ import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
+import { formatLocalIsoDate } from "@/lib/utils";
 import { Camera, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -75,7 +76,7 @@ function defaultValues(input: {
     bookId: input.bookId,
     accountId: "",
     categoryId: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: formatLocalIsoDate(),
     vatRate: input.vatRate,
     paymentMethod: input.paymentMethod,
     tagName: "",

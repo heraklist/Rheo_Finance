@@ -16,18 +16,15 @@ interface StrongholdState {
 
 const CLIENT_NAME = "supabase-auth";
 const SNAPSHOT_FILE = "supabase-auth-v2.stronghold";
-const LEGACY_SNAPSHOT_FILE = "supabase-auth.stronghold";
-const LEGACY_STRONGHOLD_PASSPHRASE = "app.rheo.finance.supabase-auth.v1";
 const STORAGE_KEY_PREFIX = "supabase:";
 const STRONGHOLD_PASSPHRASE_KEY = "rheo:stronghold-passphrase:v1";
-const ANDROID_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
+const NATIVE_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
-let legacyStrongholdStatePromise: Promise<StrongholdState> | null = null;
 let strongholdAvailable: boolean | null = null;
 let tauriPlatformPromise: Promise<string | null> | null = null;
 
-interface AndroidSecureStorageValue {
+interface NativeSecureStorageValue {
   value?: string | null;
 }
 
@@ -68,8 +65,8 @@ function logStrongholdFailure(operation: string, error: unknown): void {
   console.error(`Stronghold auth storage ${operation} failed.`, error);
 }
 
-function logAndroidSecureStorageFailure(operation: string, error: unknown): void {
-  console.error(`Android secure auth storage ${operation} failed.`, error);
+function logNativeSecureStorageFailure(operation: string, error: unknown): void {
+  console.error(`Native secure auth storage ${operation} failed.`, error);
 }
 
 async function getTauriPlatform(): Promise<string | null> {
@@ -82,8 +79,9 @@ async function getTauriPlatform(): Promise<string | null> {
   return tauriPlatformPromise;
 }
 
-async function canUseAndroidSecureStorage(): Promise<boolean> {
-  return (await getTauriPlatform()) === "android";
+async function canUseNativeSecureStorage(): Promise<boolean> {
+  const currentPlatform = await getTauriPlatform();
+  return currentPlatform === "android" || currentPlatform === "windows";
 }
 
 async function canUseStronghold(): Promise<boolean> {
@@ -127,17 +125,6 @@ async function getStrongholdState(): Promise<StrongholdState> {
   return strongholdStatePromise;
 }
 
-async function getLegacyStrongholdState(): Promise<StrongholdState> {
-  legacyStrongholdStatePromise ??= initializeStrongholdState(
-    LEGACY_SNAPSHOT_FILE,
-    LEGACY_STRONGHOLD_PASSPHRASE,
-  ).catch((error: unknown) => {
-    legacyStrongholdStatePromise = null;
-    throw error;
-  });
-  return legacyStrongholdStatePromise;
-}
-
 async function writeStrongholdItem(key: string, value: string): Promise<void> {
   const { stronghold, store } = await getStrongholdState();
   const encoded = Array.from(new TextEncoder().encode(value));
@@ -146,8 +133,8 @@ async function writeStrongholdItem(key: string, value: string): Promise<void> {
   localRemoveItem(key);
 }
 
-async function readLegacyStrongholdItem(key: string): Promise<string | null> {
-  const { store } = await getLegacyStrongholdState();
+async function readStrongholdItem(key: string): Promise<string | null> {
+  const { store } = await getStrongholdState();
   const value = await store.get(strongholdKey(key));
   return value === null ? null : new TextDecoder().decode(value);
 }
@@ -164,56 +151,64 @@ async function removeStrongholdItem(key: string): Promise<void> {
   localRemoveItem(key);
 }
 
-async function removeLegacyStrongholdItem(key: string): Promise<void> {
-  const { stronghold, store } = await getLegacyStrongholdState();
-  const existing = await store.get(strongholdKey(key));
-
-  if (existing !== null) {
-    await store.remove(strongholdKey(key));
-    await stronghold.save();
-  }
-}
-
-async function readAndroidSecureItem(key: string): Promise<string | null> {
-  const result = await invoke<AndroidSecureStorageValue>(
-    `${ANDROID_SECURE_STORAGE_COMMAND}|get_item`,
+async function readNativeSecureItem(key: string): Promise<string | null> {
+  const result = await invoke<NativeSecureStorageValue>(
+    `${NATIVE_SECURE_STORAGE_COMMAND}|get_item`,
     { key },
   );
 
   return result.value ?? null;
 }
 
-async function writeAndroidSecureItem(key: string, value: string): Promise<void> {
-  await invoke(`${ANDROID_SECURE_STORAGE_COMMAND}|set_item`, { key, value });
+async function writeNativeSecureItem(key: string, value: string): Promise<void> {
+  await invoke(`${NATIVE_SECURE_STORAGE_COMMAND}|set_item`, { key, value });
   localRemoveItem(key);
 }
 
-async function removeAndroidSecureItem(key: string): Promise<void> {
-  await invoke(`${ANDROID_SECURE_STORAGE_COMMAND}|remove_item`, { key });
+async function removeNativeSecureItem(key: string): Promise<void> {
+  await invoke(`${NATIVE_SECURE_STORAGE_COMMAND}|remove_item`, { key });
   localRemoveItem(key);
 }
 
 export const secureAuthStorage: AuthStorage = {
   async getItem(key) {
-    if (await canUseAndroidSecureStorage()) {
+    if (await canUseNativeSecureStorage()) {
       try {
-        const value = await readAndroidSecureItem(key);
+        const value = await readNativeSecureItem(key);
         if (value !== null) return value;
 
         const legacyValue = localGetItem(key);
         if (legacyValue !== null) {
           try {
-            await writeAndroidSecureItem(key, legacyValue);
+            await writeNativeSecureItem(key, legacyValue);
             return legacyValue;
           } catch (error) {
-            logAndroidSecureStorageFailure("migration", error);
+            logNativeSecureStorageFailure("local migration", error);
             return null;
+          }
+        }
+
+        if (localGetItem(STRONGHOLD_PASSPHRASE_KEY)) {
+          try {
+            const strongholdValue = await readStrongholdItem(key);
+            if (strongholdValue !== null) {
+              try {
+                await writeNativeSecureItem(key, strongholdValue);
+                await removeStrongholdItem(key);
+                localRemoveItem(STRONGHOLD_PASSPHRASE_KEY);
+              } catch (error) {
+                logNativeSecureStorageFailure("Stronghold migration", error);
+              }
+              return strongholdValue;
+            }
+          } catch (error) {
+            logNativeSecureStorageFailure("Stronghold read", error);
           }
         }
 
         return null;
       } catch (error) {
-        logAndroidSecureStorageFailure("read", error);
+        logNativeSecureStorageFailure("read", error);
         return null;
       }
     }
@@ -238,21 +233,6 @@ export const secureAuthStorage: AuthStorage = {
         return legacyValue;
       }
 
-      try {
-        const legacyStrongholdValue = await readLegacyStrongholdItem(key);
-        if (legacyStrongholdValue !== null) {
-          try {
-            await writeStrongholdItem(key, legacyStrongholdValue);
-            await removeLegacyStrongholdItem(key);
-          } catch (error) {
-            logStrongholdFailure("legacy migration", error);
-          }
-          return legacyStrongholdValue;
-        }
-      } catch (error) {
-        logStrongholdFailure("legacy read", error);
-      }
-
       return null;
     } catch (error) {
       logStrongholdFailure("read", error);
@@ -260,11 +240,11 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async setItem(key, value) {
-    if (await canUseAndroidSecureStorage()) {
+    if (await canUseNativeSecureStorage()) {
       try {
-        await writeAndroidSecureItem(key, value);
+        await writeNativeSecureItem(key, value);
       } catch (error) {
-        logAndroidSecureStorageFailure("write", error);
+        logNativeSecureStorageFailure("write", error);
         throw error;
       }
       return;
@@ -283,11 +263,11 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async removeItem(key) {
-    if (await canUseAndroidSecureStorage()) {
+    if (await canUseNativeSecureStorage()) {
       try {
-        await removeAndroidSecureItem(key);
+        await removeNativeSecureItem(key);
       } catch (error) {
-        logAndroidSecureStorageFailure("remove", error);
+        logNativeSecureStorageFailure("remove", error);
         localRemoveItem(key);
       }
       return;
@@ -300,11 +280,6 @@ export const secureAuthStorage: AuthStorage = {
 
     try {
       await removeStrongholdItem(key);
-      try {
-        await removeLegacyStrongholdItem(key);
-      } catch (error) {
-        logStrongholdFailure("legacy remove", error);
-      }
     } catch (error) {
       logStrongholdFailure("remove", error);
       localRemoveItem(key);

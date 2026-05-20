@@ -17,6 +17,7 @@ import { parseGreekAmount } from "@/lib/money";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import type { Account, Category, Frequency } from "@/lib/types";
+import { formatLocalIsoDate } from "@/lib/utils";
 import { CalendarClock, Check, Pause } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -88,7 +89,7 @@ function defaultValues(vatRate: number): RecurringFormInitialValues {
     vatRate,
     frequency: "monthly",
     dayOfPeriod: new Date().getDate(),
-    startDate: new Date().toISOString().slice(0, 10),
+    startDate: formatLocalIsoDate(),
     endDate: "",
     tagName: "",
   };
