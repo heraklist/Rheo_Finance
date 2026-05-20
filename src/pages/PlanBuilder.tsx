@@ -1,3 +1,4 @@
+import { parseGreekAmount } from "@/lib/money";
 import {
   createPlanExpenseItem,
   createPlanIncomeItem,
@@ -45,7 +46,15 @@ const STATUSES: Array<{ value: PlanStatus; label: string }> = [
 ];
 
 function parseAmount(value: string): number {
-  return Number(value.replace(",", "."));
+  const amount = parseGreekAmount(value);
+  if (amount === null) throw new Error("Invalid amount");
+  return amount;
+}
+
+function parsePositiveInt(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) throw new Error("Invalid positive integer");
+  return parsed;
 }
 
 function emptyExpenseForm() {
@@ -250,8 +259,8 @@ export function PlanBuilder() {
         category: expenseForm.category,
         type: expenseForm.type,
         priority: expenseForm.priority,
-        target_month: Number(expenseForm.target_month),
-        duration_months: Number(expenseForm.duration_months),
+        target_month: parsePositiveInt(expenseForm.target_month),
+        duration_months: parsePositiveInt(expenseForm.duration_months),
       });
       setExpenseForm(emptyExpenseForm());
       await refreshPendingAndPlan();
@@ -276,8 +285,8 @@ export function PlanBuilder() {
         category: incomeForm.category,
         type: incomeForm.type,
         confidence: incomeForm.confidence,
-        target_month: Number(incomeForm.target_month),
-        duration_months: Number(incomeForm.duration_months),
+        target_month: parsePositiveInt(incomeForm.target_month),
+        duration_months: parsePositiveInt(incomeForm.duration_months),
       });
       setIncomeForm(emptyIncomeForm());
       await refreshPendingAndPlan();

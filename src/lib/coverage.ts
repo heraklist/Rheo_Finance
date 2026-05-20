@@ -347,24 +347,24 @@ export async function addCoverageIncome(input: NewCoverageIncomeInput): Promise<
 }
 
 export async function toggleExpensePaid(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<CoverageExpenseRow[]>(
-    "SELECT * FROM coverage_expense WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toExpense(rows[0]) : null;
-  if (!existing) throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
-
   const ts = now();
-  const next = {
-    ...existing,
-    paid: !existing.paid,
-    sync_status: "pending" as const,
-    local_updated_at: ts,
-    server_updated_at: null,
-  };
 
   await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<CoverageExpenseRow[]>(
+      "SELECT * FROM coverage_expense WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toExpense(rows[0]) : null;
+    if (!existing) throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
+
+    const next = {
+      ...existing,
+      paid: !existing.paid,
+      sync_status: "pending" as const,
+      local_updated_at: ts,
+      server_updated_at: null,
+    };
+
     await txDb.execute(
       `UPDATE coverage_expense
        SET paid = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
@@ -376,24 +376,24 @@ export async function toggleExpensePaid(id: string): Promise<void> {
 }
 
 export async function toggleIncomeReceived(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<CoverageIncomeRow[]>(
-    "SELECT * FROM coverage_income WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toIncome(rows[0]) : null;
-  if (!existing) throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
-
   const ts = now();
-  const next = {
-    ...existing,
-    received: !existing.received,
-    sync_status: "pending" as const,
-    local_updated_at: ts,
-    server_updated_at: null,
-  };
 
   await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<CoverageIncomeRow[]>(
+      "SELECT * FROM coverage_income WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toIncome(rows[0]) : null;
+    if (!existing) throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
+
+    const next = {
+      ...existing,
+      received: !existing.received,
+      sync_status: "pending" as const,
+      local_updated_at: ts,
+      server_updated_at: null,
+    };
+
     await txDb.execute(
       `UPDATE coverage_income
        SET received = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?

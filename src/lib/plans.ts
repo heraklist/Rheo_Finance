@@ -1,4 +1,5 @@
 import { getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { useAppStore } from "@/lib/store";
 import type {
   Confidence,
   Plan,
@@ -149,6 +150,29 @@ function toIncomeItem(row: PlanIncomeItemRow): PlanIncomeItem {
   return { ...row, included: Boolean(row.included) };
 }
 
+function currentUserId(): string | null {
+  return useAppStore.getState().user?.id ?? null;
+}
+
+async function claimLegacyPlansForUser(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+  scope: { bookId: string } | { planId: string },
+): Promise<void> {
+  if ("bookId" in scope) {
+    await db.execute("UPDATE plan SET user_id = ? WHERE user_id IS NULL AND book_id = ?", [
+      userId,
+      scope.bookId,
+    ]);
+    return;
+  }
+
+  await db.execute("UPDATE plan SET user_id = ? WHERE user_id IS NULL AND id = ?", [
+    userId,
+    scope.planId,
+  ]);
+}
+
 function planPayload(plan: Plan): Plan {
   return {
     id: plan.id,
@@ -208,37 +232,47 @@ const PLAN_TOTALS_SQL = `SELECT
 
 export async function listPlans(bookId: string): Promise<PlanWithTotals[]> {
   const db = await getDb();
+  const userId = currentUserId();
+  if (userId) await claimLegacyPlansForUser(db, userId, { bookId });
+  const whereClause = userId ? "WHERE p.book_id = ? AND p.user_id = ?" : "WHERE p.book_id = ?";
+  const params = userId ? [bookId, userId] : [bookId];
   const rows = await db.select<PlanWithTotalsRow[]>(
     `${PLAN_TOTALS_SQL}
-     WHERE p.book_id = ?
+     ${whereClause}
      ORDER BY
-       CASE p.status
-         WHEN 'active' THEN 0
+        CASE p.status
+          WHEN 'active' THEN 0
          WHEN 'draft' THEN 1
          WHEN 'paused' THEN 2
          ELSE 3
-       END,
-       p.updated_at DESC`,
-    [bookId],
+        END,
+        p.updated_at DESC`,
+    params,
   );
   return rows.map(toPlanWithTotals);
 }
 
 export async function getPlan(id: string): Promise<PlanWithTotals | null> {
   const db = await getDb();
+  const userId = currentUserId();
+  if (userId) await claimLegacyPlansForUser(db, userId, { planId: id });
+  const whereClause = userId ? "WHERE p.id = ? AND p.user_id = ?" : "WHERE p.id = ?";
+  const params = userId ? [id, userId] : [id];
   const rows = await db.select<PlanWithTotalsRow[]>(
     `${PLAN_TOTALS_SQL}
-     WHERE p.id = ?
+     ${whereClause}
      LIMIT 1`,
-    [id],
+    params,
   );
   return rows[0] ? toPlanWithTotals(rows[0]) : null;
 }
 
 export async function createPlan(input: NewPlanInput): Promise<Plan> {
   const ts = now();
+  const userId = currentUserId();
   const plan: Plan = {
     id: uuid(),
+    user_id: userId ?? undefined,
     book_id: input.book_id,
     name: normalizeName(input.name),
     type: input.type ?? "custom",
@@ -256,11 +290,12 @@ export async function createPlan(input: NewPlanInput): Promise<Plan> {
   await runInTransaction(async (db) => {
     await db.execute(
       `INSERT INTO plan
-        (id, book_id, name, type, target_date, status, include_in_forecast, notes,
+        (id, user_id, book_id, name, type, target_date, status, include_in_forecast, notes,
          created_at, updated_at, sync_status, local_updated_at, server_updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         plan.id,
+        plan.user_id ?? null,
         plan.book_id,
         plan.name,
         plan.type,
@@ -286,9 +321,10 @@ export async function updatePlan(id: string, patch: UpdatePlanInput): Promise<Pl
   if (!existing) throw new Error("Το σχέδιο δεν βρέθηκε.");
 
   const ts = now();
+  const userId = existing.user_id ?? currentUserId() ?? undefined;
   const plan: Plan = {
     id: existing.id,
-    user_id: existing.user_id,
+    user_id: userId,
     book_id: existing.book_id,
     name: patch.name !== undefined ? normalizeName(patch.name) : existing.name,
     type: patch.type ?? existing.type,
@@ -306,7 +342,8 @@ export async function updatePlan(id: string, patch: UpdatePlanInput): Promise<Pl
   await runInTransaction(async (db) => {
     await db.execute(
       `UPDATE plan
-       SET name = ?,
+       SET user_id = ?,
+           name = ?,
            type = ?,
            target_date = ?,
            status = ?,
@@ -318,6 +355,7 @@ export async function updatePlan(id: string, patch: UpdatePlanInput): Promise<Pl
            server_updated_at = ?
        WHERE id = ?`,
       [
+        plan.user_id ?? null,
         plan.name,
         plan.type,
         plan.target_date,
@@ -507,20 +545,20 @@ export async function createPlanIncomeItem(input: NewPlanIncomeItemInput): Promi
 }
 
 export async function togglePlanExpenseIncluded(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<PlanExpenseItemRow[]>(
-    "SELECT * FROM plan_expense_item WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toExpenseItem(rows[0]) : null;
-  if (!existing) throw new Error("Το έξοδο δεν βρέθηκε.");
-
   const ts = now();
-  const next = { ...existing, included: !existing.included, sync_status: "pending" as const };
-  next.local_updated_at = ts;
-  next.server_updated_at = null;
 
   await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<PlanExpenseItemRow[]>(
+      "SELECT * FROM plan_expense_item WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toExpenseItem(rows[0]) : null;
+    if (!existing) throw new Error("Το έξοδο δεν βρέθηκε.");
+
+    const next = { ...existing, included: !existing.included, sync_status: "pending" as const };
+    next.local_updated_at = ts;
+    next.server_updated_at = null;
+
     await txDb.execute(
       `UPDATE plan_expense_item
        SET included = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
@@ -532,20 +570,20 @@ export async function togglePlanExpenseIncluded(id: string): Promise<void> {
 }
 
 export async function togglePlanIncomeIncluded(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<PlanIncomeItemRow[]>(
-    "SELECT * FROM plan_income_item WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toIncomeItem(rows[0]) : null;
-  if (!existing) throw new Error("Το έσοδο δεν βρέθηκε.");
-
   const ts = now();
-  const next = { ...existing, included: !existing.included, sync_status: "pending" as const };
-  next.local_updated_at = ts;
-  next.server_updated_at = null;
 
   await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<PlanIncomeItemRow[]>(
+      "SELECT * FROM plan_income_item WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toIncomeItem(rows[0]) : null;
+    if (!existing) throw new Error("Το έσοδο δεν βρέθηκε.");
+
+    const next = { ...existing, included: !existing.included, sync_status: "pending" as const };
+    next.local_updated_at = ts;
+    next.server_updated_at = null;
+
     await txDb.execute(
       `UPDATE plan_income_item
        SET included = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?

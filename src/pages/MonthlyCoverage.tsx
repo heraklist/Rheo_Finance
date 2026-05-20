@@ -15,6 +15,7 @@ import {
   toggleExpensePaid,
   toggleIncomeReceived,
 } from "@/lib/coverage";
+import { parseGreekAmount } from "@/lib/money";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
 import type { CoverageExpense, CoverageIncome, CoverageSummary } from "@/lib/types";
@@ -26,7 +27,9 @@ function inputClassName(): string {
 }
 
 function parseAmount(value: string): number {
-  return Number(value.replace(",", "."));
+  const amount = parseGreekAmount(value);
+  if (amount === null) throw new Error("Invalid amount");
+  return amount;
 }
 
 function addMonths(date: Date, amount: number): Date {
@@ -35,6 +38,14 @@ function addMonths(date: Date, amount: number): Date {
 
 function daysInMonth(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
+function parseMonthDay(value: string, maxDay: number): number {
+  const day = Number(value);
+  if (!Number.isInteger(day) || day < 1 || day > maxDay) {
+    throw new Error("Invalid month day");
+  }
+  return day;
 }
 
 function dayLabel(day: number, date: Date): string {
@@ -135,7 +146,7 @@ export function MonthlyCoverage() {
         name: expenseForm.name,
         amount: parseAmount(expenseForm.amount),
         type: "one_off",
-        due_date: Number(expenseForm.due_date),
+        due_date: parseMonthDay(expenseForm.due_date, daysInMonth(monthDate)),
         month,
         year,
       });
@@ -160,7 +171,7 @@ export function MonthlyCoverage() {
         name: incomeForm.name,
         amount: parseAmount(incomeForm.amount),
         confidence: "high",
-        expected_date: Number(incomeForm.expected_date),
+        expected_date: parseMonthDay(incomeForm.expected_date, daysInMonth(monthDate)),
         month,
         year,
       });
@@ -272,7 +283,10 @@ export function MonthlyCoverage() {
               />
               <input
                 required
+                type="number"
                 inputMode="numeric"
+                min={1}
+                max={daysInMonth(monthDate)}
                 placeholder="Ημέρα"
                 value={expenseForm.due_date}
                 onChange={(event) =>
@@ -349,7 +363,10 @@ export function MonthlyCoverage() {
               />
               <input
                 required
+                type="number"
                 inputMode="numeric"
+                min={1}
+                max={daysInMonth(monthDate)}
                 placeholder="Ημέρα"
                 value={incomeForm.expected_date}
                 onChange={(event) =>

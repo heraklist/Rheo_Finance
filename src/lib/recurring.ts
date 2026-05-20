@@ -50,7 +50,10 @@ const GENERATED_PAYMENT_METHOD: PaymentMethod = "Τραπεζική μεταφο
 const RECURRING_DAILY_CHECK_KEY = "recurring_last_checked_at";
 const MAX_GENERATIONS_PER_RUN = 24;
 
-let recurringDailyCheckPromise: Promise<{ generated: number; skipped: number }> | null = null;
+type RecurringGenerationResult = { generated: number; skipped: number };
+
+let recurringGenerationPromise: Promise<RecurringGenerationResult> | null = null;
+let recurringDailyCheckPromise: Promise<RecurringGenerationResult> | null = null;
 
 function activeFromDb(value: boolean | number): boolean {
   return value === true || value === 1;
@@ -476,7 +479,19 @@ async function generatedTransactionExists(templateId: string, date: string): Pro
 
 export async function generateDueRecurringTransactions(
   today: string = todayIso(),
-): Promise<{ generated: number; skipped: number }> {
+): Promise<RecurringGenerationResult> {
+  if (recurringGenerationPromise) return recurringGenerationPromise;
+
+  recurringGenerationPromise = generateDueRecurringTransactionsOnce(today).finally(() => {
+    recurringGenerationPromise = null;
+  });
+
+  return recurringGenerationPromise;
+}
+
+async function generateDueRecurringTransactionsOnce(
+  today: string,
+): Promise<RecurringGenerationResult> {
   const templates = (await listRecurringTemplates()).filter((template) => template.active);
   let generated = 0;
   let skipped = 0;
@@ -521,7 +536,7 @@ export async function generateDueRecurringTransactions(
   return { generated, skipped };
 }
 
-export async function runRecurringDailyCheck(): Promise<{ generated: number; skipped: number }> {
+export async function runRecurringDailyCheck(): Promise<RecurringGenerationResult> {
   if (recurringDailyCheckPromise) return recurringDailyCheckPromise;
 
   recurringDailyCheckPromise = runRecurringDailyCheckOnce().finally(() => {
@@ -531,7 +546,7 @@ export async function runRecurringDailyCheck(): Promise<{ generated: number; ski
   return recurringDailyCheckPromise;
 }
 
-async function runRecurringDailyCheckOnce(): Promise<{ generated: number; skipped: number }> {
+async function runRecurringDailyCheckOnce(): Promise<RecurringGenerationResult> {
   const db = await getDb();
   const today = todayIso();
   const rows = await db.select<Array<{ value: string }>>(

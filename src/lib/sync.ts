@@ -214,6 +214,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
     ],
     localColumns: [
       "id",
+      "user_id",
       "book_id",
       "name",
       "type",

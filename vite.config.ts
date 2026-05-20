@@ -8,7 +8,7 @@ const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8")) as { ver
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: react(),
+  plugins: [react()],
 
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
