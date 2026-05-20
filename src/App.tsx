@@ -10,6 +10,9 @@ import { CategorySettings } from "@/pages/CategorySettings";
 import { Dashboard } from "@/pages/Dashboard";
 import { Forecast } from "@/pages/Forecast";
 import { Login } from "@/pages/Login";
+import { MonthlyCoverage } from "@/pages/MonthlyCoverage";
+import { PlanBuilder } from "@/pages/PlanBuilder";
+import { PlanHub } from "@/pages/PlanHub";
 import { Recurring } from "@/pages/Recurring";
 import { Settings } from "@/pages/Settings";
 import { TransactionDetail } from "@/pages/TransactionDetail";
@@ -35,6 +38,9 @@ const router = createBrowserRouter([
       { path: "recurring", element: <Recurring /> },
       { path: "vat", element: <VatSummary /> },
       { path: "forecast", element: <Forecast /> },
+      { path: "plans", element: <PlanHub /> },
+      { path: "plans/:id", element: <PlanBuilder /> },
+      { path: "coverage", element: <MonthlyCoverage /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/categories/:type", element: <CategorySettings /> },
     ],

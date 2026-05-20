@@ -3,7 +3,16 @@ import { SyncPill } from "@/components/ui/SyncPill";
 import { UpdateBanner } from "@/components/ui/UpdateBanner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppStore } from "@/lib/store";
-import { Calculator, MoreHorizontal, Plus, Repeat2, Settings, TrendingUp } from "lucide-react";
+import {
+  Calculator,
+  CalendarDays,
+  MoreHorizontal,
+  Plus,
+  Repeat2,
+  Settings,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
@@ -36,6 +45,20 @@ export function AppLayout() {
       label: "Πρόβλεψη",
       description: "12μηνη ταμειακή ροή",
       icon: TrendingUp,
+      visible: true,
+    },
+    {
+      to: "/plans",
+      label: "Σχέδια",
+      description: "Οικονομικά σχέδια και σενάρια",
+      icon: Target,
+      visible: true,
+    },
+    {
+      to: "/coverage",
+      label: "Κάλυψη",
+      description: "Κάλυψη μηνιαίων εξόδων",
+      icon: CalendarDays,
       visible: true,
     },
     {

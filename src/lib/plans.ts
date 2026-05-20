@@ -187,7 +187,7 @@ const PLAN_TOTALS_SQL = `SELECT
     p.*,
     COALESCE(exp.total_expenses, 0) AS total_expenses,
     COALESCE(inc.total_income, 0) AS total_income,
-    COALESCE(inc.total_income, 0) - COALESCE(exp.total_expenses, 0) AS funding_gap,
+    COALESCE(exp.total_expenses, 0) - COALESCE(inc.total_income, 0) AS funding_gap,
     COALESCE(exp.expense_count, 0) AS expense_count,
     COALESCE(inc.income_count, 0) AS income_count
   FROM plan p
