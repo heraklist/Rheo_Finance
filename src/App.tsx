@@ -4,7 +4,7 @@ import { useAutoBackupWorker } from "@/hooks/useAutoBackupWorker";
 import { useRecurringWorker } from "@/hooks/useRecurringWorker";
 import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { AddTransaction } from "@/pages/AddTransaction";
 import { CategorySettings } from "@/pages/CategorySettings";
 import { Dashboard } from "@/pages/Dashboard";
@@ -72,6 +72,13 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
+
+    if (!isSupabaseConfigured()) {
+      setAuth(null, null);
+      setMfaStatus(false, false);
+      setAuthLoading(false);
+      return;
+    }
 
     async function updateMfaStatus(hasSession: boolean) {
       if (!hasSession) {

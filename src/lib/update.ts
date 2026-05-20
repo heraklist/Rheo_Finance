@@ -283,7 +283,7 @@ export async function checkForUpdateInfo(): Promise<UpdateInfo> {
   const currentVersion = await getVersion();
   const token = await getUpdaterGitHubToken();
 
-  if (platform() === "android") {
+  if ((await platform()) === "android") {
     return checkAndroid(currentVersion, token);
   }
 

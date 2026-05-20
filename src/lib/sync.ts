@@ -8,6 +8,7 @@ import {
 } from "@/lib/receipts";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
+import { computeVat } from "@/lib/utils";
 
 type OutboxOperation = "create" | "update" | "delete";
 type SyncEntityType =
@@ -687,6 +688,27 @@ async function preparePulledRowForLocal(
   if (entityType === "transaction" && nextRow.recurring_template_id !== null) {
     if (!(await hasLocalRow("recurring_templates", nextRow.recurring_template_id))) {
       nextRow = { ...nextRow, recurring_template_id: null };
+    }
+  }
+
+  if (entityType === "transaction") {
+    const gross = typeof nextRow.amount_gross === "number" ? nextRow.amount_gross : null;
+    const vatRate = typeof nextRow.vat_rate === "number" ? nextRow.vat_rate : null;
+
+    if (
+      gross !== null &&
+      vatRate !== null &&
+      (nextRow.amount_vat === undefined ||
+        nextRow.amount_vat === null ||
+        nextRow.amount_net === undefined ||
+        nextRow.amount_net === null)
+    ) {
+      const { vat, net } = computeVat(gross, vatRate);
+      nextRow = {
+        ...nextRow,
+        amount_vat: vat,
+        amount_net: net,
+      };
     }
   }
 

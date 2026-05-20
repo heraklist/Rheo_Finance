@@ -50,10 +50,16 @@ export function Login() {
     setSubmitting(true);
     setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    let signInError: Error | null = null;
+    try {
+      const result = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      signInError = result.error;
+    } catch (err) {
+      signInError = err instanceof Error ? err : new Error(String(err));
+    }
 
     setSubmitting(false);
 
