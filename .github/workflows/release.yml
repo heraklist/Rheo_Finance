@@ -14,13 +14,13 @@ env:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     outputs:
       version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract version
         id: version
@@ -38,7 +38,7 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -94,7 +94,7 @@ jobs:
           Get-ChildItem dist
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-artifacts
           path: dist/*
@@ -105,10 +105,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -118,13 +118,13 @@ jobs:
           corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install Android NDK
         run: sdkmanager "ndk;27.0.12077973"
@@ -298,7 +298,7 @@ jobs:
           ls -la dist
 
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-artifacts
           path: dist/*
@@ -310,21 +310,21 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: windows-artifacts
           path: dist
 
       - name: Download Android artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: android-artifacts
           path: dist
