@@ -34,6 +34,12 @@ pub fn run() {
             sql: include_str!("../migrations/0003_sync_metadata_baseline.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "plans_coverage",
+            sql: include_str!("../migrations/0004_plans_coverage.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     let builder = tauri::Builder::default()

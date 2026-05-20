@@ -20,10 +20,13 @@ Run these files manually in the Supabase SQL Editor before continuing `SESSION_0
 14. New query
 15. Paste `supabase/migrations/005_sync_tombstones.sql`
 16. Run
+17. New query
+18. Paste `supabase/migrations/006_plans_coverage.sql`
+19. Run
 
 ## Verify
 
-In Table Editor you should see 6 application tables:
+In Table Editor you should see 11 application tables:
 
 - `books`
 - `accounts`
@@ -31,6 +34,11 @@ In Table Editor you should see 6 application tables:
 - `tags`
 - `recurring_templates`
 - `transactions`
+- `plan`
+- `plan_expense_item`
+- `plan_income_item`
+- `coverage_expense`
+- `coverage_income`
 
 For each table, RLS must be enabled.
 

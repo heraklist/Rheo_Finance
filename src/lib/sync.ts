@@ -16,7 +16,12 @@ type SyncEntityType =
   | "category"
   | "tag"
   | "recurring_template"
-  | "transaction";
+  | "transaction"
+  | "plan"
+  | "plan_expense_item"
+  | "plan_income_item"
+  | "coverage_expense"
+  | "coverage_income";
 type JsonValue = string | number | boolean | null;
 type SyncRow = Record<string, JsonValue>;
 
@@ -190,6 +195,176 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
     ],
     generatedRemoteColumns: ["amount_vat", "amount_net"],
   },
+  plan: {
+    table: "plan",
+    localTable: "plan",
+    remoteColumns: [
+      "id",
+      "user_id",
+      "book_id",
+      "name",
+      "type",
+      "target_date",
+      "status",
+      "include_in_forecast",
+      "notes",
+      "created_at",
+      "updated_at",
+      "deleted_at",
+    ],
+    localColumns: [
+      "id",
+      "book_id",
+      "name",
+      "type",
+      "target_date",
+      "status",
+      "include_in_forecast",
+      "notes",
+      "created_at",
+      "updated_at",
+    ],
+  },
+  plan_expense_item: {
+    table: "plan_expense_item",
+    localTable: "plan_expense_item",
+    remoteColumns: [
+      "id",
+      "user_id",
+      "plan_id",
+      "name",
+      "amount",
+      "type",
+      "category",
+      "priority",
+      "account_id",
+      "duration_months",
+      "target_month",
+      "included",
+      "notes",
+      "created_at",
+      "deleted_at",
+    ],
+    localColumns: [
+      "id",
+      "plan_id",
+      "name",
+      "amount",
+      "type",
+      "category",
+      "priority",
+      "account_id",
+      "duration_months",
+      "target_month",
+      "included",
+      "notes",
+      "created_at",
+    ],
+  },
+  plan_income_item: {
+    table: "plan_income_item",
+    localTable: "plan_income_item",
+    remoteColumns: [
+      "id",
+      "user_id",
+      "plan_id",
+      "name",
+      "amount",
+      "type",
+      "category",
+      "confidence",
+      "duration_months",
+      "target_month",
+      "included",
+      "notes",
+      "created_at",
+      "deleted_at",
+    ],
+    localColumns: [
+      "id",
+      "plan_id",
+      "name",
+      "amount",
+      "type",
+      "category",
+      "confidence",
+      "duration_months",
+      "target_month",
+      "included",
+      "notes",
+      "created_at",
+    ],
+  },
+  coverage_expense: {
+    table: "coverage_expense",
+    localTable: "coverage_expense",
+    remoteColumns: [
+      "id",
+      "user_id",
+      "book_id",
+      "name",
+      "amount",
+      "type",
+      "due_date",
+      "month",
+      "year",
+      "paid",
+      "linked_recurring_id",
+      "linked_transaction_id",
+      "notes",
+      "created_at",
+      "deleted_at",
+    ],
+    localColumns: [
+      "id",
+      "book_id",
+      "name",
+      "amount",
+      "type",
+      "due_date",
+      "month",
+      "year",
+      "paid",
+      "linked_recurring_id",
+      "linked_transaction_id",
+      "notes",
+      "created_at",
+    ],
+  },
+  coverage_income: {
+    table: "coverage_income",
+    localTable: "coverage_income",
+    remoteColumns: [
+      "id",
+      "user_id",
+      "book_id",
+      "name",
+      "amount",
+      "confidence",
+      "expected_date",
+      "month",
+      "year",
+      "received",
+      "linked_transaction_id",
+      "notes",
+      "created_at",
+      "deleted_at",
+    ],
+    localColumns: [
+      "id",
+      "book_id",
+      "name",
+      "amount",
+      "confidence",
+      "expected_date",
+      "month",
+      "year",
+      "received",
+      "linked_transaction_id",
+      "notes",
+      "created_at",
+    ],
+  },
 };
 
 const PUSH_REFERENCE_ORDER: SyncEntityType[] = [
@@ -198,6 +373,9 @@ const PUSH_REFERENCE_ORDER: SyncEntityType[] = [
   "category",
   "tag",
   "recurring_template",
+  "plan",
+  "plan_expense_item",
+  "plan_income_item",
 ];
 
 const PULL_ORDER: SyncEntityType[] = [
@@ -206,8 +384,22 @@ const PULL_ORDER: SyncEntityType[] = [
   "category",
   "tag",
   "recurring_template",
+  "plan",
+  "plan_expense_item",
+  "plan_income_item",
   "transaction",
+  "coverage_expense",
+  "coverage_income",
 ];
+
+const BOOLEAN_COLUMNS = new Set([
+  "is_archived",
+  "active",
+  "include_in_forecast",
+  "included",
+  "paid",
+  "received",
+]);
 
 function isSyncEntityType(value: string): value is SyncEntityType {
   return value in SYNC_TABLES;
@@ -372,7 +564,7 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
 }
 
 function toRemoteValue(column: string, value: JsonValue): JsonValue {
-  if ((column === "is_archived" || column === "active") && typeof value === "number") {
+  if (BOOLEAN_COLUMNS.has(column) && typeof value === "number") {
     return value === 1;
   }
   return value;
@@ -435,7 +627,7 @@ function toLocalRow(entityType: SyncEntityType, row: SyncRow): SyncRow {
 }
 
 function toLocalValue(column: string, value: JsonValue): JsonValue {
-  if ((column === "is_archived" || column === "active") && typeof value === "boolean") {
+  if (BOOLEAN_COLUMNS.has(column) && typeof value === "boolean") {
     return value ? 1 : 0;
   }
   return value;
@@ -486,6 +678,12 @@ async function deleteLocalForRemoteTombstone(
       `UPDATE transactions
        SET recurring_template_id = NULL
        WHERE recurring_template_id = ?`,
+      [entityId],
+    );
+    await db.execute(
+      `UPDATE coverage_expense
+       SET linked_recurring_id = NULL
+       WHERE linked_recurring_id = ?`,
       [entityId],
     );
   }
