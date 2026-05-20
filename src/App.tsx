@@ -109,18 +109,28 @@ export function App() {
 
     async function initializeAuth() {
       setAuthLoading(true);
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (error) {
-        console.error("Failed to initialize auth:", error);
-        setAuth(null, null);
-        setMfaStatus(false, false);
-        return;
+        if (error) {
+          console.error("Failed to initialize auth:", error);
+          setAuth(null, null);
+          setMfaStatus(false, false);
+          return;
+        }
+
+        await applySession(data.session);
+      } catch (err) {
+        console.error("Failed to initialize auth:", err);
+        if (!cancelled) {
+          setAuth(null, null);
+          setMfaStatus(false, false);
+        }
+      } finally {
+        if (!cancelled) setAuthLoading(false);
       }
-
-      await applySession(data.session);
     }
 
     void initializeAuth();

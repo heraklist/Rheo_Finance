@@ -73,11 +73,13 @@ export function computeVat(
   net: number;
   vat: number;
 } {
+  const gross = round2(grossAmount);
+
   if (vatRate === 0) {
-    return { net: round2(grossAmount), vat: 0 };
+    return { net: gross, vat: 0 };
   }
 
-  const vat = round2((grossAmount * vatRate) / (1 + vatRate));
-  const net = round2(grossAmount - vat);
+  const net = round2(gross / (1 + vatRate));
+  const vat = round2(gross - net);
   return { net, vat };
 }

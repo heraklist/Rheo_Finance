@@ -37,11 +37,8 @@ function strongholdKey(key: string): string {
   return `${STORAGE_KEY_PREFIX}${key}`;
 }
 
-function logStrongholdFallback(operation: string, error: unknown): void {
-  console.error(
-    `Stronghold auth storage ${operation} failed. Falling back to localStorage.`,
-    error,
-  );
+function logStrongholdFailure(operation: string, error: unknown): void {
+  console.error(`Stronghold auth storage ${operation} failed.`, error);
 }
 
 async function canUseStronghold(): Promise<boolean> {
@@ -119,14 +116,14 @@ export const secureAuthStorage: AuthStorage = {
         try {
           await writeStrongholdItem(key, legacyValue);
         } catch (error) {
-          logStrongholdFallback("migration", error);
+          logStrongholdFailure("migration", error);
         }
       }
 
       return legacyValue;
     } catch (error) {
-      logStrongholdFallback("read", error);
-      return localGetItem(key);
+      logStrongholdFailure("read", error);
+      return null;
     }
   },
   async setItem(key, value) {
@@ -138,8 +135,8 @@ export const secureAuthStorage: AuthStorage = {
     try {
       await writeStrongholdItem(key, value);
     } catch (error) {
-      logStrongholdFallback("write", error);
-      localSetItem(key, value);
+      logStrongholdFailure("write", error);
+      throw error;
     }
   },
   async removeItem(key) {
@@ -151,7 +148,7 @@ export const secureAuthStorage: AuthStorage = {
     try {
       await removeStrongholdItem(key);
     } catch (error) {
-      logStrongholdFallback("remove", error);
+      logStrongholdFailure("remove", error);
       localRemoveItem(key);
     }
   },

@@ -1,4 +1,4 @@
-import { getDb, now, uuid } from "@/lib/db";
+import { getDb, now, runInTransaction, uuid } from "@/lib/db";
 import { deleteLocalReceiptPhoto, saveReceiptPhotoForTransaction } from "@/lib/receipts";
 import type { PaymentMethod, Transaction, TransactionWithRelations } from "@/lib/types";
 import { computeVat } from "@/lib/utils";
@@ -182,7 +182,6 @@ export interface UpdateTransactionInput extends NewTransactionInput {
  * Adds outbox entry for sync (when sync layer is wired up).
  */
 export async function createTransaction(input: NewTransactionInput): Promise<Transaction> {
-  const db = await getDb();
   const id = uuid();
   const ts = now();
   const { vat: amount_vat, net: amount_net } = computeVat(input.amount_gross, input.vat_rate);
@@ -213,43 +212,44 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
     server_updated_at: null,
   };
 
-  await db.execute(
-    `INSERT INTO transactions
-       (id, date, description, book_id, account_id, category_id, tag_id,
-        payment_method, amount_gross, vat_rate, amount_vat, amount_net,
-        receipt_photo_path, recurring_template_id, notes,
-        created_at, updated_at, sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      tx.id,
-      tx.date,
-      tx.description,
-      tx.book_id,
-      tx.account_id,
-      tx.category_id,
-      tx.tag_id,
-      tx.payment_method,
-      tx.amount_gross,
-      tx.vat_rate,
-      tx.amount_vat,
-      tx.amount_net,
-      tx.receipt_photo_path,
-      tx.recurring_template_id,
-      tx.notes,
-      tx.created_at,
-      tx.updated_at,
-      tx.sync_status,
-      tx.local_updated_at,
-      tx.server_updated_at,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `INSERT INTO transactions
+         (id, date, description, book_id, account_id, category_id, tag_id,
+          payment_method, amount_gross, vat_rate, amount_vat, amount_net,
+          receipt_photo_path, recurring_template_id, notes,
+          created_at, updated_at, sync_status, local_updated_at, server_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tx.id,
+        tx.date,
+        tx.description,
+        tx.book_id,
+        tx.account_id,
+        tx.category_id,
+        tx.tag_id,
+        tx.payment_method,
+        tx.amount_gross,
+        tx.vat_rate,
+        tx.amount_vat,
+        tx.amount_net,
+        tx.receipt_photo_path,
+        tx.recurring_template_id,
+        tx.notes,
+        tx.created_at,
+        tx.updated_at,
+        tx.sync_status,
+        tx.local_updated_at,
+        tx.server_updated_at,
+      ],
+    );
 
-  // Add outbox entry for sync (Phase 2 will read these)
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["transaction", tx.id, "create", JSON.stringify(tx), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["transaction", tx.id, "create", JSON.stringify(tx), ts],
+    );
+  });
 
   return tx;
 }
@@ -258,7 +258,6 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
  * Update an existing transaction. Recomputes VAT and queues an outbox update.
  */
 export async function updateTransaction(input: UpdateTransactionInput): Promise<Transaction> {
-  const db = await getDb();
   const existing = await getTransaction(input.id);
 
   if (!existing) {
@@ -301,53 +300,55 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
     server_updated_at: null,
   };
 
-  await db.execute(
-    `UPDATE transactions
-     SET date = ?,
-         description = ?,
-         book_id = ?,
-         account_id = ?,
-         category_id = ?,
-         tag_id = ?,
-         payment_method = ?,
-         amount_gross = ?,
-         vat_rate = ?,
-         amount_vat = ?,
-         amount_net = ?,
-         receipt_photo_path = ?,
-         notes = ?,
-         updated_at = ?,
-         sync_status = ?,
-         local_updated_at = ?,
-         server_updated_at = ?
-     WHERE id = ?`,
-    [
-      tx.date,
-      tx.description,
-      tx.book_id,
-      tx.account_id,
-      tx.category_id,
-      tx.tag_id,
-      tx.payment_method,
-      tx.amount_gross,
-      tx.vat_rate,
-      tx.amount_vat,
-      tx.amount_net,
-      tx.receipt_photo_path,
-      tx.notes,
-      tx.updated_at,
-      tx.sync_status,
-      tx.local_updated_at,
-      tx.server_updated_at,
-      tx.id,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `UPDATE transactions
+       SET date = ?,
+           description = ?,
+           book_id = ?,
+           account_id = ?,
+           category_id = ?,
+           tag_id = ?,
+           payment_method = ?,
+           amount_gross = ?,
+           vat_rate = ?,
+           amount_vat = ?,
+           amount_net = ?,
+           receipt_photo_path = ?,
+           notes = ?,
+           updated_at = ?,
+           sync_status = ?,
+           local_updated_at = ?,
+           server_updated_at = ?
+       WHERE id = ?`,
+      [
+        tx.date,
+        tx.description,
+        tx.book_id,
+        tx.account_id,
+        tx.category_id,
+        tx.tag_id,
+        tx.payment_method,
+        tx.amount_gross,
+        tx.vat_rate,
+        tx.amount_vat,
+        tx.amount_net,
+        tx.receipt_photo_path,
+        tx.notes,
+        tx.updated_at,
+        tx.sync_status,
+        tx.local_updated_at,
+        tx.server_updated_at,
+        tx.id,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["transaction", tx.id, "update", JSON.stringify(tx), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["transaction", tx.id, "update", JSON.stringify(tx), ts],
+    );
+  });
 
   return tx;
 }
@@ -356,7 +357,6 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
  * Delete a transaction and queue an outbox delete.
  */
 export async function deleteTransaction(id: string): Promise<void> {
-  const db = await getDb();
   const existing = await getTransaction(id);
 
   if (!existing) {
@@ -365,22 +365,24 @@ export async function deleteTransaction(id: string): Promise<void> {
 
   const ts = now();
 
-  await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
+  await runInTransaction(async (db) => {
+    await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      "transaction",
-      id,
-      "delete",
-      JSON.stringify({
-        ...existing,
-        deleted_at: ts,
-      }),
-      ts,
-    ],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        "transaction",
+        id,
+        "delete",
+        JSON.stringify({
+          ...existing,
+          deleted_at: ts,
+        }),
+        ts,
+      ],
+    );
+  });
 
   try {
     await deleteLocalReceiptPhoto(existing.receipt_photo_path);

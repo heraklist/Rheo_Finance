@@ -117,6 +117,13 @@ type RestoreTable = (typeof RESTORE_TABLES)[number];
 type BackupRow = Record<string, string | number | boolean | null>;
 type SqlValue = string | number | null;
 
+interface ForeignKeyViolation {
+  table: string;
+  rowid: number;
+  parent: string;
+  fkid: number;
+}
+
 export interface BackupResult {
   path: string;
 }
@@ -214,10 +221,12 @@ async function restoreFromBackupText(text: string): Promise<RestoreResult> {
   const tables = parseBackupPayload(text);
   const db = await getDb();
   let totalRows = 0;
+  let transactionStarted = false;
 
-  await db.execute("BEGIN");
+  await db.execute("PRAGMA foreign_keys = OFF");
   try {
-    await db.execute("PRAGMA defer_foreign_keys = ON");
+    await db.execute("BEGIN IMMEDIATE");
+    transactionStarted = true;
     await db.execute("DELETE FROM sync_outbox");
 
     for (const table of [...RESTORE_TABLES].reverse()) {
@@ -228,11 +237,23 @@ async function restoreFromBackupText(text: string): Promise<RestoreResult> {
       totalRows += await restoreRows(table, tables[table]);
     }
 
+    const violations = await db.select<ForeignKeyViolation[]>("PRAGMA foreign_key_check");
+    if (violations.length > 0) {
+      const first = violations[0];
+      if (!first) throw new Error("Backup restore foreign key violation.");
+      throw new Error(
+        `Backup restore foreign key violation: ${first.table}.${first.rowid} -> ${first.parent}`,
+      );
+    }
+
     await db.execute("COMMIT");
+    transactionStarted = false;
     return { tablesRestored: RESTORE_TABLES.length, rowsRestored: totalRows };
   } catch (err) {
-    await db.execute("ROLLBACK");
+    if (transactionStarted) await db.execute("ROLLBACK");
     throw err;
+  } finally {
+    await db.execute("PRAGMA foreign_keys = ON");
   }
 }
 

@@ -3,6 +3,7 @@ import {
   deleteLocalReceiptPhoto,
   deleteRemoteReceiptPhoto,
   downloadReceiptPhoto,
+  isLocalReceiptPath,
   uploadReceiptPhoto,
 } from "@/lib/receipts";
 import { useAppStore } from "@/lib/store";
@@ -28,6 +29,11 @@ interface OutboxEntry {
   attempts: number;
   last_error: string | null;
   created_at: string;
+}
+
+interface PreparedRemotePush {
+  remoteRow: SyncRow;
+  uploadedReceipt: boolean;
 }
 
 interface SyncTableConfig {
@@ -256,6 +262,22 @@ function timestampMs(value: string | null): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+function remoteUpdatedAtFromResult(data: unknown): string {
+  const row = data as { updated_at?: string | null } | null;
+  return timestampValue(row?.updated_at ?? undefined) ?? now();
+}
+
+async function upsertRemoteRow(config: SyncTableConfig, remoteRow: SyncRow): Promise<string> {
+  const { data, error } = await supabase
+    .from(config.table)
+    .upsert(remoteRow)
+    .select("updated_at")
+    .single();
+
+  if (error) throw error;
+  return remoteUpdatedAtFromResult(data);
+}
+
 function laterTimestamp(current: string | null, candidate: string | null): string | null {
   const candidateMs = timestampMs(candidate);
   if (candidateMs === null) return current;
@@ -350,20 +372,23 @@ async function prepareRemoteRowForPush(
   row: SyncRow,
   userId: string,
   entityId: string,
-): Promise<SyncRow> {
+): Promise<PreparedRemotePush> {
   const remoteRow = toRemoteRow(entityType, row, userId);
 
-  if (entityType !== "transaction") return remoteRow;
+  if (entityType !== "transaction") return { remoteRow, uploadedReceipt: false };
 
   const receiptPath = row.receipt_photo_path;
   if (typeof receiptPath === "string" && receiptPath.length > 0) {
     remoteRow.receipt_photo_path = await uploadReceiptPhoto(userId, entityId, receiptPath);
-  } else if (receiptPath === null) {
+    return { remoteRow, uploadedReceipt: isLocalReceiptPath(receiptPath) };
+  }
+
+  if (receiptPath === null) {
     remoteRow.receipt_photo_path = null;
     await deleteRemoteReceiptPhoto(userId, entityId);
   }
 
-  return remoteRow;
+  return { remoteRow, uploadedReceipt: false };
 }
 
 async function preparePulledRowForLocal(
@@ -491,15 +516,15 @@ async function upsertLocalReferenceData(userId: string) {
       }
 
       const remoteRow = toRemoteRow(entityType, row, userId);
-      const { error } = await supabase.from(config.table).upsert(remoteRow);
-
-      if (error) throw error;
+      const syncedAt = await upsertRemoteRow(config, remoteRow);
 
       await db.execute(
         `UPDATE ${config.localTable}
-         SET sync_status = 'synced', server_updated_at = ?
+         SET sync_status = 'synced',
+             local_updated_at = ?,
+             server_updated_at = ?
          WHERE id = ?`,
-        [now(), entityId],
+        [syncedAt, syncedAt, entityId],
       );
     }
   }
@@ -548,6 +573,7 @@ export async function pushChanges(): Promise<number> {
       }
 
       const config = SYNC_TABLES[entry.entity_type];
+      let syncedAt: string | null = null;
 
       if (entry.operation === "create" || entry.operation === "update") {
         const payload = parsePayload(entry.payload);
@@ -564,14 +590,31 @@ export async function pushChanges(): Promise<number> {
           continue;
         }
 
-        const remoteRow = await prepareRemoteRowForPush(
+        const prepared = await prepareRemoteRowForPush(
           entry.entity_type,
           payload,
           user.id,
           entry.entity_id,
         );
-        const { error } = await supabase.from(config.table).upsert(remoteRow);
-        if (error) throw error;
+        try {
+          syncedAt = await upsertRemoteRow(config, prepared.remoteRow);
+        } catch (error) {
+          if (
+            entry.operation === "create" &&
+            entry.entity_type === "transaction" &&
+            prepared.uploadedReceipt
+          ) {
+            try {
+              await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
+            } catch (cleanupError) {
+              console.error(
+                "Failed to clean up uploaded receipt after push failure:",
+                cleanupError,
+              );
+            }
+          }
+          throw error;
+        }
       } else if (entry.operation === "delete") {
         const payload = parsePayload(entry.payload);
         const localDeletedAt = deletedAt(payload) ?? timestampValue(entry.created_at) ?? now();
@@ -588,11 +631,14 @@ export async function pushChanges(): Promise<number> {
           continue;
         }
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from(config.table)
           .update({ deleted_at: localDeletedAt })
-          .eq("id", entry.entity_id);
+          .eq("id", entry.entity_id)
+          .select("updated_at")
+          .maybeSingle();
         if (error) throw error;
+        syncedAt = data ? remoteUpdatedAtFromResult(data) : localDeletedAt;
 
         if (entry.entity_type === "transaction" && payload.receipt_photo_path) {
           await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
@@ -602,11 +648,14 @@ export async function pushChanges(): Promise<number> {
       await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
 
       if (entry.operation !== "delete") {
+        const finalSyncedAt = syncedAt ?? now();
         await db.execute(
           `UPDATE ${config.localTable}
-           SET sync_status = 'synced', server_updated_at = ?
+           SET sync_status = 'synced',
+               local_updated_at = ?,
+               server_updated_at = ?
            WHERE id = ?`,
-          [now(), entry.entity_id],
+          [finalSyncedAt, finalSyncedAt, entry.entity_id],
         );
       }
 
@@ -644,6 +693,7 @@ export async function pullChanges(): Promise<number> {
 
   let total = 0;
   let highWatermark: string | null = null;
+  const pullStartedAt = now();
   const failures: string[] = [];
 
   for (const entityType of PULL_ORDER) {
@@ -683,13 +733,11 @@ export async function pullChanges(): Promise<number> {
     throw new Error(`Δεν ολοκληρώθηκε το pull. ${failures.join(" | ")}`);
   }
 
-  if (highWatermark) {
-    await db.execute(
-      `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-       VALUES ('last_synced_at', ?, ?)`,
-      [highWatermark, now()],
-    );
-  }
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('last_synced_at', ?, ?)`,
+    [highWatermark ?? pullStartedAt, now()],
+  );
 
   return total;
 }

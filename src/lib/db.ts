@@ -1,6 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 
-let dbInstance: Database | null = null;
+let dbPromise: Promise<Database> | null = null;
 
 interface ForeignKeysPragmaRow {
   foreign_keys: number;
@@ -15,17 +15,38 @@ async function enableForeignKeyChecks(db: Database): Promise<void> {
   }
 }
 
+async function initializeDb(): Promise<Database> {
+  const db = await Database.load("sqlite:evochia.db");
+  await enableForeignKeyChecks(db);
+  return db;
+}
+
 /**
  * Get (or initialize) the local SQLite database instance.
  * Tauri's sql plugin runs migrations automatically on first connection
  * (configured in tauri.conf.json + lib.rs).
  */
 export async function getDb(): Promise<Database> {
-  if (dbInstance) return dbInstance;
-  const db = await Database.load("sqlite:evochia.db");
-  await enableForeignKeyChecks(db);
-  dbInstance = db;
-  return dbInstance;
+  dbPromise ??= initializeDb().catch((error: unknown) => {
+    dbPromise = null;
+    throw error;
+  });
+
+  return dbPromise;
+}
+
+export async function runInTransaction<T>(operation: (db: Database) => Promise<T>): Promise<T> {
+  const db = await getDb();
+
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    const result = await operation(db);
+    await db.execute("COMMIT");
+    return result;
+  } catch (error) {
+    await db.execute("ROLLBACK");
+    throw error;
+  }
 }
 
 /**

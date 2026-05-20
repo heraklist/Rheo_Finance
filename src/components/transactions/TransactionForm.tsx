@@ -127,25 +127,39 @@ export function TransactionForm({
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {
+    let cancelled = false;
+
     void (async () => {
       const accs = await listAccounts(bookId);
+      if (cancelled) return;
       setAccounts(accs);
       setAccountId((current) => {
         if (current && accs.some((account) => account.id === current)) return current;
         return accs[0]?.id || "";
       });
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookId]);
 
   useEffect(() => {
+    let cancelled = false;
+
     void (async () => {
       const cats = await listCategories({ bookId, type });
+      if (cancelled) return;
       setCategories(cats);
       setCategoryId((current) => {
         if (current && cats.some((category) => category.id === current)) return current;
         return "";
       });
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [type, bookId]);
 
   useEffect(() => {

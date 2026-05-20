@@ -2,6 +2,7 @@ import { getUpdaterGitHubToken } from "@/lib/updaterToken";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { type DownloadEvent, check } from "@tauri-apps/plugin-updater";
 
 export type UpdateCheckStatus =
@@ -72,10 +73,13 @@ const RELEASES_PAGE_URL = "https://github.com/heraklist/Rheo_Finance/releases/la
 const ANDROID_MANIFEST_URL =
   "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest-android.json";
 
-function openExternalUrl(url: string): void {
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    window.location.href = url;
+async function openExternalUrl(url: string): Promise<void> {
+  try {
+    await openExternal(url);
+  } catch (error) {
+    console.error("Failed to open external update URL:", error);
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) throw error;
   }
 }
 
@@ -294,12 +298,12 @@ export async function installUpdate(
   if (!info.available) return;
 
   if (!info.isDesktop) {
-    openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
+    await openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
     return;
   }
 
   if (info.installMode === "manual") {
-    openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
+    await openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
     return;
   }
 

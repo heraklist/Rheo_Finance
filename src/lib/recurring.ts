@@ -49,6 +49,8 @@ const GENERATED_PAYMENT_METHOD: PaymentMethod = "Τραπεζική μεταφο
 const RECURRING_DAILY_CHECK_KEY = "recurring_last_checked_at";
 const MAX_GENERATIONS_PER_RUN = 24;
 
+let recurringDailyCheckPromise: Promise<{ generated: number; skipped: number }> | null = null;
+
 function activeFromDb(value: boolean | number): boolean {
   return value === true || value === 1;
 }
@@ -488,10 +490,10 @@ export async function generateDueRecurringTransactions(
           recurring_template_id: currentTemplate.id,
           notes: null,
         });
+        await markRecurringGenerated(currentTemplate, nextDue);
         generated++;
       }
 
-      await markRecurringGenerated(currentTemplate, nextDue);
       currentTemplate = {
         ...currentTemplate,
         last_generated: nextDue,
@@ -505,6 +507,16 @@ export async function generateDueRecurringTransactions(
 }
 
 export async function runRecurringDailyCheck(): Promise<{ generated: number; skipped: number }> {
+  if (recurringDailyCheckPromise) return recurringDailyCheckPromise;
+
+  recurringDailyCheckPromise = runRecurringDailyCheckOnce().finally(() => {
+    recurringDailyCheckPromise = null;
+  });
+
+  return recurringDailyCheckPromise;
+}
+
+async function runRecurringDailyCheckOnce(): Promise<{ generated: number; skipped: number }> {
   const db = await getDb();
   const today = todayIso();
   const rows = await db.select<Array<{ value: string }>>(

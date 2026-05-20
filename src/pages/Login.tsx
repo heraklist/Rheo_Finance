@@ -1,8 +1,9 @@
 import { APP_VERSION } from "@/components/settings/settingsOptions";
 import { Input } from "@/components/ui/input";
+import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { LockKeyhole, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function authErrorMessage(message: string): string {
@@ -23,10 +24,15 @@ function authErrorMessage(message: string): string {
 
 export function Login() {
   const navigate = useNavigate();
+  const user = useAppStore((state) => state.user);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) navigate("/", { replace: true });
+  }, [navigate, user]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,8 +62,6 @@ export function Login() {
       setError(authErrorMessage(signInError.message));
       return;
     }
-
-    navigate("/", { replace: true });
   }
 
   return (

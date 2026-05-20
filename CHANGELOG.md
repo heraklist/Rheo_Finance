@@ -4,6 +4,23 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.9 - 2026-05-20
+
+### Changed
+
+- Database initialization now reuses a single in-flight connection promise.
+- Transaction writes and outbox entries are now committed atomically.
+- Sync now stores server `updated_at` values after successful Supabase writes.
+- Desktop update links now open through Tauri shell instead of navigating the WebView.
+
+### Fixed
+
+- Backup restore validates foreign keys before commit.
+- Recurring daily generation now has an in-process concurrency guard.
+- Login, auth initialization, MFA settings, and transaction form async flows no longer leave stale loading or stale response state.
+- VAT split now keeps `net + vat` aligned with rounded gross totals.
+- Release workflow version extraction validates tag format before using it.
+
 ## v0.2.8 - 2026-05-18
 
 ### Changed

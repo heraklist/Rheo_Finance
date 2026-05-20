@@ -63,8 +63,14 @@ export function MfaSettingsPanel() {
 
     async function load() {
       setLoading(true);
-      await refreshFactors();
-      if (!cancelled) setLoading(false);
+      try {
+        await refreshFactors();
+      } catch (err) {
+        console.error("Failed to load MFA factors:", err);
+        if (!cancelled) setError("Δεν φορτώθηκαν οι authenticator ρυθμίσεις. Δοκίμασε ξανά.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
     void load();
