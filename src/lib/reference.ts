@@ -1,4 +1,4 @@
-import { getDb, now, uuid } from "@/lib/db";
+import { getDb, now, runInTransaction, uuid } from "@/lib/db";
 import type { Account, Book, Category, CategoryType, Tag } from "@/lib/types";
 
 export type EditableCategoryType = Extract<CategoryType, "income" | "expense">;
@@ -97,61 +97,64 @@ export async function createCategory(input: {
   type: EditableCategoryType;
   name: string;
 }): Promise<Category> {
-  const db = await getDb();
   const name = assertCategoryName(input.name);
   const ts = now();
-  const sortRows = await db.select<Array<{ sort_order: number | null }>>(
-    `SELECT MAX(sort_order) AS sort_order
-     FROM categories
-     WHERE book_id = ? AND type = ?`,
-    [input.bookId, input.type],
-  );
-  const sortOrder = Number(sortRows[0]?.sort_order ?? 0) + 10;
-  const category: Category = {
-    id: uuid(),
-    book_id: input.bookId,
-    parent_id: null,
-    name,
-    type: input.type,
-    is_archived: false,
-    sort_order: sortOrder,
-    created_at: ts,
-    sync_status: "pending",
-    local_updated_at: ts,
-    server_updated_at: null,
-  };
 
-  await db.execute(
-    `INSERT INTO categories
-       (id, book_id, parent_id, name, type, is_archived, sort_order, created_at,
-        sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      category.id,
-      category.book_id,
-      category.parent_id,
-      category.name,
-      category.type,
-      0,
-      category.sort_order,
-      category.created_at,
-      category.sync_status,
-      category.local_updated_at,
-      category.server_updated_at,
-    ],
-  );
+  const category = await runInTransaction(async (db) => {
+    const sortRows = await db.select<Array<{ sort_order: number | null }>>(
+      `SELECT MAX(sort_order) AS sort_order
+       FROM categories
+       WHERE book_id = ? AND type = ?`,
+      [input.bookId, input.type],
+    );
+    const sortOrder = Number(sortRows[0]?.sort_order ?? 0) + 10;
+    const nextCategory: Category = {
+      id: uuid(),
+      book_id: input.bookId,
+      parent_id: null,
+      name,
+      type: input.type,
+      is_archived: false,
+      sort_order: sortOrder,
+      created_at: ts,
+      sync_status: "pending",
+      local_updated_at: ts,
+      server_updated_at: null,
+    };
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["category", category.id, "create", JSON.stringify(category), ts],
-  );
+    await db.execute(
+      `INSERT INTO categories
+         (id, book_id, parent_id, name, type, is_archived, sort_order, created_at,
+          sync_status, local_updated_at, server_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nextCategory.id,
+        nextCategory.book_id,
+        nextCategory.parent_id,
+        nextCategory.name,
+        nextCategory.type,
+        0,
+        nextCategory.sort_order,
+        nextCategory.created_at,
+        nextCategory.sync_status,
+        nextCategory.local_updated_at,
+        nextCategory.server_updated_at,
+      ],
+    );
+
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["category", nextCategory.id, "create", JSON.stringify(nextCategory), ts],
+    );
+
+    return nextCategory;
+  });
 
   return category;
 }
 
 export async function updateCategoryName(id: string, name: string): Promise<Category> {
-  const db = await getDb();
   const existing = await getCategory(id);
   if (!existing) throw new Error("Category not found");
 
@@ -164,33 +167,34 @@ export async function updateCategoryName(id: string, name: string): Promise<Cate
     server_updated_at: null,
   };
 
-  await db.execute(
-    `UPDATE categories
-     SET name = ?,
-         sync_status = ?,
-         local_updated_at = ?,
-         server_updated_at = ?
-     WHERE id = ?`,
-    [
-      category.name,
-      category.sync_status,
-      category.local_updated_at,
-      category.server_updated_at,
-      category.id,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `UPDATE categories
+       SET name = ?,
+           sync_status = ?,
+           local_updated_at = ?,
+           server_updated_at = ?
+       WHERE id = ?`,
+      [
+        category.name,
+        category.sync_status,
+        category.local_updated_at,
+        category.server_updated_at,
+        category.id,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["category", category.id, "update", JSON.stringify(category), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["category", category.id, "update", JSON.stringify(category), ts],
+    );
+  });
 
   return category;
 }
 
 async function setCategoryArchived(id: string, archived: boolean): Promise<Category> {
-  const db = await getDb();
   const existing = await getCategory(id);
   if (!existing) throw new Error("Category not found");
 
@@ -203,27 +207,29 @@ async function setCategoryArchived(id: string, archived: boolean): Promise<Categ
     server_updated_at: null,
   };
 
-  await db.execute(
-    `UPDATE categories
-     SET is_archived = ?,
-         sync_status = ?,
-         local_updated_at = ?,
-         server_updated_at = ?
-     WHERE id = ?`,
-    [
-      archived ? 1 : 0,
-      category.sync_status,
-      category.local_updated_at,
-      category.server_updated_at,
-      category.id,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `UPDATE categories
+       SET is_archived = ?,
+           sync_status = ?,
+           local_updated_at = ?,
+           server_updated_at = ?
+       WHERE id = ?`,
+      [
+        archived ? 1 : 0,
+        category.sync_status,
+        category.local_updated_at,
+        category.server_updated_at,
+        category.id,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["category", category.id, "update", JSON.stringify(category), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["category", category.id, "update", JSON.stringify(category), ts],
+    );
+  });
 
   return category;
 }
@@ -259,7 +265,6 @@ export async function getCategoryUsage(id: string): Promise<CategoryUsage> {
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const db = await getDb();
   const existing = await getCategory(id);
   if (!existing) throw new Error("Category not found");
 
@@ -270,22 +275,24 @@ export async function deleteCategory(id: string): Promise<void> {
 
   const ts = now();
 
-  await db.execute("DELETE FROM categories WHERE id = ?", [id]);
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      "category",
-      id,
-      "delete",
-      JSON.stringify({
-        ...existing,
-        deleted_at: ts,
-        local_updated_at: ts,
-      }),
-      ts,
-    ],
-  );
+  await runInTransaction(async (txDb) => {
+    await txDb.execute("DELETE FROM categories WHERE id = ?", [id]);
+    await txDb.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        "category",
+        id,
+        "delete",
+        JSON.stringify({
+          ...existing,
+          deleted_at: ts,
+          local_updated_at: ts,
+        }),
+        ts,
+      ],
+    );
+  });
 }
 
 export async function listTags(): Promise<Tag[]> {
@@ -317,27 +324,29 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
     server_updated_at: null,
   };
 
-  await db.execute(
-    `INSERT INTO tags
-       (id, name, description, is_archived, created_at, sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      tag.id,
-      tag.name,
-      tag.description,
-      0,
-      tag.created_at,
-      tag.sync_status,
-      tag.local_updated_at,
-      tag.server_updated_at,
-    ],
-  );
+  await runInTransaction(async (txDb) => {
+    await txDb.execute(
+      `INSERT INTO tags
+         (id, name, description, is_archived, created_at, sync_status, local_updated_at, server_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tag.id,
+        tag.name,
+        tag.description,
+        0,
+        tag.created_at,
+        tag.sync_status,
+        tag.local_updated_at,
+        tag.server_updated_at,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["tag", tag.id, "create", JSON.stringify(tag), ts],
-  );
+    await txDb.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["tag", tag.id, "create", JSON.stringify(tag), ts],
+    );
+  });
 
   return tag;
 }

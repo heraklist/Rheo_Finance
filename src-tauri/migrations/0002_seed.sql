@@ -75,5 +75,5 @@ INSERT OR IGNORE INTO categories (id, book_id, parent_id, name, type, sort_order
 -- ============================================================
 INSERT OR IGNORE INTO sync_metadata (key, value, updated_at) VALUES
   ('initialized_at', datetime('now'), datetime('now')),
-  ('last_synced_at', '', datetime('now')),
+  ('last_synced_at', '1970-01-01T00:00:00.000Z', datetime('now')),
   ('current_user_id', '', datetime('now'));

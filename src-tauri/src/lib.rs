@@ -2,6 +2,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod secure_auth_storage;
+
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -26,6 +28,12 @@ pub fn run() {
             sql: include_str!("../migrations/0002_seed.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "sync_metadata_baseline",
+            sql: include_str!("../migrations/0003_sync_metadata_baseline.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     let builder = tauri::Builder::default()
@@ -33,6 +41,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(secure_auth_storage::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:evochia.db", migrations)

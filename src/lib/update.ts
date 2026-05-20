@@ -78,8 +78,7 @@ async function openExternalUrl(url: string): Promise<void> {
     await openExternal(url);
   } catch (error) {
     console.error("Failed to open external update URL:", error);
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) throw error;
+    throw error;
   }
 }
 

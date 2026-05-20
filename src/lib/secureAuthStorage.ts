@@ -1,4 +1,4 @@
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { appLocalDataDir, join } from "@tauri-apps/api/path";
 import { platform } from "@tauri-apps/plugin-os";
 import { type Client, type Store, Stronghold } from "@tauri-apps/plugin-stronghold";
@@ -17,9 +17,15 @@ interface StrongholdState {
 const CLIENT_NAME = "supabase-auth";
 const SNAPSHOT_FILE = "supabase-auth.stronghold";
 const STORAGE_KEY_PREFIX = "supabase:";
+const ANDROID_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
 let strongholdAvailable: boolean | null = null;
+let tauriPlatformPromise: Promise<string | null> | null = null;
+
+interface AndroidSecureStorageValue {
+  value?: string | null;
+}
 
 function localGetItem(key: string): string | null {
   return window.localStorage.getItem(key);
@@ -41,16 +47,31 @@ function logStrongholdFailure(operation: string, error: unknown): void {
   console.error(`Stronghold auth storage ${operation} failed.`, error);
 }
 
+function logAndroidSecureStorageFailure(operation: string, error: unknown): void {
+  console.error(`Android secure auth storage ${operation} failed.`, error);
+}
+
+async function getTauriPlatform(): Promise<string | null> {
+  if (!isTauri()) return null;
+
+  tauriPlatformPromise ??= Promise.resolve()
+    .then(() => platform())
+    .catch(() => null);
+
+  return tauriPlatformPromise;
+}
+
+async function canUseAndroidSecureStorage(): Promise<boolean> {
+  return (await getTauriPlatform()) === "android";
+}
+
 async function canUseStronghold(): Promise<boolean> {
   if (!isTauri()) return false;
   if (strongholdAvailable !== null) return strongholdAvailable;
 
-  try {
-    const currentPlatform = platform();
-    strongholdAvailable = currentPlatform !== "android" && currentPlatform !== "ios";
-  } catch {
-    strongholdAvailable = false;
-  }
+  const currentPlatform = await getTauriPlatform();
+  strongholdAvailable =
+    currentPlatform !== null && currentPlatform !== "android" && currentPlatform !== "ios";
 
   return strongholdAvailable;
 }
@@ -99,8 +120,50 @@ async function removeStrongholdItem(key: string): Promise<void> {
   localRemoveItem(key);
 }
 
+async function readAndroidSecureItem(key: string): Promise<string | null> {
+  const result = await invoke<AndroidSecureStorageValue>(
+    `${ANDROID_SECURE_STORAGE_COMMAND}|get_item`,
+    { key },
+  );
+
+  return result.value ?? null;
+}
+
+async function writeAndroidSecureItem(key: string, value: string): Promise<void> {
+  await invoke(`${ANDROID_SECURE_STORAGE_COMMAND}|set_item`, { key, value });
+  localRemoveItem(key);
+}
+
+async function removeAndroidSecureItem(key: string): Promise<void> {
+  await invoke(`${ANDROID_SECURE_STORAGE_COMMAND}|remove_item`, { key });
+  localRemoveItem(key);
+}
+
 export const secureAuthStorage: AuthStorage = {
   async getItem(key) {
+    if (await canUseAndroidSecureStorage()) {
+      try {
+        const value = await readAndroidSecureItem(key);
+        if (value !== null) return value;
+
+        const legacyValue = localGetItem(key);
+        if (legacyValue !== null) {
+          try {
+            await writeAndroidSecureItem(key, legacyValue);
+            return legacyValue;
+          } catch (error) {
+            logAndroidSecureStorageFailure("migration", error);
+            return null;
+          }
+        }
+
+        return null;
+      } catch (error) {
+        logAndroidSecureStorageFailure("read", error);
+        return null;
+      }
+    }
+
     if (!(await canUseStronghold())) return localGetItem(key);
 
     try {
@@ -127,6 +190,16 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async setItem(key, value) {
+    if (await canUseAndroidSecureStorage()) {
+      try {
+        await writeAndroidSecureItem(key, value);
+      } catch (error) {
+        logAndroidSecureStorageFailure("write", error);
+        throw error;
+      }
+      return;
+    }
+
     if (!(await canUseStronghold())) {
       localSetItem(key, value);
       return;
@@ -140,6 +213,16 @@ export const secureAuthStorage: AuthStorage = {
     }
   },
   async removeItem(key) {
+    if (await canUseAndroidSecureStorage()) {
+      try {
+        await removeAndroidSecureItem(key);
+      } catch (error) {
+        logAndroidSecureStorageFailure("remove", error);
+        localRemoveItem(key);
+      }
+      return;
+    }
+
     if (!(await canUseStronghold())) {
       localRemoveItem(key);
       return;

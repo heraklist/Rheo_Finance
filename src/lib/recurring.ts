@@ -1,4 +1,4 @@
-import { getDb, now, uuid } from "@/lib/db";
+import { getDb, now, runInTransaction, uuid } from "@/lib/db";
 import { createTransaction } from "@/lib/transactions";
 import type {
   Frequency,
@@ -7,6 +7,7 @@ import type {
   RecurringTemplateWithRelations,
   Transaction,
 } from "@/lib/types";
+import type Database from "@tauri-apps/plugin-sql";
 
 type RecurringDbRow = Omit<RecurringTemplateWithRelations, "active" | "next_due"> & {
   active: boolean | number;
@@ -210,7 +211,6 @@ export async function getRecurringTemplate(
 export async function createRecurringTemplate(
   input: RecurringTemplateInput,
 ): Promise<RecurringTemplate> {
-  const db = await getDb();
   const ts = now();
   const template: RecurringTemplate = {
     id: uuid(),
@@ -233,39 +233,41 @@ export async function createRecurringTemplate(
     server_updated_at: null,
   };
 
-  await db.execute(
-    `INSERT INTO recurring_templates
-       (id, active, description, book_id, account_id, category_id, tag_id,
-        amount_gross, vat_rate, frequency, day_of_period, start_date, end_date,
-        last_generated, created_at, sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      template.id,
-      template.active ? 1 : 0,
-      template.description,
-      template.book_id,
-      template.account_id,
-      template.category_id,
-      template.tag_id,
-      template.amount_gross,
-      template.vat_rate,
-      template.frequency,
-      template.day_of_period,
-      template.start_date,
-      template.end_date,
-      template.last_generated,
-      template.created_at,
-      template.sync_status,
-      template.local_updated_at,
-      template.server_updated_at,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `INSERT INTO recurring_templates
+         (id, active, description, book_id, account_id, category_id, tag_id,
+          amount_gross, vat_rate, frequency, day_of_period, start_date, end_date,
+          last_generated, created_at, sync_status, local_updated_at, server_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        template.id,
+        template.active ? 1 : 0,
+        template.description,
+        template.book_id,
+        template.account_id,
+        template.category_id,
+        template.tag_id,
+        template.amount_gross,
+        template.vat_rate,
+        template.frequency,
+        template.day_of_period,
+        template.start_date,
+        template.end_date,
+        template.last_generated,
+        template.created_at,
+        template.sync_status,
+        template.local_updated_at,
+        template.server_updated_at,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["recurring_template", template.id, "create", JSON.stringify(outboxPayload(template)), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["recurring_template", template.id, "create", JSON.stringify(outboxPayload(template)), ts],
+    );
+  });
 
   return template;
 }
@@ -276,7 +278,6 @@ export async function updateRecurringTemplate(
   const existing = await getRecurringTemplate(input.id);
   if (!existing) throw new Error("Recurring template not found");
 
-  const db = await getDb();
   const ts = now();
   const template: RecurringTemplate = {
     id: input.id,
@@ -299,49 +300,51 @@ export async function updateRecurringTemplate(
     server_updated_at: null,
   };
 
-  await db.execute(
-    `UPDATE recurring_templates
-     SET active = ?,
-         description = ?,
-         book_id = ?,
-         account_id = ?,
-         category_id = ?,
-         tag_id = ?,
-         amount_gross = ?,
-         vat_rate = ?,
-         frequency = ?,
-         day_of_period = ?,
-         start_date = ?,
-         end_date = ?,
-         sync_status = ?,
-         local_updated_at = ?,
-         server_updated_at = ?
-     WHERE id = ?`,
-    [
-      template.active ? 1 : 0,
-      template.description,
-      template.book_id,
-      template.account_id,
-      template.category_id,
-      template.tag_id,
-      template.amount_gross,
-      template.vat_rate,
-      template.frequency,
-      template.day_of_period,
-      template.start_date,
-      template.end_date,
-      template.sync_status,
-      template.local_updated_at,
-      template.server_updated_at,
-      template.id,
-    ],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `UPDATE recurring_templates
+       SET active = ?,
+           description = ?,
+           book_id = ?,
+           account_id = ?,
+           category_id = ?,
+           tag_id = ?,
+           amount_gross = ?,
+           vat_rate = ?,
+           frequency = ?,
+           day_of_period = ?,
+           start_date = ?,
+           end_date = ?,
+           sync_status = ?,
+           local_updated_at = ?,
+           server_updated_at = ?
+       WHERE id = ?`,
+      [
+        template.active ? 1 : 0,
+        template.description,
+        template.book_id,
+        template.account_id,
+        template.category_id,
+        template.tag_id,
+        template.amount_gross,
+        template.vat_rate,
+        template.frequency,
+        template.day_of_period,
+        template.start_date,
+        template.end_date,
+        template.sync_status,
+        template.local_updated_at,
+        template.server_updated_at,
+        template.id,
+      ],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["recurring_template", template.id, "update", JSON.stringify(outboxPayload(template)), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["recurring_template", template.id, "update", JSON.stringify(outboxPayload(template)), ts],
+    );
+  });
 
   return template;
 }
@@ -356,8 +359,11 @@ export async function setRecurringTemplateActive(id: string, active: boolean): P
   });
 }
 
-async function queueTransactionRecurringDetach(tx: Transaction, ts: string): Promise<void> {
-  const db = await getDb();
+async function queueTransactionRecurringDetach(
+  db: Database,
+  tx: Transaction,
+  ts: string,
+): Promise<void> {
   const payload: Transaction = {
     ...tx,
     recurring_template_id: null,
@@ -375,54 +381,55 @@ async function queueTransactionRecurringDetach(tx: Transaction, ts: string): Pro
 }
 
 export async function deleteRecurringTemplate(id: string): Promise<void> {
-  const db = await getDb();
   const existing = await getRecurringTemplate(id);
   if (!existing) throw new Error("Recurring template not found");
 
   const ts = now();
-  const linkedTransactions = await db.select<Transaction[]>(
-    "SELECT * FROM transactions WHERE recurring_template_id = ?",
-    [id],
-  );
-
-  for (const tx of linkedTransactions) {
-    await db.execute(
-      `UPDATE transactions
-       SET recurring_template_id = NULL,
-           updated_at = ?,
-           sync_status = 'pending',
-           local_updated_at = ?,
-           server_updated_at = NULL
-       WHERE id = ?`,
-      [ts, ts, tx.id],
-    );
-    await queueTransactionRecurringDetach(tx, ts);
-  }
-
-  await db.execute("DELETE FROM recurring_templates WHERE id = ?", [id]);
   const deleteTs = new Date(Date.parse(ts) + 1).toISOString();
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      "recurring_template",
-      id,
-      "delete",
-      JSON.stringify({
-        ...outboxPayload(existing),
-        deleted_at: deleteTs,
-      }),
-      deleteTs,
-    ],
-  );
+  await runInTransaction(async (txDb) => {
+    const linkedTransactions = await txDb.select<Transaction[]>(
+      "SELECT * FROM transactions WHERE recurring_template_id = ?",
+      [id],
+    );
+
+    for (const tx of linkedTransactions) {
+      await txDb.execute(
+        `UPDATE transactions
+         SET recurring_template_id = NULL,
+             updated_at = ?,
+             sync_status = 'pending',
+             local_updated_at = ?,
+             server_updated_at = NULL
+         WHERE id = ?`,
+        [ts, ts, tx.id],
+      );
+      await queueTransactionRecurringDetach(txDb, tx, ts);
+    }
+
+    await txDb.execute("DELETE FROM recurring_templates WHERE id = ?", [id]);
+
+    await txDb.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        "recurring_template",
+        id,
+        "delete",
+        JSON.stringify({
+          ...outboxPayload(existing),
+          deleted_at: deleteTs,
+        }),
+        deleteTs,
+      ],
+    );
+  });
 }
 
 async function markRecurringGenerated(
   template: RecurringTemplateWithRelations,
   generatedDate: string,
 ): Promise<void> {
-  const db = await getDb();
   const ts = now();
   const nextTemplate: RecurringTemplate = {
     ...template,
@@ -432,21 +439,29 @@ async function markRecurringGenerated(
     server_updated_at: null,
   };
 
-  await db.execute(
-    `UPDATE recurring_templates
-     SET last_generated = ?,
-         sync_status = 'pending',
-         local_updated_at = ?,
-         server_updated_at = NULL
-     WHERE id = ?`,
-    [generatedDate, ts, template.id],
-  );
+  await runInTransaction(async (db) => {
+    await db.execute(
+      `UPDATE recurring_templates
+       SET last_generated = ?,
+           sync_status = 'pending',
+           local_updated_at = ?,
+           server_updated_at = NULL
+       WHERE id = ?`,
+      [generatedDate, ts, template.id],
+    );
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["recurring_template", template.id, "update", JSON.stringify(outboxPayload(nextTemplate)), ts],
-  );
+    await db.execute(
+      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        "recurring_template",
+        template.id,
+        "update",
+        JSON.stringify(outboxPayload(nextTemplate)),
+        ts,
+      ],
+    );
+  });
 }
 
 async function generatedTransactionExists(templateId: string, date: string): Promise<boolean> {

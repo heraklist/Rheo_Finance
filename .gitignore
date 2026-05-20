@@ -8,7 +8,25 @@ build/
 
 # Tauri
 src-tauri/target/
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/android/
+src-tauri/gen/android/*
+!src-tauri/gen/android/app/
+src-tauri/gen/android/app/*
+!src-tauri/gen/android/app/proguard-rules.pro
+!src-tauri/gen/android/app/src/
+src-tauri/gen/android/app/src/*
+!src-tauri/gen/android/app/src/main/
+src-tauri/gen/android/app/src/main/*
+!src-tauri/gen/android/app/src/main/java/
+src-tauri/gen/android/app/src/main/java/*
+!src-tauri/gen/android/app/src/main/java/app/
+src-tauri/gen/android/app/src/main/java/app/*
+!src-tauri/gen/android/app/src/main/java/app/rheo/
+src-tauri/gen/android/app/src/main/java/app/rheo/*
+!src-tauri/gen/android/app/src/main/java/app/rheo/finance/
+src-tauri/gen/android/app/src/main/java/app/rheo/finance/*
+!src-tauri/gen/android/app/src/main/java/app/rheo/finance/SecureAuthStoragePlugin.kt
 src-tauri/.cargo/
 
 # IDE

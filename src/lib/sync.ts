@@ -1,4 +1,4 @@
-import { getDb, now } from "@/lib/db";
+import { getDb, now, runInTransaction } from "@/lib/db";
 import {
   deleteLocalReceiptPhoto,
   deleteRemoteReceiptPhoto,
@@ -318,6 +318,17 @@ async function getRemoteUpdatedAt(table: string, entityId: string): Promise<stri
   return remote?.updated_at ?? null;
 }
 
+async function getRemoteRow(config: SyncTableConfig, entityId: string): Promise<SyncRow | null> {
+  const { data, error } = await supabase
+    .from(config.table)
+    .select("*")
+    .eq("id", entityId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? (data as SyncRow) : null;
+}
+
 async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Promise<boolean> {
   const entityId = remoteRow.id;
   const remoteMs = timestampMs(serverUpdatedAt(remoteRow));
@@ -482,6 +493,19 @@ async function deleteLocalForRemoteTombstone(
   await db.execute(`DELETE FROM ${config.localTable} WHERE id = ?`, [entityId]);
 }
 
+async function applyRemoteRowToLocal(
+  entityType: SyncEntityType,
+  remoteRow: SyncRow,
+): Promise<void> {
+  if (deletedAt(remoteRow)) {
+    await deleteLocalForRemoteTombstone(entityType, remoteRow);
+    return;
+  }
+
+  const localRow = await preparePulledRowForLocal(entityType, remoteRow);
+  await upsertLocal(entityType, localRow);
+}
+
 async function upsertLocalReferenceData(userId: string) {
   const db = await getDb();
 
@@ -506,12 +530,8 @@ async function upsertLocalReferenceData(userId: string) {
           `[sync] LWW: remote newer for ${entityType} ${entityId} ` +
             `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(row)}). Skipping push.`,
         );
-        await db.execute(
-          `UPDATE ${config.localTable}
-           SET sync_status = 'synced', server_updated_at = ?
-           WHERE id = ?`,
-          [remoteUpdatedAt, entityId],
-        );
+        const remoteRow = await getRemoteRow(config, entityId);
+        if (remoteRow) await applyRemoteRowToLocal(entityType, remoteRow);
         continue;
       }
 
@@ -586,7 +606,10 @@ export async function pushChanges(): Promise<number> {
             `[sync] LWW: remote newer for ${entry.entity_type} ${entry.entity_id} ` +
               `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(payload)}). Skipping push.`,
           );
+          const remoteRow = await getRemoteRow(config, entry.entity_id);
+          if (remoteRow) await applyRemoteRowToLocal(entry.entity_type, remoteRow);
           await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
+          success++;
           continue;
         }
 
@@ -627,7 +650,10 @@ export async function pushChanges(): Promise<number> {
             `[sync] LWW: remote newer for deleted ${entry.entity_type} ${entry.entity_id} ` +
               `(remote=${remoteUpdatedAt}, local=${localDeletedAt}). Skipping delete.`,
           );
+          const remoteRow = await getRemoteRow(config, entry.entity_id);
+          if (remoteRow) await applyRemoteRowToLocal(entry.entity_type, remoteRow);
           await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
+          success++;
           continue;
         }
 
@@ -645,19 +671,21 @@ export async function pushChanges(): Promise<number> {
         }
       }
 
-      await db.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
+      await runInTransaction(async (txDb) => {
+        await txDb.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
 
-      if (entry.operation !== "delete") {
-        const finalSyncedAt = syncedAt ?? now();
-        await db.execute(
-          `UPDATE ${config.localTable}
-           SET sync_status = 'synced',
-               local_updated_at = ?,
-               server_updated_at = ?
-           WHERE id = ?`,
-          [finalSyncedAt, finalSyncedAt, entry.entity_id],
-        );
-      }
+        if (entry.operation !== "delete") {
+          const finalSyncedAt = syncedAt ?? now();
+          await txDb.execute(
+            `UPDATE ${config.localTable}
+             SET sync_status = 'synced',
+                 local_updated_at = ?,
+                 server_updated_at = ?
+             WHERE id = ?`,
+            [finalSyncedAt, finalSyncedAt, entry.entity_id],
+          );
+        }
+      });
 
       success++;
     } catch (err) {
@@ -693,7 +721,6 @@ export async function pullChanges(): Promise<number> {
 
   let total = 0;
   let highWatermark: string | null = null;
-  const pullStartedAt = now();
   const failures: string[] = [];
 
   for (const entityType of PULL_ORDER) {
@@ -723,8 +750,7 @@ export async function pullChanges(): Promise<number> {
         continue;
       }
 
-      const localRow = await preparePulledRowForLocal(entityType, remoteRow);
-      await upsertLocal(entityType, localRow);
+      await applyRemoteRowToLocal(entityType, remoteRow);
       total++;
     }
   }
@@ -733,11 +759,13 @@ export async function pullChanges(): Promise<number> {
     throw new Error(`Δεν ολοκληρώθηκε το pull. ${failures.join(" | ")}`);
   }
 
-  await db.execute(
-    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-     VALUES ('last_synced_at', ?, ?)`,
-    [highWatermark ?? pullStartedAt, now()],
-  );
+  if (highWatermark !== null) {
+    await db.execute(
+      `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+       VALUES ('last_synced_at', ?, ?)`,
+      [highWatermark, now()],
+    );
+  }
 
   return total;
 }
