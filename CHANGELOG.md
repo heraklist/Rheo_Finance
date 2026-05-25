@@ -4,6 +4,14 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.22 - 2026-05-25
+
+### Added
+
+- Manual entitlement grants for owner/tester/manual access through a server-only Vercel admin endpoint.
+- Subscription metadata now records entitlement source, grant reason, and optional expiry.
+- Documentation for Phase 1 entitlement behavior and tester/owner grants.
+
 ## v0.2.21 - 2026-05-25
 
 ### Changed

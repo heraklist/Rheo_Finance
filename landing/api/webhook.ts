@@ -35,6 +35,7 @@ interface SubscriptionUpsert {
   stripe_customer_id: string;
   stripe_subscription_id: string;
   tier: SubscriptionTier;
+  source: "stripe";
   status: SubscriptionStatus;
   current_period_end: string;
   cancel_at_period_end: boolean;
@@ -162,6 +163,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
           tier: mapSubscriptionTier(sub.metadata?.tier),
+          source: "stripe",
           status: mapStripeStatus(sub.status),
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,
@@ -182,6 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
           tier: isCanceled ? "free" : mapSubscriptionTier(sub.metadata?.tier),
+          source: "stripe",
           status: mapStripeStatus(sub.status),
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,
@@ -204,6 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
           tier: mapSubscriptionTier(sub.metadata?.tier), // keep paid tier until actually canceled
+          source: "stripe",
           status: "past_due",
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,

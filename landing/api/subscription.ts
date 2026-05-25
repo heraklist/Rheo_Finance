@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/subscriptions?user_id=eq.${user.id}&select=tier,status,current_period_end,cancel_at_period_end`,
+      `${supabaseUrl}/rest/v1/subscriptions?user_id=eq.${user.id}&select=tier,status,source,current_period_end,cancel_at_period_end,expires_at`,
       {
         headers: {
           apikey: supabaseKey,
@@ -51,19 +51,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         tier: "free",
         status: "active",
+        source: "stripe",
         current_period_end: null,
         cancel_at_period_end: false,
+        expires_at: null,
       });
     }
 
     const sub = rows[0];
+    const expiresAt = sub.expires_at ? Date.parse(sub.expires_at) : Number.NaN;
 
-    // Check if subscription has expired
-    if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) {
-      if (sub.status !== "canceled") {
-        // Period ended but Stripe hasn't sent webhook yet — still show as active
-        // Stripe webhook will eventually update this
-      }
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+      return res.status(200).json({
+        tier: "free",
+        status: "canceled",
+        source: sub.source || "manual",
+        current_period_end: sub.current_period_end,
+        cancel_at_period_end: true,
+        expires_at: sub.expires_at,
+      });
     }
 
     // Set cache headers — app can cache for 5 minutes
@@ -72,8 +78,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       tier: sub.tier || "free",
       status: sub.status || "active",
+      source: sub.source || "stripe",
       current_period_end: sub.current_period_end,
       cancel_at_period_end: sub.cancel_at_period_end ?? false,
+      expires_at: sub.expires_at || null,
     });
   } catch (err) {
     if (err instanceof Error && err.message === "Unauthorized") {

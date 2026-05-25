@@ -13,19 +13,24 @@ import { supabase } from "@/lib/supabase";
 export type SubscriptionTier = "free" | "solo" | "pro" | "team";
 
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "incomplete";
+export type SubscriptionSource = "stripe" | "manual" | "tester" | "owner";
 
 export interface SubscriptionInfo {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
+  source: SubscriptionSource;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  expiresAt: string | null;
 }
 
 export const DEFAULT_SUBSCRIPTION: SubscriptionInfo = {
   tier: "free",
   status: "active",
+  source: "stripe",
   currentPeriodEnd: null,
   cancelAtPeriodEnd: false,
+  expiresAt: null,
 };
 
 // ─── Feature Limits per Tier ──────────────────────────────────
@@ -78,13 +83,19 @@ const PRO_LIMITS: TierLimits = {
   prioritySupport: true,
 };
 
+const TEAM_LIMITS: TierLimits = {
+  ...PRO_LIMITS,
+  prioritySupport: true,
+};
+
 export function getTierLimits(tier: SubscriptionTier): TierLimits {
   switch (tier) {
     case "solo":
       return SOLO_LIMITS;
     case "pro":
-    case "team":
       return PRO_LIMITS;
+    case "team":
+      return TEAM_LIMITS;
     default:
       return FREE_LIMITS;
   }
@@ -197,8 +208,10 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
     const info: SubscriptionInfo = {
       tier: normalizeSubscriptionTier(data.tier),
       status: data.status ?? "active",
+      source: normalizeSubscriptionSource(data.source),
       currentPeriodEnd: data.current_period_end ?? null,
       cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
+      expiresAt: data.expires_at ?? null,
     };
 
     cachedSub = info;
@@ -218,4 +231,9 @@ export function clearSubscriptionCache(): void {
 function normalizeSubscriptionTier(value: unknown): SubscriptionTier {
   if (value === "solo" || value === "pro" || value === "team") return value;
   return "free";
+}
+
+function normalizeSubscriptionSource(value: unknown): SubscriptionSource {
+  if (value === "manual" || value === "tester" || value === "owner") return value;
+  return "stripe";
 }
