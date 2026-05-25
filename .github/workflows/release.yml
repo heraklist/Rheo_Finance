@@ -86,6 +86,7 @@ jobs:
       - name: Stage Windows artifacts
         shell: pwsh
         run: |
+          Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "src-tauri/target/release/bundle/nsis/*-setup.exe" dist/
           Copy-Item "src-tauri/target/release/bundle/nsis/*.sig" dist/
@@ -281,6 +282,7 @@ jobs:
           if [ "$VERSION" = "$GITHUB_REF_NAME" ]; then
             VERSION=$(node -e "console.log(require('./package.json').version)")
           fi
+          rm -rf dist
           mkdir -p dist
           APK_PATH=$(find src-tauri/gen/android -name "*.apk" -path "*/release/*" -print -quit)
           if [ -z "$APK_PATH" ]; then

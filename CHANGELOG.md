@@ -4,6 +4,12 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.15 - 2026-05-25
+
+### Fixed
+
+- Release workflow now stages only installer/APK artifacts before publish, so web build files are not uploaded as release assets.
+
 ## v0.2.14 - 2026-05-25
 
 ### Changed
