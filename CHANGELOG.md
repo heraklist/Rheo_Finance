@@ -4,6 +4,13 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.18 - 2026-05-25
+
+### Fixed
+
+- Windows login session storage now tries app-level secure storage commands before plugin command prefixes, avoiding false login failures after Supabase accepts credentials.
+- Native secure auth storage command invocation is tolerant to both underscore and hyphenated Tauri plugin command IDs.
+
 ## v0.2.17 - 2026-05-25
 
 ### Added

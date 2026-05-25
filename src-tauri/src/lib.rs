@@ -91,7 +91,12 @@ pub fn run() {
         });
 
     builder
-        .invoke_handler(tauri::generate_handler![restart_app])
+        .invoke_handler(tauri::generate_handler![
+            restart_app,
+            secure_auth_storage::secure_auth_storage_get_item,
+            secure_auth_storage::secure_auth_storage_set_item,
+            secure_auth_storage::secure_auth_storage_remove_item
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

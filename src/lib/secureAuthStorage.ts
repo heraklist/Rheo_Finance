@@ -18,7 +18,11 @@ const CLIENT_NAME = "supabase-auth";
 const SNAPSHOT_FILE = "supabase-auth-v2.stronghold";
 const STORAGE_KEY_PREFIX = "supabase:";
 const STRONGHOLD_PASSPHRASE_KEY = "rheo:stronghold-passphrase:v1";
-const NATIVE_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
+const NATIVE_SECURE_STORAGE_COMMANDS = [
+  "secure_auth_storage",
+  "plugin:secure_auth_storage",
+  "plugin:secure-auth-storage",
+] as const;
 const LEGACY_SHARED_AUTH_STORAGE_KEYS = ["updater:github-token"];
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
@@ -146,22 +150,38 @@ async function removeStrongholdItem(key: string): Promise<void> {
 }
 
 async function readNativeSecureItem(key: string): Promise<string | null> {
-  const result = await invoke<NativeSecureStorageValue>(
-    `${NATIVE_SECURE_STORAGE_COMMAND}|get_item`,
-    { key },
-  );
+  const result = await invokeNativeSecureStorage<NativeSecureStorageValue>("get_item", { key });
 
   return result.value ?? null;
 }
 
 async function writeNativeSecureItem(key: string, value: string): Promise<void> {
-  await invoke(`${NATIVE_SECURE_STORAGE_COMMAND}|set_item`, { key, value });
+  await invokeNativeSecureStorage("set_item", { key, value });
   localRemoveItem(key);
 }
 
 async function removeNativeSecureItem(key: string): Promise<void> {
-  await invoke(`${NATIVE_SECURE_STORAGE_COMMAND}|remove_item`, { key });
+  await invokeNativeSecureStorage("remove_item", { key });
   localRemoveItem(key);
+}
+
+async function invokeNativeSecureStorage<T = void>(
+  command: "get_item" | "set_item" | "remove_item",
+  args: Record<string, string>,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (const prefix of NATIVE_SECURE_STORAGE_COMMANDS) {
+    try {
+      const commandName =
+        prefix === "secure_auth_storage" ? `${prefix}_${command}` : `${prefix}|${command}`;
+      return await invoke<T>(commandName, args);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 export const secureAuthStorage: AuthStorage = {

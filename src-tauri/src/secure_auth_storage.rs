@@ -43,7 +43,7 @@ struct StorageSetArgs {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct StorageValue {
+pub struct StorageValue {
     value: Option<String>,
 }
 
@@ -269,6 +269,31 @@ async fn remove_item<R: Runtime>(app: tauri::AppHandle<R>, key: String) -> Resul
         let _ = key;
         Err("Native secure auth storage is unavailable on this platform.".to_string())
     }
+}
+
+#[tauri::command]
+pub async fn secure_auth_storage_get_item<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    key: String,
+) -> Result<StorageValue, String> {
+    get_item(app, key).await
+}
+
+#[tauri::command]
+pub async fn secure_auth_storage_set_item<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    key: String,
+    value: String,
+) -> Result<(), String> {
+    set_item(app, key, value).await
+}
+
+#[tauri::command]
+pub async fn secure_auth_storage_remove_item<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    key: String,
+) -> Result<(), String> {
+    remove_item(app, key).await
 }
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
