@@ -1,15 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
-import {
-  ExternalLink,
-  Info,
-  KeyRound,
-  RefreshCcw,
-  Save,
-  Settings2,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { ExternalLink, Info, RefreshCcw, Settings2, ShieldAlert } from "lucide-react";
 
 import {
   Select,
@@ -140,28 +131,14 @@ export function PreferencesSection({
 interface AboutSectionProps {
   appVersion: string;
   checkingUpdate: boolean;
-  githubTokenDraft: string;
-  githubTokenMessage: string;
-  githubTokenSaved: boolean;
-  savingGithubToken: boolean;
   updateMessage: string;
-  onClearGithubToken: () => void;
-  onGithubTokenDraftChange: (value: string) => void;
-  onSaveGithubToken: () => void;
   onUpdateCheck: () => void;
 }
 
 export function AboutSection({
   appVersion,
   checkingUpdate,
-  githubTokenDraft,
-  githubTokenMessage,
-  githubTokenSaved,
-  savingGithubToken,
   updateMessage,
-  onClearGithubToken,
-  onGithubTokenDraftChange,
-  onSaveGithubToken,
   onUpdateCheck,
 }: AboutSectionProps) {
   return (
@@ -188,55 +165,24 @@ export function AboutSection({
         </div>
         <div className="rounded-md border border-border-light bg-sand p-3">
           <div className="mb-3 flex items-start gap-2 text-text-muted">
-            <KeyRound className="mt-0.5 h-4 w-4 text-gold" strokeWidth={1.7} />
+            <RefreshCcw className="mt-0.5 h-4 w-4 text-gold" strokeWidth={1.7} />
             <div>
               <p className="text-sm font-medium text-text-primary">
-                Ενημερώσεις από GitHub Releases
+                Αυτόματες ενημερώσεις από GitHub Releases
               </p>
               <p className="text-caption">
-                {githubTokenSaved
-                  ? "Υπάρχει αποθηκευμένο token για πρόσβαση στο private release feed."
-                  : "Το repo είναι private. Χρειάζεται token με read access για έλεγχο ενημερώσεων."}
+                Το release feed είναι δημόσιο και δεν χρειάζεται πλέον GitHub token.
               </p>
               <p className="text-caption mt-1">
-                Desktop: ανοίγει το τελευταίο signed installer από GitHub Releases. Android: ανοίγει
-                το τελευταίο APK για sideload.
+                Desktop: κατεβάζει και εγκαθιστά αυτόματα το signed update. Android: ανοίγει το
+                signed arm64 APK και η εγκατάσταση επιβεβαιώνεται από το σύστημα.
+              </p>
+              <p className="text-caption mt-1">
+                Αν έχεις παλιό debug APK πριν το v0.2.19, χρειάζεται μία φορά uninstall/install. Από
+                signed APK σε signed APK γίνεται κανονική αναβάθμιση.
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              type="password"
-              value={githubTokenDraft}
-              onChange={(event) => onGithubTokenDraftChange(event.target.value)}
-              placeholder="GitHub token"
-              className="min-w-0 flex-1 rounded-md border border-border-light bg-cream px-3 py-2 text-sm focus:border-charcoal focus:outline-none"
-              autoComplete="off"
-            />
-            <button
-              type="button"
-              onClick={onSaveGithubToken}
-              disabled={savingGithubToken}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-charcoal px-3 py-2 text-sm font-medium text-text-on-dark disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" strokeWidth={1.7} />
-              Αποθήκευση
-            </button>
-            {githubTokenSaved ? (
-              <button
-                type="button"
-                onClick={onClearGithubToken}
-                disabled={savingGithubToken}
-                className="inline-flex items-center justify-center gap-2 text-sm font-medium text-expense hover:underline disabled:opacity-50"
-              >
-                <X className="h-4 w-4" strokeWidth={1.7} />
-                Διαγραφή
-              </button>
-            ) : null}
-          </div>
-          {githubTokenMessage ? (
-            <p className="mt-2 text-caption text-text-muted">{githubTokenMessage}</p>
-          ) : null}
         </div>
         <button
           type="button"

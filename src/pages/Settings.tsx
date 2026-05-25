@@ -34,11 +34,6 @@ import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { getPendingCount, resetSyncStateForFullPull, syncAll } from "@/lib/sync";
 import { checkForUpdate } from "@/lib/updater";
-import {
-  clearUpdaterGitHubToken,
-  hasUpdaterGitHubToken,
-  setUpdaterGitHubToken,
-} from "@/lib/updaterToken";
 import { documentDir, join } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
@@ -81,16 +76,12 @@ export function Settings() {
   const [exportMessage, setExportMessage] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [updateMessage, setUpdateMessage] = useState("");
-  const [githubTokenDraft, setGithubTokenDraft] = useState("");
-  const [githubTokenSaved, setGithubTokenSaved] = useState(false);
-  const [githubTokenMessage, setGithubTokenMessage] = useState("");
   const [backupRunning, setBackupRunning] = useState(false);
   const [driveBackupRunning, setDriveBackupRunning] = useState(false);
   const [restoreRunning, setRestoreRunning] = useState(false);
   const [exportRunning, setExportRunning] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const [savingGithubToken, setSavingGithubToken] = useState(false);
   const [periodKey, setPeriodKey] = useState<PeriodKey>("q1");
   const [customFromDate, setCustomFromDate] = useState(`${CURRENT_YEAR}-01-01`);
   const [customToDate, setCustomToDate] = useState(`${CURRENT_YEAR}-12-31`);
@@ -109,24 +100,6 @@ export function Settings() {
     () => resolveExportPeriod(periodKey, customFromDate, customToDate, quarterPeriods),
     [customFromDate, customToDate, periodKey, quarterPeriods],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadUpdaterTokenState() {
-      try {
-        const hasToken = await hasUpdaterGitHubToken();
-        if (!cancelled) setGithubTokenSaved(hasToken);
-      } catch (err) {
-        console.error("Failed to load updater token state:", err);
-      }
-    }
-
-    void loadUpdaterTokenState();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -412,50 +385,6 @@ export function Settings() {
     }
   }
 
-  async function handleSaveGithubToken() {
-    if (savingGithubToken) return;
-
-    const token = githubTokenDraft.trim();
-    if (!token) {
-      setGithubTokenMessage("Βάλε ένα GitHub token ή καθάρισε το αποθηκευμένο token.");
-      return;
-    }
-
-    setSavingGithubToken(true);
-    setGithubTokenMessage("");
-
-    try {
-      await setUpdaterGitHubToken(token);
-      setGithubTokenDraft("");
-      setGithubTokenSaved(true);
-      setGithubTokenMessage("Το updater token αποθηκεύτηκε τοπικά.");
-    } catch (err) {
-      console.error("Failed to save updater token:", err);
-      setGithubTokenMessage("Δεν αποθηκεύτηκε το updater token.");
-    } finally {
-      setSavingGithubToken(false);
-    }
-  }
-
-  async function handleClearGithubToken() {
-    if (savingGithubToken) return;
-
-    setSavingGithubToken(true);
-    setGithubTokenMessage("");
-
-    try {
-      await clearUpdaterGitHubToken();
-      setGithubTokenDraft("");
-      setGithubTokenSaved(false);
-      setGithubTokenMessage("Το updater token διαγράφηκε από την τοπική αποθήκευση.");
-    } catch (err) {
-      console.error("Failed to clear updater token:", err);
-      setGithubTokenMessage("Δεν διαγράφηκε το updater token.");
-    } finally {
-      setSavingGithubToken(false);
-    }
-  }
-
   return (
     <div className="px-4 py-6 space-y-6">
       <div>
@@ -544,14 +473,7 @@ export function Settings() {
       <AboutSection
         appVersion={APP_VERSION}
         checkingUpdate={checkingUpdate}
-        githubTokenDraft={githubTokenDraft}
-        githubTokenMessage={githubTokenMessage}
-        githubTokenSaved={githubTokenSaved}
-        savingGithubToken={savingGithubToken}
         updateMessage={updateMessage}
-        onClearGithubToken={handleClearGithubToken}
-        onGithubTokenDraftChange={setGithubTokenDraft}
-        onSaveGithubToken={handleSaveGithubToken}
         onUpdateCheck={handleUpdateCheck}
       />
     </div>

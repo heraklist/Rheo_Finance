@@ -19,21 +19,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const token = process.env.GITHUB_PAT;
-  if (!token) {
-    return res.status(500).json({ error: "Server misconfigured: missing GITHUB_PAT" });
+  const githubHeaders: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+
+  if (token) {
+    githubHeaders.Authorization = `Bearer ${token}`;
   }
 
   try {
     // 1. Get latest release
     const releaseRes = await fetch(
       `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
-      }
+      { headers: githubHeaders }
     );
 
     if (!releaseRes.ok) {
@@ -55,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 3. Get temporary download URL (GitHub returns 302 to S3)
     const assetRes = await fetch(asset.url, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: "application/octet-stream",
       },
       redirect: "manual",

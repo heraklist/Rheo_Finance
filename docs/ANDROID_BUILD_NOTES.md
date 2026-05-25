@@ -97,7 +97,7 @@ adb install -r $apk
 
 ## Release signing
 
-Release APK signing is intentionally not configured yet because it needs a private keystore and password storage decision.
+Release APK signing is configured in GitHub Actions through repository secrets. Keep the private keystore backed up outside git.
 
 Create the keystore once, then back it up in a password manager:
 

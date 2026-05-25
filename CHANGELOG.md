@@ -4,6 +4,14 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.20 - 2026-05-25
+
+### Changed
+
+- Desktop updater now uses the public signed GitHub Releases feed directly, without a GitHub token.
+- Settings/About update copy now reflects public releases, automatic desktop install, and signed Android arm64 sideload updates.
+- Landing download API can resolve public GitHub release assets without requiring `GITHUB_PAT`, while still using it when present.
+
 ## v0.2.19 - 2026-05-25
 
 ### Changed

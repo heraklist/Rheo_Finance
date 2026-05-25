@@ -173,7 +173,7 @@ rheo-finance/
 - ✅ Excel export (XLSX)
 - ✅ Manual + auto-backup (JSON)
 - ✅ Stronghold secure auth storage (desktop)
-- ✅ GitHub private updater integration
+- ✅ Public GitHub Releases updater integration
 - ✅ Plans & monthly coverage
 
 ---

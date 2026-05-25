@@ -13,7 +13,7 @@
 
 **Owner:** Heraklis, Greek-speaking, με dev background. Θέλει concrete deliverables, όχι ατελείωτο planning.
 
-**Current state:** Rheo Finance v0.2.13. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, native secure auth storage και GitHub private updater token. Android arm64 Rust build works locally; full APK packaging on Windows needs symlink privilege.
+**Current state:** Rheo Finance v0.2.20. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, native secure auth storage και public signed GitHub Releases updater. Android signed arm64 APK builds in CI; local Windows APK packaging may still need symlink privilege.
 
 **Repo:** `github.com/heraklist/Rheo_Finance` private.
 
@@ -49,9 +49,9 @@
 | Storage | Supabase Storage for receipt photos |
 | Secure local auth storage | Native secure storage on Windows/Android; Stronghold legacy-read migration |
 | Distribution | Manual sideload + signed GitHub Releases |
-| Updater | GitHub Releases `latest.json`; private repo uses user-provided read token |
+| Updater | Public GitHub Releases `latest-desktop.json`/`latest-android.json`; no user token |
 | App identifier/package | `app.rheo.finance` |
-| Repo visibility | Private |
+| Repo visibility | Public releases; source repo visibility can change without updater token UI |
 | Brand mark | `◆ Rheo` |
 | iOS | Not in scope |
 
@@ -70,18 +70,18 @@ Do not reopen these unless Heraklis explicitly asks.
 - Recurring: CRUD, active toggle, generation worker, book-aware forms.
 - Dashboard: real totals, real monthly chart data, book filter, period filter, VAT hidden for personal.
 - VAT Summary and Forecast pages.
-- Settings: account, company name, category CRUD links, MFA, sync, backup, export, preferences, updater token.
+- Settings: account, company name, category CRUD links, MFA, sync, backup, export, preferences, updater check.
 - Backup: manual JSON + weekly auto-backup worker.
 - Export: XLSX with rounded VAT and category breakdown.
-- Updater: signed Tauri updater config, GitHub private token support, desktop install flow, Android assisted-update manifest.
-- Android: arm64 debug APK builds; auth tokens use Android Keystore-backed native storage, while updater installation remains assisted sideload.
+- Updater: signed Tauri updater config, public desktop auto-install flow, Android assisted-update manifest.
+- Android: signed arm64 APK builds in release CI; auth tokens use Android Keystore-backed native storage, while updater installation remains assisted sideload.
 - Release pipeline: GitHub Actions builds signed Windows installer, signed Android APK, `latest-desktop.json`, legacy `latest.json`, and `latest-android.json` from `v*.*.*` tags.
 
 ---
 
 ## Current Release State
 
-Source version is `0.2.13` in:
+Source version is `0.2.20` in:
 
 - `package.json`
 - `src-tauri/Cargo.toml`
@@ -98,7 +98,7 @@ Pre-release QA fixed:
 - Auth storage uses native secure storage on Windows/Android, with legacy Stronghold/localStorage migration only.
 - Android build includes the native secure auth storage plugin; full local APK packaging still depends on Windows symlink privilege or CI/Linux.
 
-Before shipping a public/manual installer, create/push tag `v0.2.13`, wait for GitHub Actions release, install that artifact, then smoke test updater.
+Before shipping a public/manual installer, create/push the next `v*.*.*` tag, wait for GitHub Actions release, install that artifact, then smoke test updater.
 
 ---
 
@@ -133,7 +133,7 @@ Before shipping a public/manual installer, create/push tag `v0.2.13`, wait for G
 
 - Never ask for or store Supabase `service_role`.
 - Do not print secrets or tokens.
-- GitHub updater token is a user-provided read-only token for the private repo and is stored locally through native secure storage on Windows/Android.
+- The updater uses public signed GitHub Release manifests and does not store a GitHub token.
 - Legacy Stronghold storage is read only for migration; do not add new Stronghold/localStorage token write paths.
 - Repo stays private.
 
@@ -153,8 +153,8 @@ cargo check
 Release:
 
 ```bash
-git tag v0.2.13
-git push origin v0.2.13
+git tag v0.2.20
+git push origin v0.2.20
 ```
 
 The `release.yml` workflow creates the signed GitHub Release and `latest.json`.
@@ -174,7 +174,7 @@ The `release.yml` workflow creates the signed GitHub Release and `latest.json`.
 | `src/lib/transactions.ts` | Transaction CRUD + totals |
 | `src/lib/sync.ts` | Custom Supabase sync engine |
 | `src/lib/secureAuthStorage.ts` | Stronghold-backed auth storage |
-| `src/lib/updater.ts` | GitHub private updater check |
+| `src/lib/updater.ts` | Public GitHub Releases updater check |
 | `src/lib/export.ts` | XLSX export |
 | `src-tauri/tauri.conf.json` | Tauri app config, updater, CSP |
 | `.github/workflows/release.yml` | Signed release workflow |

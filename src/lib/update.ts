@@ -1,4 +1,3 @@
-import { getUpdaterGitHubToken } from "@/lib/updaterToken";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
@@ -8,7 +7,6 @@ import { type DownloadEvent, check } from "@tauri-apps/plugin-updater";
 export type UpdateCheckStatus =
   | "current"
   | "available"
-  | "needs-token"
   | "not-configured"
   | "unsupported"
   | "error";
@@ -27,26 +25,12 @@ export interface UpdateInfo {
   releaseUrl?: string;
   releaseNotes?: string;
   isDesktop: boolean;
-  needsToken?: boolean;
 }
 
 export interface InstallProgress {
   downloaded: number;
   total: number;
   event: DownloadEvent["event"];
-}
-
-interface GitHubReleaseAsset {
-  browser_download_url: string;
-  name: string;
-  url: string;
-}
-
-interface GitHubLatestRelease {
-  assets: GitHubReleaseAsset[];
-  body?: string;
-  html_url: string;
-  tag_name: string;
 }
 
 interface DesktopManifestPlatform {
@@ -68,8 +52,9 @@ interface AndroidManifest {
   version?: string;
 }
 
-const GITHUB_API_BASE = "https://api.github.com/repos/heraklist/Rheo_Finance";
 const RELEASES_PAGE_URL = "https://github.com/heraklist/Rheo_Finance/releases/latest";
+const DESKTOP_MANIFEST_URL =
+  "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest-desktop.json";
 const ANDROID_MANIFEST_URL =
   "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest-android.json";
 
@@ -89,18 +74,6 @@ function errorMessage(error: unknown): string {
 
 function isMissingUpdaterConfig(message: string): boolean {
   return /endpoints?|pubkey|public key|signature/i.test(message);
-}
-
-function isGitHubAccessError(message: string): boolean {
-  return /401|403|404|unauthori[sz]ed|forbidden|not found|private/i.test(message);
-}
-
-function createUpdaterHeaders(token: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/octet-stream, application/json",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
 }
 
 export function compareVersions(a: string, b: string): number {
@@ -124,46 +97,21 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-async function fetchGitHubJson<T>(url: string, token: string, accept: string): Promise<T> {
+async function fetchPublicJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
-    headers: {
-      ...createUpdaterHeaders(token),
-      Accept: accept,
-    },
+    cache: "no-store",
+    headers: { Accept: "application/json" },
   });
 
   if (!response.ok) {
-    throw new Error(`GitHub updater request failed: ${response.status}`);
+    throw new Error(`Updater feed request failed: ${response.status}`);
   }
 
   return (await response.json()) as T;
 }
 
-async function fetchRelease(token: string): Promise<GitHubLatestRelease> {
-  return fetchGitHubJson<GitHubLatestRelease>(
-    `${GITHUB_API_BASE}/releases/latest`,
-    token,
-    "application/vnd.github+json",
-  );
-}
-
-async function fetchReleaseAssetJson<T>(
-  release: GitHubLatestRelease,
-  token: string,
-  assetNames: string[],
-): Promise<T | null> {
-  const asset = release.assets.find((candidate) => assetNames.includes(candidate.name));
-  if (!asset) return null;
-
-  return fetchGitHubJson<T>(asset.url, token, "application/octet-stream");
-}
-
-async function checkDesktopWithTauri(
-  currentVersion: string,
-  token: string | null,
-): Promise<UpdateInfo> {
-  const headers = token ? createUpdaterHeaders(token) : undefined;
-  const update = await check(headers ? { headers } : undefined);
+async function checkDesktopWithTauri(currentVersion: string): Promise<UpdateInfo> {
+  const update = await check();
 
   if (!update) {
     return { available: false, currentVersion, installMode: "tauri", isDesktop: true };
@@ -180,80 +128,32 @@ async function checkDesktopWithTauri(
   };
 }
 
-async function checkDesktopFromGitHubApi(
-  currentVersion: string,
-  token: string,
-): Promise<UpdateInfo> {
-  const release = await fetchRelease(token);
-  const manifest = await fetchReleaseAssetJson<DesktopManifest>(release, token, [
-    "latest-desktop.json",
-    "latest.json",
-  ]);
-  const latestVersion = manifest?.version ?? release.tag_name.replace(/^v/, "");
+async function checkDesktopPublicManifest(currentVersion: string): Promise<UpdateInfo> {
+  const manifest = await fetchPublicJson<DesktopManifest>(DESKTOP_MANIFEST_URL);
+  const latestVersion = manifest.version ?? currentVersion;
 
   return {
     available: compareVersions(latestVersion, currentVersion) > 0,
     currentVersion,
     installMode: "manual",
     latestVersion,
-    releaseNotes: manifest?.notes ?? release.body ?? "",
-    releaseUrl: release.html_url,
+    releaseNotes: manifest.notes ?? "",
+    releaseUrl: RELEASES_PAGE_URL,
     isDesktop: true,
   };
 }
 
-async function checkDesktop(currentVersion: string, token: string | null): Promise<UpdateInfo> {
-  if (token) return checkDesktopFromGitHubApi(currentVersion, token);
-
+async function checkDesktop(currentVersion: string): Promise<UpdateInfo> {
   try {
-    return await checkDesktopWithTauri(currentVersion, null);
+    return await checkDesktopWithTauri(currentVersion);
   } catch (error) {
-    if (isGitHubAccessError(errorMessage(error))) {
-      return {
-        available: false,
-        currentVersion,
-        isDesktop: true,
-        needsToken: true,
-      };
-    }
-    throw error;
+    if (isMissingUpdaterConfig(errorMessage(error))) throw error;
+    return checkDesktopPublicManifest(currentVersion);
   }
 }
 
-async function checkAndroidFromGitHubApi(
-  currentVersion: string,
-  token: string,
-): Promise<UpdateInfo> {
-  const release = await fetchRelease(token);
-  const manifest = await fetchReleaseAssetJson<AndroidManifest>(release, token, [
-    "latest-android.json",
-  ]);
-  const latestVersion = manifest?.version ?? release.tag_name.replace(/^v/, "");
-  const releaseUrl = manifest?.url ?? release.html_url;
-
-  return {
-    available: compareVersions(latestVersion, currentVersion) > 0,
-    currentVersion,
-    latestVersion,
-    releaseNotes: manifest?.notes ?? "",
-    releaseUrl,
-    isDesktop: false,
-  };
-}
-
-async function checkAndroidPublic(currentVersion: string): Promise<UpdateInfo> {
-  const response = await fetch(ANDROID_MANIFEST_URL);
-
-  if (!response.ok) {
-    return {
-      available: false,
-      currentVersion,
-      isDesktop: false,
-      needsToken: response.status === 401 || response.status === 403 || response.status === 404,
-    };
-  }
-
-  const manifest = (await response.json()) as AndroidManifest;
+async function checkAndroid(currentVersion: string): Promise<UpdateInfo> {
+  const manifest = await fetchPublicJson<AndroidManifest>(ANDROID_MANIFEST_URL);
   const latestVersion = manifest.version ?? currentVersion;
 
   return {
@@ -266,11 +166,6 @@ async function checkAndroidPublic(currentVersion: string): Promise<UpdateInfo> {
   };
 }
 
-async function checkAndroid(currentVersion: string, token: string | null): Promise<UpdateInfo> {
-  if (token) return checkAndroidFromGitHubApi(currentVersion, token);
-  return checkAndroidPublic(currentVersion);
-}
-
 export async function checkForUpdateInfo(): Promise<UpdateInfo> {
   if (!isTauri()) {
     return {
@@ -281,13 +176,12 @@ export async function checkForUpdateInfo(): Promise<UpdateInfo> {
   }
 
   const currentVersion = await getVersion();
-  const token = await getUpdaterGitHubToken();
 
   if ((await platform()) === "android") {
-    return checkAndroid(currentVersion, token);
+    return checkAndroid(currentVersion);
   }
 
-  return checkDesktop(currentVersion, token);
+  return checkDesktop(currentVersion);
 }
 
 export async function installUpdate(
@@ -296,41 +190,31 @@ export async function installUpdate(
 ): Promise<void> {
   if (!info.available) return;
 
-  if (!info.isDesktop) {
+  if (!info.isDesktop || info.installMode === "manual") {
     await openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
     return;
   }
 
-  if (info.installMode === "manual") {
-    await openExternalUrl(info.releaseUrl ?? RELEASES_PAGE_URL);
-    return;
-  }
-
-  const token = await getUpdaterGitHubToken();
-  const headers = token ? createUpdaterHeaders(token) : undefined;
-  const update = await check(headers ? { headers } : undefined);
+  const update = await check();
   if (!update) throw new Error("Update no longer available");
 
   let downloaded = 0;
   let total = 0;
-  await update.downloadAndInstall(
-    (progress) => {
-      switch (progress.event) {
-        case "Started":
-          total = progress.data.contentLength ?? 0;
-          downloaded = 0;
-          break;
-        case "Progress":
-          downloaded += progress.data.chunkLength;
-          break;
-        case "Finished":
-          downloaded = total;
-          break;
-      }
-      onProgress?.({ downloaded, total, event: progress.event });
-    },
-    headers ? { headers } : undefined,
-  );
+  await update.downloadAndInstall((progress) => {
+    switch (progress.event) {
+      case "Started":
+        total = progress.data.contentLength ?? 0;
+        downloaded = 0;
+        break;
+      case "Progress":
+        downloaded += progress.data.chunkLength;
+        break;
+      case "Finished":
+        downloaded = total;
+        break;
+    }
+    onProgress?.({ downloaded, total, event: progress.event });
+  });
 
   await invoke("restart_app");
 }
@@ -343,20 +227,8 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     };
   }
 
-  let token: string | null = null;
-
   try {
-    token = await getUpdaterGitHubToken();
     const info = await checkForUpdateInfo();
-
-    if (info.needsToken && !token) {
-      return {
-        status: "needs-token",
-        message:
-          "Το GitHub repo είναι private. Αποθήκευσε updater token στις Ρυθμίσεις και δοκίμασε ξανά.",
-        info,
-      };
-    }
 
     if (!info.available) {
       return {
@@ -378,23 +250,7 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
       return {
         status: "not-configured",
         message:
-          "Ο updater είναι έτοιμος, αλλά χρειάζεται signing public key και endpoint πριν το release.",
-      };
-    }
-
-    if (isGitHubAccessError(message) && !token) {
-      return {
-        status: "needs-token",
-        message:
-          "Το GitHub repo είναι private. Αποθήκευσε updater token στις Ρυθμίσεις και δοκίμασε ξανά.",
-      };
-    }
-
-    if (isGitHubAccessError(message)) {
-      return {
-        status: "error",
-        message:
-          "Το GitHub token δεν έδωσε πρόσβαση στο updater feed. Έλεγξε ότι έχει read access στο private repo.",
+          "Ο updater χρειάζεται έγκυρο signing public key και release endpoint πριν το επόμενο release.",
       };
     }
 
