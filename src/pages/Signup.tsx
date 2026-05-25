@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
-const LANDING_URL = import.meta.env.VITE_LANDING_URL as string | undefined;
+const LANDING_URL =
+  (import.meta.env.VITE_LANDING_URL as string | undefined) ??
+  "https://landing-two-dun-95.vercel.app";
 
 function signUpErrorMessage(message: string): string {
   if (message.includes("already registered") || message.includes("already exists")) {
@@ -71,11 +73,9 @@ export function Signup() {
       const { error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
-        options: LANDING_URL
-          ? {
-              emailRedirectTo: `${LANDING_URL}/auth/confirmed`,
-            }
-          : undefined,
+        options: {
+          emailRedirectTo: `${LANDING_URL}/auth/confirmed`,
+        },
       });
 
       if (signUpError) {
