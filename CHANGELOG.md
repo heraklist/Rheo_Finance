@@ -4,6 +4,16 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.17 - 2026-05-25
+
+### Added
+
+- Landing confirmation page for Supabase email verification redirects.
+
+### Fixed
+
+- Signup now sends Supabase email verification links to the Rheo landing confirmation page explicitly.
+
 ## v0.2.16 - 2026-05-25
 
 ### Added

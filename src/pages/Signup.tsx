@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
+const LANDING_URL = import.meta.env.VITE_LANDING_URL as string | undefined;
+
 function signUpErrorMessage(message: string): string {
   if (message.includes("already registered") || message.includes("already exists")) {
     return "Αυτό το email χρησιμοποιείται ήδη. Δοκίμασε σύνδεση.";
@@ -69,6 +71,11 @@ export function Signup() {
       const { error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
+        options: LANDING_URL
+          ? {
+              emailRedirectTo: `${LANDING_URL}/auth/confirmed`,
+            }
+          : undefined,
       });
 
       if (signUpError) {

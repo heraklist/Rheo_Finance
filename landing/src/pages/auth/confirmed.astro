@@ -1,0 +1,45 @@
+---
+import Base from "../../layouts/Base.astro";
+import Footer from "../../components/Footer.astro";
+import Header from "../../components/Header.astro";
+---
+
+<Base
+  title="Επιβεβαιώθηκε το email — Rheo Finance"
+  description="Το email επιβεβαιώθηκε. Μπορείς πλέον να επιστρέψεις στο Rheo Finance και να συνδεθείς."
+>
+  <Header />
+  <main class="min-h-[70vh] border-t border-border-light pt-28">
+    <section class="section-container py-16">
+      <div class="mx-auto max-w-xl text-center">
+        <div
+          class="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-income/10 text-income"
+          aria-hidden="true"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h1 class="text-h1 text-charcoal">Το email επιβεβαιώθηκε</h1>
+        <p class="mt-4 text-body text-text-secondary">
+          Ο λογαριασμός σου είναι έτοιμος. Άνοιξε το Rheo Finance και συνδέσου με το email και το
+          password σου.
+        </p>
+        <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="/#download" class="btn-gold w-full sm:w-auto">Κατέβασε την εφαρμογή</a>
+          <a href="/" class="btn-secondary w-full sm:w-auto">Πίσω στην αρχική</a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
