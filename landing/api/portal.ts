@@ -3,6 +3,7 @@ import Stripe from "stripe";
 
 import { verifySupabaseUser } from "./_auth.js";
 import { handleOptions } from "./_cors.js";
+import { cleanEnv } from "./_env.js";
 
 /**
  * POST /api/portal
@@ -17,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const stripeKey = cleanEnv(process.env.STRIPE_SECRET_KEY);
   if (!stripeKey) {
     return res.status(500).json({ error: "Server misconfigured: missing STRIPE_SECRET_KEY" });
   }
@@ -55,8 +56,8 @@ function getBaseUrl(req: VercelRequest): string {
 }
 
 async function getStripeCustomerId(userId: string): Promise<string | null> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+  const supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Server misconfigured");
   }

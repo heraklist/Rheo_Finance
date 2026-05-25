@@ -3,6 +3,7 @@ import Stripe from "stripe";
 
 import { verifySupabaseUser } from "./_auth.js";
 import { handleOptions } from "./_cors.js";
+import { cleanEnv } from "./_env.js";
 
 /**
  * POST /api/checkout
@@ -19,13 +20,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const stripeKey = cleanEnv(process.env.STRIPE_SECRET_KEY);
   if (!stripeKey) {
     return res.status(500).json({ error: "Server misconfigured: missing STRIPE_SECRET_KEY" });
   }
 
-  const priceMonthly = process.env.STRIPE_PRICE_MONTHLY;
-  const priceAnnual = process.env.STRIPE_PRICE_ANNUAL;
+  const priceMonthly = cleanEnv(process.env.STRIPE_PRICE_MONTHLY);
+  const priceAnnual = cleanEnv(process.env.STRIPE_PRICE_ANNUAL);
   if (!priceMonthly || !priceAnnual) {
     return res.status(500).json({ error: "Server misconfigured: missing Stripe price IDs" });
   }

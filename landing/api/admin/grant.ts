@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { handleOptions } from "../_cors.js";
+import { cleanEnv } from "../_env.js";
 
 type SubscriptionTier = "free" | "solo" | "pro" | "team";
 type SubscriptionSource = "manual" | "tester" | "owner";
@@ -106,9 +107,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const configuredAdminToken = process.env.ADMIN_GRANT_TOKEN;
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const configuredAdminToken = cleanEnv(process.env.ADMIN_GRANT_TOKEN);
+  const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+  const serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
 
   if (!configuredAdminToken || !supabaseUrl || !serviceKey) {
     return res.status(500).json({ error: "Server misconfigured" });

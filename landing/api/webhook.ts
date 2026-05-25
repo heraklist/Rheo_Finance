@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 
+import { cleanEnv } from "./_env.js";
+
 /**
  * POST /api/webhook
  * Stripe webhook handler.
@@ -43,8 +45,8 @@ interface SubscriptionUpsert {
 }
 
 async function upsertSubscription(data: SubscriptionUpsert): Promise<void> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+  const supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY");
   }
@@ -131,8 +133,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripeKey = cleanEnv(process.env.STRIPE_SECRET_KEY);
+  const webhookSecret = cleanEnv(process.env.STRIPE_WEBHOOK_SECRET);
   if (!stripeKey || !webhookSecret) {
     return res.status(500).json({ error: "Missing Stripe configuration" });
   }

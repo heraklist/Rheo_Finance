@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { verifySupabaseUser } from "./_auth.js";
 import { handleOptions } from "./_cors.js";
+import { cleanEnv } from "./_env.js";
 
 /**
  * GET /api/subscription?userId=<uuid>
@@ -18,8 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+  const supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: "Server misconfigured" });
   }

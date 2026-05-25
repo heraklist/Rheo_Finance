@@ -1,5 +1,7 @@
 import type { VercelRequest } from "@vercel/node";
 
+import { cleanEnv } from "./_env.js";
+
 export interface VerifiedSupabaseUser {
   id: string;
   email: string | null;
@@ -14,8 +16,8 @@ function bearerToken(req: VercelRequest): string | null {
 }
 
 export async function verifySupabaseUser(req: VercelRequest): Promise<VerifiedSupabaseUser> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+  const supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Server misconfigured");
   }

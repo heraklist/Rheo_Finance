@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+import { cleanEnv } from "./_env.js";
+
 const OWNER = "heraklist";
 const REPO = "Rheo_Finance";
 
@@ -18,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const token = process.env.GITHUB_PAT;
+  const token = cleanEnv(process.env.GITHUB_PAT);
   const githubHeaders: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
