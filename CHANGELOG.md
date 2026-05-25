@@ -4,6 +4,21 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.16 - 2026-05-25
+
+### Added
+
+- Landing/Vercel subscription endpoints for Pro checkout, subscription status, and customer portal.
+
+### Changed
+
+- Release builds now embed the public landing URL and the new Supabase publishable project config.
+
+### Fixed
+
+- Billing APIs now require the signed-in user's Supabase access token instead of trusting client-provided user/customer IDs.
+- Tauri CSP now allows the Rheo landing domain for subscription and checkout API calls.
+
 ## v0.2.15 - 2026-05-25
 
 ### Fixed

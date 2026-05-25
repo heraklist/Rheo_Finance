@@ -1,0 +1,158 @@
+---
+import Base from "../layouts/Base.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Base
+  title="Πολιτική Απορρήτου — Rheo Finance"
+  description="Πολιτική απορρήτου και προστασίας δεδομένων της Rheo Finance."
+>
+  <Header />
+  <main class="pt-20 pb-16">
+    <article class="section-container prose-rheo">
+      <h1>Πολιτική Απορρήτου</h1>
+      <p class="meta">Τελευταία ενημέρωση: 25 Μαΐου 2026</p>
+
+      <h2>1. Υπεύθυνος επεξεργασίας</h2>
+      <p>
+        Υπεύθυνος επεξεργασίας των δεδομένων είναι η Rheo Finance,
+        με έδρα την Αθήνα, Ελλάδα.
+        Επικοινωνία: <a href="mailto:privacy@rheo.finance">privacy@rheo.finance</a>
+      </p>
+
+      <h2>2. Δεδομένα που συλλέγουμε</h2>
+      <h3>2.1 Δεδομένα λογαριασμού</h3>
+      <p>
+        Κατά την εγγραφή συλλέγουμε τη διεύθυνση email σας. Αν
+        ενεργοποιήσετε συνδρομή, η Stripe αποθηκεύει τα στοιχεία
+        χρέωσης — εμείς δεν τα βλέπουμε ούτε τα αποθηκεύουμε.
+      </p>
+
+      <h3>2.2 Οικονομικά δεδομένα</h3>
+      <p>
+        Τα έσοδα, έξοδα, κατηγορίες, φωτογραφίες αποδείξεων και
+        λοιπά οικονομικά δεδομένα αποθηκεύονται <strong>τοπικά στη
+        συσκευή σας</strong> (SQLite database). Αν ενεργοποιήσετε
+        cloud sync, αντίγραφα μεταφέρονται σε servers εντός ΕΕ.
+      </p>
+
+      <h3>2.3 Τεχνικά δεδομένα</h3>
+      <p>
+        Ενδέχεται να συλλέγουμε ανώνυμα τεχνικά δεδομένα (έκδοση
+        εφαρμογής, λειτουργικό σύστημα) μόνο για σκοπούς
+        αντιμετώπισης σφαλμάτων. Δεν συλλέγουμε analytics ή
+        tracking cookies.
+      </p>
+
+      <h2>3. Σκοπός επεξεργασίας</h2>
+      <p>Τα δεδομένα σας χρησιμοποιούνται αποκλειστικά για:</p>
+      <ul>
+        <li>Παροχή της υπηρεσίας (αποθήκευση, sync, backup)</li>
+        <li>Διαχείριση λογαριασμού και συνδρομής</li>
+        <li>Αντιμετώπιση τεχνικών σφαλμάτων</li>
+        <li>Επικοινωνία σχετικά με την υπηρεσία (μόνο αν χρειαστεί)</li>
+      </ul>
+      <p>
+        <strong>Δεν πουλάμε, νοικιάζουμε ή μοιραζόμαστε τα δεδομένα
+        σας με τρίτους</strong> για σκοπούς marketing.
+      </p>
+
+      <h2>4. Αποθήκευση και ασφάλεια</h2>
+      <p>
+        Τα τοπικά δεδομένα παραμένουν στη συσκευή σας. Τα cloud
+        δεδομένα αποθηκεύονται σε servers Supabase στη Φρανκφούρτη
+        (ΕΕ), με κρυπτογράφηση σε μεταφορά (TLS) και σε αποθήκευση.
+        Κάθε χρήστης έχει πρόσβαση μόνο στα δικά του δεδομένα μέσω
+        Row Level Security (RLS).
+      </p>
+
+      <h2>5. Δικαιώματά σας (GDPR)</h2>
+      <p>Σύμφωνα με τον GDPR, έχετε δικαίωμα:</p>
+      <ul>
+        <li><strong>Πρόσβασης</strong> — να ζητήσετε αντίγραφο των δεδομένων σας</li>
+        <li><strong>Διόρθωσης</strong> — να διορθώσετε ανακριβή δεδομένα</li>
+        <li><strong>Διαγραφής</strong> — να διαγράψετε τον λογαριασμό και τα δεδομένα σας</li>
+        <li><strong>Φορητότητας</strong> — να εξάγετε τα δεδομένα σας (Excel export)</li>
+        <li><strong>Εναντίωσης</strong> — να αντιταχθείτε στην επεξεργασία</li>
+      </ul>
+      <p>
+        Η εφαρμογή παρέχει ενσωματωμένα εργαλεία για εξαγωγή
+        (Excel export) και διαγραφή λογαριασμού. Για ειδικά αιτήματα,
+        επικοινωνήστε στο
+        <a href="mailto:privacy@rheo.finance">privacy@rheo.finance</a>.
+      </p>
+
+      <h2>6. Τρίτα μέρη</h2>
+      <p>Χρησιμοποιούμε τις εξής υπηρεσίες τρίτων:</p>
+      <ul>
+        <li><strong>Supabase</strong> (ΕΕ) — Authentication, cloud database, file storage</li>
+        <li><strong>Stripe</strong> — Επεξεργασία πληρωμών (τα στοιχεία κάρτας δεν περνούν από εμάς)</li>
+        <li><strong>Vercel</strong> — Hosting ιστοσελίδας και API</li>
+        <li><strong>GitHub</strong> — Διανομή εφαρμογής (releases)</li>
+      </ul>
+
+      <h2>7. Cookies</h2>
+      <p>
+        Η ιστοσελίδα μας δεν χρησιμοποιεί cookies tracking ή
+        analytics. Η εφαρμογή desktop/Android δεν χρησιμοποιεί
+        cookies.
+      </p>
+
+      <h2>8. Διατήρηση δεδομένων</h2>
+      <p>
+        Τα δεδομένα σας διατηρούνται όσο είναι ενεργός ο λογαριασμός
+        σας. Μετά τη διαγραφή λογαριασμού, τα cloud δεδομένα
+        διαγράφονται εντός 30 ημερών. Τα τοπικά δεδομένα παραμένουν
+        στη συσκευή σας μέχρι να τα διαγράψετε.
+      </p>
+
+      <h2>9. Αλλαγές στην πολιτική</h2>
+      <p>
+        Ενδέχεται να ενημερώσουμε αυτή την πολιτική. Η ενημερωμένη
+        έκδοση δημοσιεύεται σε αυτή τη σελίδα με νέα ημερομηνία.
+        Για σημαντικές αλλαγές, θα ενημερωθείτε μέσω email.
+      </p>
+
+      <h2>10. Επικοινωνία</h2>
+      <p>
+        Για ερωτήσεις σχετικά με το απόρρητο:
+        <a href="mailto:privacy@rheo.finance">privacy@rheo.finance</a>
+      </p>
+    </article>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .prose-rheo {
+    @apply mx-auto max-w-3xl;
+  }
+  .prose-rheo h1 {
+    @apply text-[32px] font-bold text-charcoal md:text-[40px];
+  }
+  .prose-rheo .meta {
+    @apply mt-2 mb-8 text-body-sm text-text-muted;
+  }
+  .prose-rheo h2 {
+    @apply mt-10 mb-3 text-[20px] font-semibold text-charcoal;
+  }
+  .prose-rheo h3 {
+    @apply mt-6 mb-2 text-[16px] font-semibold text-charcoal;
+  }
+  .prose-rheo p {
+    @apply mb-4 text-body leading-relaxed text-text-secondary;
+  }
+  .prose-rheo ul {
+    @apply mb-4 ml-5 list-disc space-y-2 text-body text-text-secondary;
+  }
+  .prose-rheo li {
+    @apply leading-relaxed;
+  }
+  .prose-rheo a {
+    @apply font-medium text-gold underline underline-offset-2 hover:text-gold-soft;
+  }
+  .prose-rheo strong {
+    @apply font-semibold text-charcoal;
+  }
+</style>

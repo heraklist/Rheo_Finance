@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-text-primary antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    @apply bg-gold/20 text-charcoal;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-lg bg-charcoal px-6 py-3
+      text-[15px] font-semibold text-text-on-dark
+      transition-all duration-150
+      hover:bg-charcoal-soft
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-cream;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-lg border border-border-mid bg-transparent px-6 py-3
+      text-[15px] font-semibold text-charcoal
+      transition-all duration-150
+      hover:bg-sand
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-cream;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-lg bg-gold px-6 py-3
+      text-[15px] font-semibold text-text-on-dark
+      transition-all duration-150
+      hover:bg-gold-soft
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal focus-visible:ring-offset-2 focus-visible:ring-offset-cream;
+  }
+
+  .section-container {
+    @apply mx-auto max-w-5xl px-5 md:px-8;
+  }
+
+  .feature-card {
+    @apply rounded-xl border border-border-light bg-white/60 p-6
+      transition-colors hover:border-gold/30;
+  }
+
+  .pricing-card {
+    @apply rounded-xl border border-border-light bg-white/60 p-8;
+  }
+
+  .pricing-card-pro {
+    @apply rounded-xl border-2 border-gold bg-white/80 p-8 shadow-sm;
+  }
+}

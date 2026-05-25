@@ -1,0 +1,36 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-border-light bg-charcoal py-10 text-text-on-dark/70">
+  <div class="section-container">
+    <div class="flex flex-col items-center gap-6 md:flex-row md:justify-between">
+      <div class="flex items-center gap-2">
+        <img src="/app-icon.png" alt="" aria-hidden="true" class="h-7 w-7 rounded" />
+        <span class="font-bold text-text-on-dark">Rheo</span>
+      </div>
+
+      <div class="flex flex-wrap gap-6 text-body-sm">
+        <a href="/#features" class="transition-colors hover:text-text-on-dark"
+          >Δυνατότητες</a
+        >
+        <a href="/#pricing" class="transition-colors hover:text-text-on-dark"
+          >Τιμές</a
+        >
+        <a href="/#download" class="transition-colors hover:text-text-on-dark"
+          >Λήψη</a
+        >
+        <a href="/terms" class="transition-colors hover:text-text-on-dark"
+          >Όροι Χρήσης</a
+        >
+        <a href="/privacy" class="transition-colors hover:text-text-on-dark"
+          >Απόρρητο</a
+        >
+      </div>
+
+      <p class="text-[12px]">
+        &copy; {year} Rheo Finance
+      </p>
+    </div>
+  </div>
+</footer>

@@ -25,6 +25,7 @@
       "build",
       "landing",
       "docs",
+      "supabase/.temp",
       "src-tauri/target",
       "src-tauri/gen",
       "*.tsbuildinfo"

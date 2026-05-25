@@ -7,6 +7,7 @@ import {
   CategoriesSection,
   ExportSection,
   PreferencesSection,
+  SubscriptionSection,
   SyncSection,
 } from "@/components/settings/SettingsSections";
 import {
@@ -483,6 +484,8 @@ export function Settings() {
       <CategoriesSection categoryCounts={categoryCounts} currentBookLabel={currentBookLabel} />
 
       <MfaSettingsPanel />
+
+      <SubscriptionSection />
 
       <SyncSection
         lastSyncedAt={lastSyncedAt}

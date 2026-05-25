@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+import Header from "../components/Header.astro";
+import Hero from "../components/Hero.astro";
+import Features from "../components/Features.astro";
+import Pricing from "../components/Pricing.astro";
+import Download from "../components/Download.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Base
+  title="Rheo Finance — Διαχείριση οικονομικών για ελεύθερους επαγγελματίες"
+  description="Καταχώρηση εσόδων & εξόδων, ΦΠΑ, αποδείξεις, προβλέψεις. Offline-first εφαρμογή για Windows & Android. Δωρεάν."
+>
+  <Header />
+  <main>
+    <Hero />
+    <Features />
+    <Pricing />
+    <Download />
+  </main>
+  <Footer />
+</Base>

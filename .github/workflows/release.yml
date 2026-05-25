@@ -11,6 +11,9 @@ permissions:
 
 env:
   PNPM_VERSION: 11.0.9
+  VITE_SUPABASE_URL: https://jdwetppniotobfsueyzq.supabase.co
+  VITE_SUPABASE_ANON_KEY: sb_publishable_e2pPJyk82VRW_4136JJMjA_xc6sK7b0
+  VITE_LANDING_URL: https://landing-two-dun-95.vercel.app
 
 jobs:
   build-windows:
@@ -67,20 +70,21 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || secrets.TAURI_KEY_PASSWORD }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
         run: |
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw "Missing TAURI_SIGNING_PRIVATE_KEY or TAURI_PRIVATE_KEY secret" }
           if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { throw "Missing TAURI_SIGNING_PRIVATE_KEY_PASSWORD or TAURI_KEY_PASSWORD secret" }
-          if (-not $env:VITE_SUPABASE_URL) { throw "Missing VITE_SUPABASE_URL secret" }
-          if (-not $env:VITE_SUPABASE_ANON_KEY) { throw "Missing VITE_SUPABASE_ANON_KEY secret" }
+          if (-not $env:VITE_SUPABASE_URL) { throw "Missing VITE_SUPABASE_URL" }
+          if (-not $env:VITE_SUPABASE_ANON_KEY) { throw "Missing VITE_SUPABASE_ANON_KEY" }
+          if (-not $env:VITE_LANDING_URL) { throw "Missing VITE_LANDING_URL" }
 
       - name: Build signed Windows installer
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || secrets.TAURI_KEY_PASSWORD }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
         run: pnpm tauri build
 
       - name: Stage Windows artifacts
@@ -145,11 +149,12 @@ jobs:
 
       - name: Validate required release secrets
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
         run: |
-          test -n "$VITE_SUPABASE_URL" || (echo "Missing VITE_SUPABASE_URL secret" && exit 1)
-          test -n "$VITE_SUPABASE_ANON_KEY" || (echo "Missing VITE_SUPABASE_ANON_KEY secret" && exit 1)
+          test -n "$VITE_SUPABASE_URL" || (echo "Missing VITE_SUPABASE_URL" && exit 1)
+          test -n "$VITE_SUPABASE_ANON_KEY" || (echo "Missing VITE_SUPABASE_ANON_KEY" && exit 1)
+          test -n "$VITE_LANDING_URL" || (echo "Missing VITE_LANDING_URL" && exit 1)
 
       - name: Determine Android signing mode
         id: signing
@@ -263,8 +268,8 @@ jobs:
           ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           RUST_MIN_STACK: "8388608"
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
         run: pnpm tauri android build --apk --ci
 
       - name: Build debug Android APK
@@ -272,8 +277,8 @@ jobs:
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           RUST_MIN_STACK: "8388608"
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
         run: pnpm tauri android build --debug --apk --ci
 
       - name: Stage Android artifact

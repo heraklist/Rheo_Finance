@@ -1,0 +1,83 @@
+---
+const links = [
+  { href: "#features", label: "Δυνατότητες" },
+  { href: "#pricing", label: "Τιμές" },
+  { href: "#download", label: "Λήψη" },
+];
+---
+
+<header
+  class="fixed top-0 z-50 w-full border-b border-border-light/60 bg-cream/90 backdrop-blur-md"
+>
+  <div class="section-container flex h-14 items-center justify-between">
+    <a href="/" class="flex items-center gap-2 text-h3 tracking-tight">
+      <img src="/app-icon.png" alt="" aria-hidden="true" class="h-7 w-7 rounded" />
+      <span class="font-bold text-charcoal">Rheo</span>
+    </a>
+
+    <nav class="hidden items-center gap-6 md:flex">
+      {
+        links.map(({ href, label }) => (
+          <a
+            href={href}
+            class="text-body-sm font-medium text-text-secondary transition-colors hover:text-charcoal"
+          >
+            {label}
+          </a>
+        ))
+      }
+      <a href="#download" class="btn-primary !px-4 !py-2 !text-[13px]">
+        Δωρεάν λήψη
+      </a>
+    </nav>
+
+    <button
+      id="menu-toggle"
+      class="flex items-center justify-center rounded-md p-2 text-charcoal md:hidden"
+      aria-label="Menu"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+      >
+        <line x1="4" y1="7" x2="20" y2="7"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17" x2="20" y2="17"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div
+    id="mobile-menu"
+    class="hidden border-t border-border-light bg-cream md:hidden"
+  >
+    <div class="section-container flex flex-col gap-3 py-4">
+      {
+        links.map(({ href, label }) => (
+          <a
+            href={href}
+            class="text-body-sm font-medium text-text-secondary"
+          >
+            {label}
+          </a>
+        ))
+      }
+      <a href="#download" class="btn-primary mt-2 text-center"> Δωρεάν λήψη </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById("menu-toggle");
+  const menu = document.getElementById("mobile-menu");
+  toggle?.addEventListener("click", () => menu?.classList.toggle("hidden"));
+  menu?.querySelectorAll("a").forEach((a) =>
+    a.addEventListener("click", () => menu?.classList.add("hidden"))
+  );
+</script>

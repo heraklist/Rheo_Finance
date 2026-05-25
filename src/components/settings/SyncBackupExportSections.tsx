@@ -1,3 +1,4 @@
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import {
   Select,
   SelectContent,
@@ -5,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTier } from "@/hooks/useTier";
 import type { ExportBookScope, ExportPeriod } from "@/lib/export";
 import { formatDateRelative } from "@/lib/utils";
 import {
@@ -43,9 +45,11 @@ export function SyncSection({
   onManualSync,
   onResetSync,
 }: SyncSectionProps) {
+  const { hasFeature } = useTier();
   return (
     <section className={sectionClassName()}>
       <h2 className="text-h3 mb-2">Συγχρονισμός</h2>
+      {!hasFeature("sync") && <UpgradePrompt feature="sync" className="mb-3" />}
       <div className="space-y-1.5 text-sm text-text-muted mb-4">
         <div>
           Κατάσταση: <span className="text-text-primary">{syncState}</span>
@@ -250,6 +254,7 @@ export function ExportSection({
         </div>
         <FileSpreadsheet className="w-5 h-5 text-gold" strokeWidth={1.7} />
       </div>
+      <ExportGate />
 
       <div className="grid gap-3 md:grid-cols-3">
         <div>
@@ -337,4 +342,11 @@ export function ExportSection({
       {exportMessage ? <p className="text-caption mt-3">{exportMessage}</p> : null}
     </section>
   );
+}
+
+/** Small gate component that shows upgrade prompt for export */
+function ExportGate() {
+  const { hasFeature } = useTier();
+  if (hasFeature("excel_export")) return null;
+  return <UpgradePrompt feature="excel_export" className="mb-3" />;
 }
