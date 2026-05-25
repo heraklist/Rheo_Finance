@@ -386,7 +386,7 @@ jobs:
             --output dist
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.meta.outputs.version }}
           name: Rheo Finance v${{ steps.meta.outputs.version }}
