@@ -1,10 +1,10 @@
 import { APP_VERSION } from "@/components/settings/settingsOptions";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { LockKeyhole, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function authErrorMessage(message: string): string {
   if (message.includes("Invalid login credentials")) {
@@ -36,6 +36,11 @@ export function Login() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!isSupabaseConfigured()) {
+      setError("Η σύνδεση Supabase δεν έχει ρυθμιστεί σε αυτό το build.");
+      return;
+    }
 
     if (!email.trim() || !email.includes("@")) {
       setError("Δώσε έγκυρο email.");
@@ -88,7 +93,7 @@ export function Login() {
           <div className="text-display">Rheo</div>
           <div className="text-body-lg text-text-secondary">Finance</div>
           <div className="text-caption mt-2 text-text-muted">
-            Local-first finance for independent professionals
+            Τοπικά πρώτα, με ασφαλή συγχρονισμό
           </div>
         </div>
 
@@ -141,6 +146,13 @@ export function Login() {
 
           <p className="text-caption text-center">
             Με ενεργό authenticator θα ζητηθεί 6ψήφιος κωδικός στο επόμενο βήμα.
+          </p>
+
+          <p className="text-caption text-center">
+            Δεν έχεις λογαριασμό;{" "}
+            <Link to="/signup" className="text-charcoal underline underline-offset-2">
+              Εγγραφή
+            </Link>
           </p>
         </form>
 

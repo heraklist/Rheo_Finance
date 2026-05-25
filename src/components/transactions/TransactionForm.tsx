@@ -18,7 +18,7 @@ import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { parseGreekAmount } from "@/lib/money";
 import { type ReceiptPhotoDraft, pickReceiptPhoto } from "@/lib/receipts";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
-import { useAppStore } from "@/lib/store";
+import { isBusinessBook, useAppStore } from "@/lib/store";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatLocalIsoDate } from "@/lib/utils";
 import { Camera, X } from "lucide-react";
@@ -124,7 +124,8 @@ export function TransactionForm({
   const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
   const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
   const displayAccountName = useDisplayAccountName();
-  const showVat = bookId === "book-business";
+  const books = useAppStore((s) => s.books);
+  const showVat = isBusinessBook(books, bookId);
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {
@@ -243,7 +244,7 @@ export function TransactionForm({
   return (
     <>
       <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
-        <BookSelector bookId={bookId} showVat={showVat} onBookIdChange={setBookId} />
+        <BookSelector books={books} bookId={bookId} showVat={showVat} onBookIdChange={setBookId} />
 
         <MoneyAmountField
           id="tx-amount"

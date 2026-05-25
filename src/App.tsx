@@ -1,6 +1,8 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAutoBackupWorker } from "@/hooks/useAutoBackupWorker";
+import { useBookInit } from "@/hooks/useBookInit";
 import { useRecurringWorker } from "@/hooks/useRecurringWorker";
 import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
@@ -15,6 +17,7 @@ import { PlanBuilder } from "@/pages/PlanBuilder";
 import { PlanHub } from "@/pages/PlanHub";
 import { Recurring } from "@/pages/Recurring";
 import { Settings } from "@/pages/Settings";
+import { Signup } from "@/pages/Signup";
 import { TransactionDetail } from "@/pages/TransactionDetail";
 import { TransactionsList } from "@/pages/TransactionsList";
 import { VatSummary } from "@/pages/VatSummary";
@@ -23,6 +26,7 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
+  { path: "/signup", element: <Signup /> },
   {
     path: "/",
     element: (
@@ -66,12 +70,14 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
 
 export function App() {
   const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
+  const booksReady = useBookInit();
   useAutoBackupWorker();
   useRecurringWorker();
   useSyncWorker();
 
   useEffect(() => {
     let cancelled = false;
+    let initialized = false;
 
     if (!isSupabaseConfigured()) {
       setAuth(null, null);
@@ -142,7 +148,10 @@ export function App() {
           setMfaStatus(false, false);
         }
       } finally {
-        if (!cancelled) setAuthLoading(false);
+        if (!cancelled) {
+          initialized = true;
+          setAuthLoading(false);
+        }
       }
     }
 
@@ -150,6 +159,7 @@ export function App() {
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") return;
+      if (!initialized) return;
       void applySession(session);
     });
 
@@ -159,5 +169,17 @@ export function App() {
     };
   }, [setAuth, setAuthLoading, setMfaStatus]);
 
-  return <RouterProvider router={router} />;
+  if (!booksReady) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-cream">
+        <div className="h-10 w-32 rounded-md bg-sand" />
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  );
 }

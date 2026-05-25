@@ -1,57 +1,86 @@
 import type { ForecastMonth } from "@/lib/analytics";
 import { formatEuro } from "@/lib/utils";
-import {
-  CartesianGrid,
-  Line,
-  LineChart as RechartsLineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 interface ForecastLineChartProps {
   data: ForecastMonth[];
   height?: number;
 }
 
+function chartHeightClass(height: number): string {
+  if (height <= 150) return "h-36";
+  if (height <= 190) return "h-44";
+  return "h-56";
+}
+
+function pointPath(points: Array<{ x: number; y: number }>): string {
+  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+}
+
 export function ForecastLineChart({ data, height = 180 }: ForecastLineChartProps) {
+  const width = 360;
+  const svgHeight = 180;
+  const paddingTop = 16;
+  const paddingRight = 10;
+  const paddingBottom = 28;
+  const paddingLeft = 10;
+  const plotWidth = width - paddingLeft - paddingRight;
+  const plotHeight = svgHeight - paddingTop - paddingBottom;
+  const values = data.map((point) => point.cumulative);
+  const minValue = Math.min(0, ...values);
+  const maxValue = Math.max(1, ...values);
+  const span = Math.max(1, maxValue - minValue);
+  const step = data.length > 1 ? plotWidth / (data.length - 1) : 0;
+  const points = data.map((point, index) => ({
+    x: paddingLeft + index * step,
+    y: paddingTop + plotHeight - ((point.cumulative - minValue) / span) * plotHeight,
+  }));
+
   return (
-    <div style={{ width: "100%", height }}>
-      <ResponsiveContainer>
-        <RechartsLineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="var(--border-light)" strokeDasharray="3 3" vertical={false} />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(label: string) =>
-              label.split(" ")[0]?.toLocaleUpperCase("el-GR") ?? label
-            }
-            tick={{ fontSize: 10, fill: "var(--text-muted)" }}
-          />
-          <YAxis hide domain={["auto", "auto"]} />
-          <Tooltip
-            contentStyle={{
-              background: "var(--cream)",
-              border: "1px solid var(--border-light)",
-              borderRadius: "8px",
-              fontSize: "12px",
-              padding: "8px 12px",
-            }}
-            labelStyle={{ color: "var(--text-muted)", fontSize: "11px" }}
-            formatter={(value: number) => [formatEuro(value), "Σωρευτικό"]}
-          />
-          <Line
-            type="monotone"
-            dataKey="cumulative"
-            stroke="var(--gold)"
-            strokeWidth={2.5}
-            dot={{ r: 2.5, fill: "var(--gold)", strokeWidth: 0 }}
-            activeDot={{ r: 4, fill: "var(--gold)" }}
-          />
-        </RechartsLineChart>
-      </ResponsiveContainer>
+    <div className={chartHeightClass(height)}>
+      <svg
+        aria-label="Πρόβλεψη ταμειακής ροής"
+        className="h-full w-full overflow-visible"
+        role="img"
+        viewBox={`0 0 ${width} ${svgHeight}`}
+      >
+        {[0, 1, 2].map((line) => {
+          const y = paddingTop + (plotHeight / 2) * line;
+          return (
+            <line
+              key={line}
+              stroke="var(--border-light)"
+              strokeDasharray="3 3"
+              x1={paddingLeft}
+              x2={width - paddingRight}
+              y1={y}
+              y2={y}
+            />
+          );
+        })}
+        {points.length > 0 ? (
+          <path d={pointPath(points)} fill="none" stroke="var(--gold)" strokeWidth="2.5" />
+        ) : null}
+        {points.map((point, index) => {
+          const source = data[index];
+          if (!source) return null;
+          return (
+            <g key={source.label}>
+              <circle cx={point.x} cy={point.y} fill="var(--gold)" r="2.5">
+                <title>{`${source.label}: ${formatEuro(source.cumulative)}`}</title>
+              </circle>
+              <text
+                fill="var(--text-muted)"
+                fontSize="10"
+                textAnchor="middle"
+                x={point.x}
+                y={svgHeight - 8}
+              >
+                {source.label.split(" ")[0]?.toLocaleUpperCase("el-GR") ?? source.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

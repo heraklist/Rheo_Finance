@@ -59,24 +59,24 @@ export function CoverageSummaryCard({ summary, loading = false }: CoverageSummar
             <span>Κάλυψη</span>
             <span>{summary.coverage_pct}%</span>
           </div>
-          <div className="h-2 rounded-full bg-sand">
-            <div
-              className={cn("h-2 rounded-full", barToneClass(summary.coverage_pct))}
-              style={{ width: `${Math.min(100, summary.coverage_pct)}%` }}
-            />
-          </div>
+          <progress
+            aria-label="Κάλυψη"
+            className={cn("progress-meter h-2", barToneClass(summary.coverage_pct))}
+            max={100}
+            value={Math.min(100, summary.coverage_pct)}
+          />
         </div>
         <div>
           <div className="mb-1 flex items-center justify-between text-caption text-text-muted">
             <span>Πρόοδος πληρωμών</span>
             <span>{summary.payment_progress_pct}%</span>
           </div>
-          <div className="h-2 rounded-full bg-sand">
-            <div
-              className="h-2 rounded-full bg-gold"
-              style={{ width: `${Math.min(100, summary.payment_progress_pct)}%` }}
-            />
-          </div>
+          <progress
+            aria-label="Πρόοδος πληρωμών"
+            className="progress-meter h-2 bg-gold"
+            max={100}
+            value={Math.min(100, summary.payment_progress_pct)}
+          />
         </div>
       </div>
     </section>

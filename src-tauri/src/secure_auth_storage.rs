@@ -101,12 +101,14 @@ fn dpapi_protect(value: &[u8]) -> Result<Vec<u8>, String> {
         return Err(dpapi_error("Windows secure auth storage encryption"));
     }
 
+    if output.pbData.is_null() {
+        return Err("Windows secure auth storage encryption returned null output.".to_string());
+    }
+
     let encrypted =
         unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec() };
-    if !output.pbData.is_null() {
-        unsafe {
-            LocalFree(output.pbData.cast());
-        }
+    unsafe {
+        LocalFree(output.pbData.cast());
     }
 
     Ok(encrypted)
@@ -139,12 +141,14 @@ fn dpapi_unprotect(value: &[u8]) -> Result<Vec<u8>, String> {
         return Err(dpapi_error("Windows secure auth storage decryption"));
     }
 
+    if output.pbData.is_null() {
+        return Err("Windows secure auth storage decryption returned null output.".to_string());
+    }
+
     let decrypted =
         unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec() };
-    if !output.pbData.is_null() {
-        unsafe {
-            LocalFree(output.pbData.cast());
-        }
+    unsafe {
+        LocalFree(output.pbData.cast());
     }
 
     Ok(decrypted)

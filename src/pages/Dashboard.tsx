@@ -4,6 +4,7 @@ import { DashboardKpiGrid } from "@/components/dashboard/DashboardKpiGrid";
 import { RecentTransactionsSection } from "@/components/dashboard/RecentTransactionsSection";
 import {
   type BookFilter,
+  type DashboardBookOption,
   EMPTY_BOOK_COUNTS,
   type PeriodFilter,
   isoDate,
@@ -15,7 +16,7 @@ import {
   getBookTransactionCounts,
   getMonthlyTotals,
 } from "@/lib/analytics";
-import { useAppStore } from "@/lib/store";
+import { isPersonalBook, useAppStore } from "@/lib/store";
 import { getTotals, listTransactions } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
@@ -41,6 +42,7 @@ function millisecondsUntilNextLocalDay(from = new Date()): number {
 export function Dashboard() {
   const navigate = useNavigate();
   const currentBookId = useAppStore((state) => state.currentBookId);
+  const storeBooks = useAppStore((state) => state.books);
   const [today, setToday] = useState(startOfLocalDay);
   const [bookFilter, setBookFilter] = useState<BookFilter>(currentBookId as BookFilter);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
@@ -64,7 +66,7 @@ export function Dashboard() {
   const [bookCounts, setBookCounts] = useState<BookTransactionCounts>(EMPTY_BOOK_COUNTS);
   const selectedBookId = bookFilter === "all" ? undefined : bookFilter;
   const selectedRange = useMemo(() => periodToRange(periodFilter), [periodFilter]);
-  const showVat = bookFilter !== "book-personal";
+  const showVat = bookFilter === "all" || !isPersonalBook(storeBooks, bookFilter);
 
   useEffect(() => {
     let timeoutId: number | undefined;
@@ -138,10 +140,13 @@ export function Dashboard() {
   const isEmpty =
     !loading && (!totals || (totals.income === 0 && totals.expense === 0)) && recent.length === 0;
 
-  const bookOptions = [
-    { value: "all" as const, label: "Όλα τα βιβλία", count: bookCounts.all },
-    { value: "book-business" as const, label: "Επαγγελματικά", count: bookCounts.business },
-    { value: "book-personal" as const, label: "Προσωπικά", count: bookCounts.personal },
+  const bookOptions: DashboardBookOption[] = [
+    { value: "all", label: "Όλα τα βιβλία", count: bookCounts.all },
+    ...storeBooks.map((b) => ({
+      value: b.id,
+      label: b.name,
+      count: b.slug === "business" ? bookCounts.business : bookCounts.personal,
+    })),
   ];
 
   return (

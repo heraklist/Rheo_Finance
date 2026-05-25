@@ -1,6 +1,6 @@
 # Android build notes
 
-Updated: 2026-05-15
+Updated: 2026-05-21
 
 ## Current status
 
@@ -9,12 +9,12 @@ Updated: 2026-05-15
 - SDK packages installed: platform-tools, Android API 35/36, build-tools 35/36, NDK `27.3.13750724`.
 - Rust Android targets installed: `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`, `x86_64-linux-android`.
 - `corepack pnpm tauri android init` generated `src-tauri/gen/android/`.
-- Arm64 debug APK built successfully for v0.2.5:
+- Arm64 debug APK previously built successfully for v0.2.5:
   `src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk`
 - APK metadata verified with `aapt`: package `app.rheo.finance`, `versionName=0.2.5`,
   `versionCode=2005`, `minSdk=24`, `targetSdk=36`, native code `arm64-v8a`.
-- Stronghold and updater are desktop-only in Rust. Android currently uses the existing
-  frontend `localStorage` fallback for Supabase auth/updater token storage.
+- Auth token storage uses native secure storage on Windows and Android.
+  Stronghold remains desktop legacy-read/migration only.
 
 `src-tauri/gen/` is ignored by git, so the generated Gradle project and APK are local build artifacts. After changing the package identifier, delete `src-tauri/gen/android` and run `tauri android init` again so the generated Java package tree matches `app.rheo.finance`.
 
@@ -46,7 +46,13 @@ Normal command:
 corepack pnpm tauri android build --debug
 ```
 
-On this Windows machine the Rust library compiled, but Tauri failed when creating the Android `jniLibs` symlink. Proper fix: enable Windows Developer Mode or run a shell with symlink privilege.
+On this Windows machine the Rust Android library compiled, but Tauri failed when creating the Android `jniLibs` symlink with `Creation symbolic link is not allowed for this system`. This is an OS privilege issue, not a repo code issue.
+
+Permanent fixes:
+
+- Enable Windows Developer Mode: Settings -> System -> For developers -> Developer Mode.
+- Or run the Android build in CI/Linux, where the symlink step is allowed.
+- Or run a Windows shell that has `SeCreateSymbolicLinkPrivilege`.
 
 Temporary workaround used after the Rust `.so` was built:
 
@@ -76,7 +82,7 @@ The APK output is:
 src-tauri/gen/android/app/build/outputs/apk/arm64/debug/app-arm64-debug.apk
 ```
 
-Current v0.2.5 debug build used that workaround successfully.
+Current local v0.2.12 full Android build is blocked only by the Windows symlink privilege after Rust compilation.
 
 ## Sideload
 
@@ -102,10 +108,10 @@ keytool -genkeypair -v -keystore rheo-release.jks -alias rheo -keyalg RSA -keysi
 Do not commit the keystore or passwords. Suggested environment variables:
 
 ```text
-EVOCHIA_ANDROID_KEYSTORE
-EVOCHIA_ANDROID_KEY_ALIAS
-EVOCHIA_ANDROID_KEYSTORE_PASSWORD
-EVOCHIA_ANDROID_KEY_PASSWORD
+RHEO_ANDROID_KEYSTORE
+RHEO_ANDROID_KEY_ALIAS
+RHEO_ANDROID_KEYSTORE_PASSWORD
+RHEO_ANDROID_KEY_PASSWORD
 ```
 
 ## Manual QA checklist

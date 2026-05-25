@@ -40,6 +40,24 @@ pub fn run() {
             sql: include_str!("../migrations/0004_plans_coverage.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "coverage_income_recurring",
+            sql: include_str!("../migrations/0005_coverage_income_recurring.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "uuid_seed_ids",
+            sql: include_str!("../migrations/0006_uuid_seed_ids.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "coverage_user_scope",
+            sql: include_str!("../migrations/0007_coverage_user_scope.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     let builder = tauri::Builder::default()

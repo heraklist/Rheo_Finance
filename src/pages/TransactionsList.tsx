@@ -84,8 +84,8 @@ function amountFilterError(minAmount: string, maxAmount: string): string {
   return "";
 }
 
-function bookLabel(bookId: string): string {
-  return bookId === "book-personal" ? "Προσωπικά βιβλία" : "Επαγγελματικά βιβλία";
+function bookLabel(bookId: string, books: Array<{ id: string; name: string }>): string {
+  return books.find((b) => b.id === bookId)?.name ?? bookId;
 }
 
 function filtersFromSearchParams(searchParams: URLSearchParams): TransactionFilters {
@@ -102,6 +102,7 @@ export function TransactionsList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentBookId = useAppStore((state) => state.currentBookId);
+  const storeBooks = useAppStore((state) => state.books);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -115,6 +116,7 @@ export function TransactionsList() {
   );
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const debouncedSearch = useDebounce(search, 250);
 
   useEffect(() => {
@@ -175,11 +177,15 @@ export function TransactionsList() {
         setError("");
         const rows = await listTransactions({
           bookId: currentBookId,
-          limit: 200,
+          limit: 501,
           search: debouncedSearch,
           ...filters,
         });
-        if (!cancelled) setTransactions(rows);
+        if (!cancelled) {
+          const isOver = rows.length > 500;
+          setTruncated(isOver);
+          setTransactions(isOver ? rows.slice(0, 500) : rows);
+        }
       } catch (err) {
         console.error("Failed to load transactions:", err);
         if (!cancelled) setError("Δεν φορτώθηκαν οι συναλλαγές.");
@@ -209,7 +215,7 @@ export function TransactionsList() {
       <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-border-light">
         <div className="min-w-0">
           <h1 className="text-h2">Συναλλαγές</h1>
-          <p className="text-caption mt-0.5">{bookLabel(currentBookId)}</p>
+          <p className="text-caption mt-0.5">{bookLabel(currentBookId, storeBooks)}</p>
         </div>
         <Link
           to="/add"
@@ -445,6 +451,12 @@ export function TransactionsList() {
               </section>
             );
           })}
+          {truncated ? (
+            <p className="text-center text-caption text-text-muted py-2">
+              Εμφανίζονται οι πρώτες 500 συναλλαγές. Χρησιμοποίησε φίλτρα για πιο στοχευμένα
+              αποτελέσματα.
+            </p>
+          ) : null}
         </div>
       )}
     </div>

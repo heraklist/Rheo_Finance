@@ -1,7 +1,7 @@
 import { documentDir, join } from "@tauri-apps/api/path";
 import { BaseDirectory, mkdir, readFile, writeFile } from "@tauri-apps/plugin-fs";
 
-import { getDb, now } from "@/lib/db";
+import { getDb, now, runWithDbLock } from "@/lib/db";
 
 const BACKUP_TABLES = [
   "books",
@@ -173,6 +173,7 @@ const RESTORE_TABLE_COLUMNS = {
   ],
   coverage_expense: [
     "id",
+    "user_id",
     "book_id",
     "name",
     "amount",
@@ -191,6 +192,7 @@ const RESTORE_TABLE_COLUMNS = {
   ],
   coverage_income: [
     "id",
+    "user_id",
     "book_id",
     "name",
     "amount",
@@ -199,6 +201,7 @@ const RESTORE_TABLE_COLUMNS = {
     "month",
     "year",
     "received",
+    "linked_recurring_id",
     "linked_transaction_id",
     "notes",
     "created_at",
@@ -291,7 +294,11 @@ function parseBackupPayload(text: string): Record<RestoreTable, BackupRow[]> {
   return tables;
 }
 
-async function restoreRows(table: RestoreTable, rows: BackupRow[]): Promise<number> {
+async function restoreRows(
+  db: Awaited<ReturnType<typeof getDb>>,
+  table: RestoreTable,
+  rows: BackupRow[],
+): Promise<number> {
   const allowedColumns = new Set<string>(RESTORE_TABLE_COLUMNS[table]);
   let restored = 0;
 
@@ -301,7 +308,6 @@ async function restoreRows(table: RestoreTable, rows: BackupRow[]): Promise<numb
 
     const placeholders = cols.map(() => "?").join(", ");
     const values = cols.map((column) => normalizeSqlValue(row[column]));
-    const db = await getDb();
 
     await db.execute(
       `INSERT OR REPLACE INTO ${table} (${cols.join(", ")}) VALUES (${placeholders})`,
@@ -315,42 +321,58 @@ async function restoreRows(table: RestoreTable, rows: BackupRow[]): Promise<numb
 
 async function restoreFromBackupText(text: string): Promise<RestoreResult> {
   const tables = parseBackupPayload(text);
-  const db = await getDb();
-  let totalRows = 0;
-  let transactionStarted = false;
+  return runWithDbLock(async (db) => {
+    let totalRows = 0;
+    let transactionStarted = false;
 
-  await db.execute("PRAGMA foreign_keys = OFF");
-  try {
-    await db.execute("BEGIN IMMEDIATE");
-    transactionStarted = true;
-    await db.execute("DELETE FROM sync_outbox");
+    try {
+      await db.execute("PRAGMA foreign_keys = ON");
+      await db.execute("BEGIN IMMEDIATE");
+      transactionStarted = true;
+      await db.execute("PRAGMA defer_foreign_keys = ON");
+      await db.execute("DELETE FROM sync_outbox");
 
-    for (const table of [...RESTORE_TABLES].reverse()) {
-      await db.execute(`DELETE FROM ${table}`);
+      for (const table of [...RESTORE_TABLES].reverse()) {
+        await db.execute(`DELETE FROM ${table}`);
+      }
+
+      for (const table of RESTORE_TABLES) {
+        totalRows += await restoreRows(db, table, tables[table]);
+      }
+
+      const violations = await db.select<ForeignKeyViolation[]>("PRAGMA foreign_key_check");
+      if (violations.length > 0) {
+        const first = violations[0];
+        if (!first) throw new Error("Backup restore foreign key violation.");
+        throw new Error(
+          `Backup restore foreign key violation: ${first.table}.${first.rowid} -> ${first.parent}`,
+        );
+      }
+
+      await db.execute("COMMIT");
+      transactionStarted = false;
+
+      // Re-enable foreign keys after the deferred-FK transaction completes.
+      await db.execute("PRAGMA foreign_keys = ON");
+
+      return { tablesRestored: RESTORE_TABLES.length, rowsRestored: totalRows };
+    } catch (err) {
+      if (transactionStarted) {
+        try {
+          await db.execute("ROLLBACK");
+        } catch {
+          // ROLLBACK best-effort — the connection may already be rolled back
+        }
+      }
+      // Ensure FK enforcement is restored even after failure
+      try {
+        await db.execute("PRAGMA foreign_keys = ON");
+      } catch {
+        // best-effort
+      }
+      throw err;
     }
-
-    for (const table of RESTORE_TABLES) {
-      totalRows += await restoreRows(table, tables[table]);
-    }
-
-    const violations = await db.select<ForeignKeyViolation[]>("PRAGMA foreign_key_check");
-    if (violations.length > 0) {
-      const first = violations[0];
-      if (!first) throw new Error("Backup restore foreign key violation.");
-      throw new Error(
-        `Backup restore foreign key violation: ${first.table}.${first.rowid} -> ${first.parent}`,
-      );
-    }
-
-    await db.execute("COMMIT");
-    transactionStarted = false;
-    return { tablesRestored: RESTORE_TABLES.length, rowsRestored: totalRows };
-  } catch (err) {
-    if (transactionStarted) await db.execute("ROLLBACK");
-    throw err;
-  } finally {
-    await db.execute("PRAGMA foreign_keys = ON");
-  }
+  });
 }
 
 export async function getLastAutoBackupAt(): Promise<string | null> {

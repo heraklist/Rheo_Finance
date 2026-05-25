@@ -20,19 +20,19 @@
 
 ### Project structure
 ```
-evochia_finance/
+Rheo_Finance/
 ├── src/                          # React frontend (TypeScript strict)
 │   ├── App.tsx                   # Router
 │   ├── main.tsx                  # Entry
 │   ├── index.css                 # Design tokens + Tailwind directives + custom components
 │   ├── components/
 │   │   ├── ui/                   # Custom: BrandMark, KPITile, SyncPill, TransactionRow
-│   │   ├── charts/               # Recharts wrappers
+│   │   ├── charts/               # SVG chart components
 │   │   └── layout/               # AppLayout (header + FAB)
 │   ├── pages/                    # Routed screens
 │   │   ├── Dashboard.tsx         # ✅ Functional
 │   │   ├── AddTransaction.tsx    # ✅ Functional
-│   │   └── Placeholder.tsx       # 5 stubs έτοιμοι
+│   │   └── Signup.tsx            # Account registration
 │   ├── lib/                      # Business logic
 │   │   ├── db.ts                 # SQLite client
 │   │   ├── types.ts              # Entity types
@@ -98,7 +98,7 @@ evochia_finance/
 Πριν οτιδήποτε άλλο:
 
 ```bash
-cd evochia_finance
+cd Rheo_Finance
 pnpm install
 pnpm tauri:dev
 ```
@@ -148,7 +148,7 @@ pnpm tauri:dev
 - Πρόσθεσε TOTP MFA challenge όταν Supabase AAL χρειάζεται upgrade σε `aal2`
 - Πρόσθεσε Settings panel για Microsoft Authenticator / TOTP enrollment
 - Δημιούργησε `src/lib/auth.ts` με sign in / sign out / session helpers
-- Token storage σε OS keychain via `tauri-plugin-stronghold` ή plain localStorage για αρχή
+- Token storage σε native secure storage: Windows DPAPI, Android Keystore, legacy Stronghold read-only migration. Όχι νέο auth token fallback σε plain localStorage στα native builds.
 - Protect routes — αν δεν υπάρχει session, redirect σε /login
 - Ενημέρωσε `AppLayout` για user menu (sign out)
 
@@ -245,7 +245,7 @@ pnpm tauri:dev
 
 ### Dependencies
 - **Μη αναβαθμίσεις** Tailwind σε v4 (shadcn σε v3 ακόμα)
-- **Μην προσθέσεις** UI library πέρα από αυτά που ήδη υπάρχουν (`@radix-ui/*`, `lucide-react`, `recharts`)
+- **Μην προσθέσεις** UI library πέρα από αυτά που ήδη υπάρχουν (`@radix-ui/*`, `lucide-react`)
 - **Μη συστήσεις** δραματικά πιο μεγάλες deps για μικρά προβλήματα
 
 ### Security / secrets
@@ -327,7 +327,7 @@ pnpm tauri:dev
 | Sync | Custom Option A (outbox pattern) |
 | Auth | Email/password + TOTP MFA |
 | Local DB | SQLite via tauri-plugin-sql |
-| Domain | finance.evochia.gr |
+| Domain | finance.rheo.app |
 | Repo | heraklist/Rheo_Finance (private) |
 | Distribution | Sideload για Heraklis (no Google Play) |
 | Greek-first UI | ναι |

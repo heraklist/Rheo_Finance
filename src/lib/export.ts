@@ -4,7 +4,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 
 import { getDb } from "@/lib/db";
 import type { CategoryType } from "@/lib/types";
-import { round2 } from "@/lib/utils";
+import { MONTHS_SHORT_EL, round2 } from "@/lib/utils";
 import { type WorkbookSheet, createXlsxWorkbook } from "@/lib/xlsx";
 
 export type ExportBookScope = "business" | "personal" | "both";
@@ -53,28 +53,16 @@ interface VatBucket {
   count: number;
 }
 
-const BOOK_IDS: Record<Exclude<ExportBookScope, "both">, string> = {
-  business: "book-business",
-  personal: "book-personal",
-};
+const MONTHS_SHORT = MONTHS_SHORT_EL;
 
-const MONTHS_SHORT = [
-  "Ιαν",
-  "Φεβ",
-  "Μαρ",
-  "Απρ",
-  "Μάι",
-  "Ιουν",
-  "Ιουλ",
-  "Αυγ",
-  "Σεπ",
-  "Οκτ",
-  "Νοέ",
-  "Δεκ",
-];
-
-function bookIdForScope(scope: ExportBookScope): string | undefined {
-  return scope === "both" ? undefined : BOOK_IDS[scope];
+async function bookIdForScope(scope: ExportBookScope): Promise<string | undefined> {
+  if (scope === "both") return undefined;
+  const db = await getDb();
+  const rows = await db.select<Array<{ id: string }>>(
+    "SELECT id FROM books WHERE slug = ? LIMIT 1",
+    [scope],
+  );
+  return rows[0]?.id;
 }
 
 function typeLabel(type: CategoryType | null): string {
@@ -140,7 +128,7 @@ async function loadExportRows(options: FinanceExportOptions): Promise<ExportTran
   const db = await getDb();
   const conditions = ["t.date >= ?", "t.date <= ?"];
   const params: Array<string | number> = [options.period.fromDate, options.period.toDate];
-  const bookId = bookIdForScope(options.bookScope);
+  const bookId = await bookIdForScope(options.bookScope);
 
   if (bookId) {
     conditions.push("t.book_id = ?");

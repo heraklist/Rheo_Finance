@@ -1,4 +1,5 @@
 import type { BookTransactionCounts } from "@/lib/analytics";
+import { MONTHS_SHORT_EL } from "@/lib/utils";
 
 const MONTHS_GR = [
   "Ιανουάριος",
@@ -15,22 +16,9 @@ const MONTHS_GR = [
   "Δεκέμβριος",
 ];
 
-export const MONTHS_SHORT = [
-  "Ιαν",
-  "Φεβ",
-  "Μαρ",
-  "Απρ",
-  "Μάι",
-  "Ιουν",
-  "Ιουλ",
-  "Αυγ",
-  "Σεπ",
-  "Οκτ",
-  "Νοέ",
-  "Δεκ",
-];
+export const MONTHS_SHORT = MONTHS_SHORT_EL;
 
-export type BookFilter = "all" | "book-business" | "book-personal";
+export type BookFilter = "all" | (string & {});
 
 export type PeriodFilter =
   | { kind: "month"; year: number; month: number }
@@ -55,9 +43,9 @@ export interface DashboardBookOption {
 
 export const EMPTY_BOOK_COUNTS: BookTransactionCounts = { all: 0, business: 0, personal: 0 };
 
-export function bookLabel(bookId: string): string {
+export function bookLabel(bookId: string, books: Array<{ id: string; name: string }>): string {
   if (bookId === "all") return "Όλα τα βιβλία";
-  return bookId === "book-personal" ? "Προσωπικά" : "Επαγγελματικά";
+  return books.find((b) => b.id === bookId)?.name ?? bookId;
 }
 
 export function monthLabel(month: string): string {

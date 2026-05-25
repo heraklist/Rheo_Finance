@@ -1,6 +1,6 @@
 [package]
 name = "rheo-finance"
-version = "0.2.12"
+version = "0.2.13"
 description = "Local-first finance management for independent professionals"
 authors = ["Heraklis"]
 edition = "2021"

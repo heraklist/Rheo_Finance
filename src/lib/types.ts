@@ -187,6 +187,7 @@ export interface CoverageIncome extends SyncableEntity {
   month: number;
   year: number;
   received: boolean;
+  linked_recurring_id: string | null;
   linked_transaction_id: string | null;
   notes: string | null;
   created_at: string;

@@ -1,4 +1,4 @@
--- Evochia Finance: Row Level Security policies
+-- Rheo Finance: Row Level Security policies
 -- Deny by default; authenticated users can only access their own rows.
 
 ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;

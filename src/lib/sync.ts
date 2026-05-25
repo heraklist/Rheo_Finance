@@ -90,6 +90,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
     ],
     localColumns: [
       "id",
+      "user_id",
       "book_id",
       "parent_id",
       "name",
@@ -319,6 +320,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
     ],
     localColumns: [
       "id",
+      "user_id",
       "book_id",
       "name",
       "amount",
@@ -347,6 +349,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "month",
       "year",
       "received",
+      "linked_recurring_id",
       "linked_transaction_id",
       "notes",
       "created_at",
@@ -354,6 +357,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
     ],
     localColumns: [
       "id",
+      "user_id",
       "book_id",
       "name",
       "amount",
@@ -362,6 +366,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "month",
       "year",
       "received",
+      "linked_recurring_id",
       "linked_transaction_id",
       "notes",
       "created_at",
@@ -548,7 +553,7 @@ async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Prom
   const localMs = timestampMs(localRows[0]?.local_updated_at ?? null);
 
   if (localMs !== null && localMs > remoteMs) {
-    console.warn(`[sync] LWW: local newer for ${config.table} ${entityId}. Skipping pull.`);
+    console.error(`[sync] LWW: local newer for ${config.table} ${entityId}. Skipping pull.`);
     return true;
   }
 
@@ -634,6 +639,11 @@ async function clearRemoteRecurringReferences(recurringTemplateId: string): Prom
       .update({ linked_recurring_id: null })
       .eq("linked_recurring_id", recurringTemplateId)
       .is("deleted_at", null),
+    supabase
+      .from("coverage_income")
+      .update({ linked_recurring_id: null })
+      .eq("linked_recurring_id", recurringTemplateId)
+      .is("deleted_at", null),
   ];
 
   for (const update of updates) {
@@ -670,7 +680,7 @@ async function preparePulledRowForLocal(
 
   if (entityType === "plan_expense_item" || entityType === "plan_income_item") {
     if (!(await hasLocalRow("plan", nextRow.plan_id))) {
-      console.warn(
+      console.error(
         `[sync] Skipping orphan ${entityType} ${String(nextRow.id)}; missing plan ${String(
           nextRow.plan_id,
         )}.`,
@@ -730,8 +740,17 @@ async function preparePulledRowForLocal(
     nextRow = sanitized;
   }
 
-  if (entityType === "coverage_income" && nextRow.linked_transaction_id !== null) {
-    if (!(await hasLocalRow("transactions", nextRow.linked_transaction_id))) {
+  if (entityType === "coverage_income") {
+    if (
+      nextRow.linked_recurring_id !== null &&
+      !(await hasLocalRow("recurring_templates", nextRow.linked_recurring_id))
+    ) {
+      nextRow = { ...nextRow, linked_recurring_id: null };
+    }
+    if (
+      nextRow.linked_transaction_id !== null &&
+      !(await hasLocalRow("transactions", nextRow.linked_transaction_id))
+    ) {
       nextRow = { ...nextRow, linked_transaction_id: null };
     }
   }
@@ -776,15 +795,16 @@ async function upsertLocal(entityType: SyncEntityType, row: SyncRow) {
   const localRow = toLocalRow(entityType, row);
   const columns = Object.keys(localRow);
   const placeholders = columns.map(() => "?").join(", ");
+  const quoted = columns.map((column) => `"${column}"`);
   const updateAssignments = columns
     .filter((column) => column !== "id")
-    .map((column) => `${column} = excluded.${column}`)
+    .map((column) => `"${column}" = excluded."${column}"`)
     .join(", ");
   const values = columns.map((column) => localRow[column]);
   const db = await getDb();
 
   await db.execute(
-    `INSERT INTO ${config.localTable} (${columns.join(", ")})
+    `INSERT INTO ${config.localTable} (${quoted.join(", ")})
      VALUES (${placeholders})
      ON CONFLICT(id) DO UPDATE SET ${updateAssignments}`,
     values,
@@ -836,6 +856,12 @@ async function deleteLocalForRemoteTombstone(
        WHERE linked_recurring_id = ?`,
       [entityId],
     );
+    await db.execute(
+      `UPDATE coverage_income
+       SET linked_recurring_id = NULL
+       WHERE linked_recurring_id = ?`,
+      [entityId],
+    );
   }
 
   await db.execute(`DELETE FROM ${config.localTable} WHERE id = ?`, [entityId]);
@@ -877,7 +903,7 @@ async function upsertLocalReferenceData(userId: string) {
       const localMs = timestampMs(localUpdatedAt(row));
 
       if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
-        console.warn(
+        console.error(
           `[sync] LWW: remote newer for ${entityType} ${entityId} ` +
             `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(row)}). Skipping push.`,
         );
@@ -953,7 +979,7 @@ export async function pushChanges(): Promise<number> {
         const localMs = timestampMs(localUpdatedAt(payload));
 
         if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
-          console.warn(
+          console.error(
             `[sync] LWW: remote newer for ${entry.entity_type} ${entry.entity_id} ` +
               `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(payload)}). Skipping push.`,
           );
@@ -997,7 +1023,7 @@ export async function pushChanges(): Promise<number> {
         const localMs = timestampMs(localDeletedAt);
 
         if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
-          console.warn(
+          console.error(
             `[sync] LWW: remote newer for deleted ${entry.entity_type} ${entry.entity_id} ` +
               `(remote=${remoteUpdatedAt}, local=${localDeletedAt}). Skipping delete.`,
           );
@@ -1098,6 +1124,16 @@ export async function pullChanges(): Promise<number> {
 
     for (const row of data ?? []) {
       const remoteRow = row as SyncRow;
+
+      // Defense-in-depth: verify pulled row belongs to the authenticated user.
+      // This guards against Supabase RLS misconfiguration leaking other users' data.
+      if (remoteRow.user_id !== undefined && remoteRow.user_id !== user.id) {
+        console.error(
+          `[sync] Pull rejected: row ${config.table}.${String(remoteRow.id)} belongs to another user.`,
+        );
+        continue;
+      }
+
       const remoteUpdatedAt = timestampValue(remoteRow.updated_at);
       highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
 

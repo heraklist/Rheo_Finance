@@ -16,10 +16,6 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   "IRIS",
   "Άλλο",
 ];
-export const BOOK_OPTIONS = [
-  { label: "Επαγγελματικά", value: "book-business" },
-  { label: "Προσωπικά", value: "book-personal" },
-];
 export const EXPORT_BOOK_OPTIONS: Array<{ label: string; value: ExportBookScope }> = [
   { label: "Επαγγελματικά", value: "business" },
   { label: "Προσωπικά", value: "personal" },

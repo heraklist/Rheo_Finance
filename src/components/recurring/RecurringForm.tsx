@@ -15,7 +15,7 @@ import {
 import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { parseGreekAmount } from "@/lib/money";
 import { findOrCreateTag, listAccounts, listCategories } from "@/lib/reference";
-import { useAppStore } from "@/lib/store";
+import { isBusinessBook, useAppStore } from "@/lib/store";
 import type { Account, Category, Frequency } from "@/lib/types";
 import { formatLocalIsoDate } from "@/lib/utils";
 import { CalendarClock, Check, Pause } from "lucide-react";
@@ -107,9 +107,10 @@ export function RecurringForm({
   onCancel,
 }: RecurringFormProps) {
   const currentBookId = useAppStore((state) => state.currentBookId);
+  const storeBooks = useAppStore((state) => state.books);
   const defaultVatRate = useAppStore((state) => state.defaultVatRate);
   const defaults =
-    initialValues ?? defaultValues(currentBookId === "book-business" ? defaultVatRate : 0);
+    initialValues ?? defaultValues(isBusinessBook(storeBooks, currentBookId) ? defaultVatRate : 0);
   const [submitting, setSubmitting] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -129,7 +130,7 @@ export function RecurringForm({
   const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
   const displayAccountName = useDisplayAccountName();
-  const showVat = currentBookId === "book-business";
+  const showVat = isBusinessBook(storeBooks, currentBookId);
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {

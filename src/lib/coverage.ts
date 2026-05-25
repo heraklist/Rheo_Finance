@@ -1,4 +1,5 @@
 import { getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { useAppStore } from "@/lib/store";
 import type {
   Confidence,
   CoverageExpense,
@@ -43,6 +44,7 @@ export interface NewCoverageIncomeInput {
   month: number;
   year: number;
   received?: boolean;
+  linked_recurring_id?: string | null;
   linked_transaction_id?: string | null;
   notes?: string | null;
 }
@@ -87,6 +89,25 @@ function assertYear(year: number): number {
   return year;
 }
 
+function currentUserId(): string | null {
+  return useAppStore.getState().user?.id ?? null;
+}
+
+async function claimLegacyCoverageForUser(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string,
+  bookId: string,
+): Promise<void> {
+  await db.execute(
+    "UPDATE coverage_expense SET user_id = ? WHERE user_id IS NULL AND book_id = ?",
+    [userId, bookId],
+  );
+  await db.execute("UPDATE coverage_income SET user_id = ? WHERE user_id IS NULL AND book_id = ?", [
+    userId,
+    bookId,
+  ]);
+}
+
 async function enqueueOutbox(
   db: Awaited<ReturnType<typeof getDb>>,
   entityType: string,
@@ -105,6 +126,7 @@ async function enqueueOutbox(
 function buildExpense(input: NewCoverageExpenseInput, ts: string): CoverageExpense {
   return {
     id: uuid(),
+    user_id: currentUserId() ?? undefined,
     book_id: input.book_id,
     name: normalizeName(input.name),
     amount: normalizeAmount(input.amount),
@@ -126,6 +148,7 @@ function buildExpense(input: NewCoverageExpenseInput, ts: string): CoverageExpen
 function buildIncome(input: NewCoverageIncomeInput, ts: string): CoverageIncome {
   return {
     id: uuid(),
+    user_id: currentUserId() ?? undefined,
     book_id: input.book_id,
     name: normalizeName(input.name),
     amount: normalizeAmount(input.amount),
@@ -134,6 +157,7 @@ function buildIncome(input: NewCoverageIncomeInput, ts: string): CoverageIncome 
     month: assertMonth(input.month),
     year: assertYear(input.year),
     received: input.received ?? false,
+    linked_recurring_id: input.linked_recurring_id ?? null,
     linked_transaction_id: input.linked_transaction_id ?? null,
     notes: input.notes?.trim() || null,
     created_at: ts,
@@ -149,12 +173,13 @@ async function insertExpense(
 ): Promise<void> {
   await db.execute(
     `INSERT INTO coverage_expense
-      (id, book_id, name, amount, type, due_date, month, year, paid,
+      (id, user_id, book_id, name, amount, type, due_date, month, year, paid,
        linked_recurring_id, linked_transaction_id, notes, created_at,
        sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       item.id,
+      item.user_id ?? null,
       item.book_id,
       item.name,
       item.amount,
@@ -180,11 +205,13 @@ async function insertIncome(
 ): Promise<void> {
   await db.execute(
     `INSERT INTO coverage_income
-      (id, book_id, name, amount, confidence, expected_date, month, year, received,
-       linked_transaction_id, notes, created_at, sync_status, local_updated_at, server_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, user_id, book_id, name, amount, confidence, expected_date, month, year, received,
+       linked_recurring_id, linked_transaction_id, notes, created_at,
+       sync_status, local_updated_at, server_updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       item.id,
+      item.user_id ?? null,
       item.book_id,
       item.name,
       item.amount,
@@ -193,6 +220,7 @@ async function insertIncome(
       item.month,
       item.year,
       item.received ? 1 : 0,
+      item.linked_recurring_id,
       item.linked_transaction_id,
       item.notes,
       item.created_at,
@@ -211,8 +239,11 @@ export async function ensureCoverageMonth(
   const normalizedMonth = assertMonth(month);
   const normalizedYear = assertYear(year);
   const ts = now();
+  const userId = currentUserId();
 
   await runInTransaction(async (db) => {
+    if (userId) await claimLegacyCoverageForUser(db, userId, bookId);
+
     const templates = await db.select<RecurringCoverageRow[]>(
       `SELECT rt.id,
               rt.description,
@@ -231,8 +262,11 @@ export async function ensureCoverageMonth(
         const existing = await db.select<CountRow[]>(
           `SELECT COUNT(*) AS count
            FROM coverage_expense
-           WHERE book_id = ? AND month = ? AND year = ? AND linked_recurring_id = ?`,
-          [bookId, normalizedMonth, normalizedYear, template.id],
+           WHERE book_id = ? AND month = ? AND year = ? AND linked_recurring_id = ?
+             ${userId ? "AND user_id = ?" : ""}`,
+          userId
+            ? [bookId, normalizedMonth, normalizedYear, template.id, userId]
+            : [bookId, normalizedMonth, normalizedYear, template.id],
         );
         if (Number(existing[0]?.count ?? 0) > 0) continue;
 
@@ -259,17 +293,11 @@ export async function ensureCoverageMonth(
            WHERE book_id = ?
              AND month = ?
              AND year = ?
-             AND name = ?
-             AND amount = ?
-             AND expected_date = ?`,
-          [
-            bookId,
-            normalizedMonth,
-            normalizedYear,
-            template.description,
-            normalizeAmount(template.amount_gross),
-            expectedDate,
-          ],
+             AND linked_recurring_id = ?
+             ${userId ? "AND user_id = ?" : ""}`,
+          userId
+            ? [bookId, normalizedMonth, normalizedYear, template.id, userId]
+            : [bookId, normalizedMonth, normalizedYear, template.id],
         );
         if (Number(existing[0]?.count ?? 0) > 0) continue;
 
@@ -282,6 +310,7 @@ export async function ensureCoverageMonth(
             expected_date: expectedDate,
             month: normalizedMonth,
             year: normalizedYear,
+            linked_recurring_id: template.id,
           },
           ts,
         );
@@ -298,11 +327,16 @@ export async function listCoverageExpenses(
   year: number,
 ): Promise<CoverageExpense[]> {
   const db = await getDb();
+  const userId = currentUserId();
+  if (userId) await claimLegacyCoverageForUser(db, userId, bookId);
   const rows = await db.select<CoverageExpenseRow[]>(
     `SELECT * FROM coverage_expense
      WHERE book_id = ? AND month = ? AND year = ?
+       ${userId ? "AND user_id = ?" : ""}
      ORDER BY paid, due_date, created_at`,
-    [bookId, assertMonth(month), assertYear(year)],
+    userId
+      ? [bookId, assertMonth(month), assertYear(year), userId]
+      : [bookId, assertMonth(month), assertYear(year)],
   );
   return rows.map(toExpense);
 }
@@ -313,11 +347,16 @@ export async function listCoverageIncomes(
   year: number,
 ): Promise<CoverageIncome[]> {
   const db = await getDb();
+  const userId = currentUserId();
+  if (userId) await claimLegacyCoverageForUser(db, userId, bookId);
   const rows = await db.select<CoverageIncomeRow[]>(
     `SELECT * FROM coverage_income
      WHERE book_id = ? AND month = ? AND year = ?
+       ${userId ? "AND user_id = ?" : ""}
      ORDER BY received, expected_date, created_at`,
-    [bookId, assertMonth(month), assertYear(year)],
+    userId
+      ? [bookId, assertMonth(month), assertYear(year), userId]
+      : [bookId, assertMonth(month), assertYear(year)],
   );
   return rows.map(toIncome);
 }
@@ -348,6 +387,7 @@ export async function addCoverageIncome(input: NewCoverageIncomeInput): Promise<
 
 export async function toggleExpensePaid(id: string): Promise<void> {
   const ts = now();
+  const userId = currentUserId();
 
   await runInTransaction(async (txDb) => {
     const rows = await txDb.select<CoverageExpenseRow[]>(
@@ -356,9 +396,13 @@ export async function toggleExpensePaid(id: string): Promise<void> {
     );
     const existing = rows[0] ? toExpense(rows[0]) : null;
     if (!existing) throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
+    if (userId && existing.user_id && existing.user_id !== userId) {
+      throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
+    }
 
     const next = {
       ...existing,
+      user_id: userId ?? existing.user_id,
       paid: !existing.paid,
       sync_status: "pending" as const,
       local_updated_at: ts,
@@ -367,15 +411,94 @@ export async function toggleExpensePaid(id: string): Promise<void> {
 
     await txDb.execute(
       `UPDATE coverage_expense
-       SET paid = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
+       SET user_id = ?, paid = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
        WHERE id = ?`,
-      [next.paid ? 1 : 0, next.sync_status, next.local_updated_at, next.server_updated_at, id],
+      [
+        next.user_id ?? null,
+        next.paid ? 1 : 0,
+        next.sync_status,
+        next.local_updated_at,
+        next.server_updated_at,
+        id,
+      ],
     );
     await enqueueOutbox(txDb, "coverage_expense", id, "update", next, ts);
   });
 }
 
 export async function toggleIncomeReceived(id: string): Promise<void> {
+  const ts = now();
+  const userId = currentUserId();
+
+  await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<CoverageIncomeRow[]>(
+      "SELECT * FROM coverage_income WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toIncome(rows[0]) : null;
+    if (!existing) throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
+    if (userId && existing.user_id && existing.user_id !== userId) {
+      throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
+    }
+
+    const next = {
+      ...existing,
+      user_id: userId ?? existing.user_id,
+      received: !existing.received,
+      sync_status: "pending" as const,
+      local_updated_at: ts,
+      server_updated_at: null,
+    };
+
+    await txDb.execute(
+      `UPDATE coverage_income
+       SET user_id = ?, received = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
+       WHERE id = ?`,
+      [
+        next.user_id ?? null,
+        next.received ? 1 : 0,
+        next.sync_status,
+        next.local_updated_at,
+        next.server_updated_at,
+        id,
+      ],
+    );
+    await enqueueOutbox(txDb, "coverage_income", id, "update", next, ts);
+  });
+}
+
+export async function deleteCoverageExpense(id: string): Promise<void> {
+  const userId = currentUserId();
+  const ts = now();
+
+  await runInTransaction(async (txDb) => {
+    const rows = await txDb.select<CoverageExpenseRow[]>(
+      "SELECT * FROM coverage_expense WHERE id = ? LIMIT 1",
+      [id],
+    );
+    const existing = rows[0] ? toExpense(rows[0]) : null;
+    if (!existing) throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
+    if (userId && existing.user_id && existing.user_id !== userId) {
+      throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
+    }
+
+    if (userId && !existing.user_id) {
+      await txDb.execute("UPDATE coverage_expense SET user_id = ? WHERE id = ?", [userId, id]);
+    }
+    await txDb.execute("DELETE FROM coverage_expense WHERE id = ?", [id]);
+    await enqueueOutbox(
+      txDb,
+      "coverage_expense",
+      id,
+      "delete",
+      { ...existing, user_id: userId ?? existing.user_id, deleted_at: ts },
+      ts,
+    );
+  });
+}
+
+export async function deleteCoverageIncome(id: string): Promise<void> {
+  const userId = currentUserId();
   const ts = now();
 
   await runInTransaction(async (txDb) => {
@@ -385,61 +508,22 @@ export async function toggleIncomeReceived(id: string): Promise<void> {
     );
     const existing = rows[0] ? toIncome(rows[0]) : null;
     if (!existing) throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
+    if (userId && existing.user_id && existing.user_id !== userId) {
+      throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
+    }
 
-    const next = {
-      ...existing,
-      received: !existing.received,
-      sync_status: "pending" as const,
-      local_updated_at: ts,
-      server_updated_at: null,
-    };
-
-    await txDb.execute(
-      `UPDATE coverage_income
-       SET received = ?, sync_status = ?, local_updated_at = ?, server_updated_at = ?
-       WHERE id = ?`,
-      [next.received ? 1 : 0, next.sync_status, next.local_updated_at, next.server_updated_at, id],
-    );
-    await enqueueOutbox(txDb, "coverage_income", id, "update", next, ts);
-  });
-}
-
-export async function deleteCoverageExpense(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<CoverageExpenseRow[]>(
-    "SELECT * FROM coverage_expense WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toExpense(rows[0]) : null;
-  if (!existing) throw new Error("Το έξοδο κάλυψης δεν βρέθηκε.");
-
-  const ts = now();
-  await runInTransaction(async (txDb) => {
-    await txDb.execute("DELETE FROM coverage_expense WHERE id = ?", [id]);
+    if (userId && !existing.user_id) {
+      await txDb.execute("UPDATE coverage_income SET user_id = ? WHERE id = ?", [userId, id]);
+    }
+    await txDb.execute("DELETE FROM coverage_income WHERE id = ?", [id]);
     await enqueueOutbox(
       txDb,
-      "coverage_expense",
+      "coverage_income",
       id,
       "delete",
-      { ...existing, deleted_at: ts },
+      { ...existing, user_id: userId ?? existing.user_id, deleted_at: ts },
       ts,
     );
-  });
-}
-
-export async function deleteCoverageIncome(id: string): Promise<void> {
-  const db = await getDb();
-  const rows = await db.select<CoverageIncomeRow[]>(
-    "SELECT * FROM coverage_income WHERE id = ? LIMIT 1",
-    [id],
-  );
-  const existing = rows[0] ? toIncome(rows[0]) : null;
-  if (!existing) throw new Error("Το έσοδο κάλυψης δεν βρέθηκε.");
-
-  const ts = now();
-  await runInTransaction(async (txDb) => {
-    await txDb.execute("DELETE FROM coverage_income WHERE id = ?", [id]);
-    await enqueueOutbox(txDb, "coverage_income", id, "delete", { ...existing, deleted_at: ts }, ts);
   });
 }
 

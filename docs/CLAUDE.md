@@ -9,12 +9,11 @@
 **Project:** Rheo Finance — Tauri 2 desktop + Android app για διαχείριση
 οικονομικών independent professionals (freelancers, creators, small business).
 
-**Story:** Ξεκίνησε ως internal tool για το Evochia (Heraklis's catering brand,
-Athens), εξελίχθηκε σε ανεξάρτητο προϊόν.
+**Story:** Independent Rheo product for local-first finance workflows.
 
 **Owner:** Heraklis, Greek-speaking, με dev background. Θέλει concrete deliverables, όχι ατελείωτο planning.
 
-**Current state:** Rheo Finance v0.2.5. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, Stronghold auth storage και GitHub private updater token. Android arm64 debug APK builds locally.
+**Current state:** Rheo Finance v0.2.13. Πλήρες desktop app με SQLite local DB, Supabase Auth/Sync/Storage, password login + TOTP MFA, receipt photos, category CRUD, dashboard filters, recurring, VAT, forecast, Excel export, backup, native secure auth storage και GitHub private updater token. Android arm64 Rust build works locally; full APK packaging on Windows needs symlink privilege.
 
 **Repo:** `github.com/heraklist/Rheo_Finance` private.
 
@@ -48,7 +47,7 @@ Athens), εξελίχθηκε σε ανεξάρτητο προϊόν.
 | Local DB | SQLite via `tauri-plugin-sql` |
 | Sync | Custom outbox + timestamp LWW |
 | Storage | Supabase Storage for receipt photos |
-| Secure local auth storage | Tauri Stronghold with localStorage fallback |
+| Secure local auth storage | Native secure storage on Windows/Android; Stronghold legacy-read migration |
 | Distribution | Manual sideload + signed GitHub Releases |
 | Updater | GitHub Releases `latest.json`; private repo uses user-provided read token |
 | App identifier/package | `app.rheo.finance` |
@@ -75,14 +74,14 @@ Do not reopen these unless Heraklis explicitly asks.
 - Backup: manual JSON + weekly auto-backup worker.
 - Export: XLSX with rounded VAT and category breakdown.
 - Updater: signed Tauri updater config, GitHub private token support, desktop install flow, Android assisted-update manifest.
-- Android: arm64 debug APK builds; Stronghold/updater are desktop-only in Rust for now, Android uses frontend storage fallback until Android Keystore/signing is finalized.
+- Android: arm64 debug APK builds; auth tokens use Android Keystore-backed native storage, while updater installation remains assisted sideload.
 - Release pipeline: GitHub Actions builds signed Windows installer, signed Android APK, `latest-desktop.json`, legacy `latest.json`, and `latest-android.json` from `v*.*.*` tags.
 
 ---
 
 ## Current Release State
 
-Source version is `0.2.5` in:
+Source version is `0.2.13` in:
 
 - `package.json`
 - `src-tauri/Cargo.toml`
@@ -96,10 +95,10 @@ Pre-release QA fixed:
 - Sync delete now confirms Supabase soft-delete before remote receipt photo deletion.
 - `parseGreekAmount("1.234")` now parses as `1234`.
 - VAT and export sums round to 2 decimals.
-- Stronghold read/write/remove fallback to localStorage on failure.
-- Android build excludes Stronghold/updater Rust plugins to avoid mobile cross-compile blockers.
+- Auth storage uses native secure storage on Windows/Android, with legacy Stronghold/localStorage migration only.
+- Android build includes the native secure auth storage plugin; full local APK packaging still depends on Windows symlink privilege or CI/Linux.
 
-Before shipping a public/manual installer, create/push tag `v0.2.5`, wait for GitHub Actions release, install that artifact, then smoke test updater.
+Before shipping a public/manual installer, create/push tag `v0.2.13`, wait for GitHub Actions release, install that artifact, then smoke test updater.
 
 ---
 
@@ -134,8 +133,8 @@ Before shipping a public/manual installer, create/push tag `v0.2.5`, wait for Gi
 
 - Never ask for or store Supabase `service_role`.
 - Do not print secrets or tokens.
-- GitHub updater token is a user-provided read-only token for the private repo and is stored locally through Stronghold-backed storage.
-- Stronghold currently uses an app static password. This is acceptable for v0.2 single-user, but review for v1.0 if threat model changes.
+- GitHub updater token is a user-provided read-only token for the private repo and is stored locally through native secure storage on Windows/Android.
+- Legacy Stronghold storage is read only for migration; do not add new Stronghold/localStorage token write paths.
 - Repo stays private.
 
 ---
@@ -154,8 +153,8 @@ cargo check
 Release:
 
 ```bash
-git tag v0.2.5
-git push origin v0.2.5
+git tag v0.2.13
+git push origin v0.2.13
 ```
 
 The `release.yml` workflow creates the signed GitHub Release and `latest.json`.

@@ -3,11 +3,25 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { DEFAULT_COMPANY_NAME, normalizeCompanyName } from "@/lib/company";
-import type { PaymentMethod } from "@/lib/types";
+import type { Book, PaymentMethod } from "@/lib/types";
 
 export type SyncState = "synced" | "syncing" | "offline" | "error";
 
+export function bookSlug(books: Book[], bookId: string): string | undefined {
+  return books.find((b) => b.id === bookId)?.slug;
+}
+
+export function isBusinessBook(books: Book[], bookId: string): boolean {
+  return bookSlug(books, bookId) === "business";
+}
+
+export function isPersonalBook(books: Book[], bookId: string): boolean {
+  return bookSlug(books, bookId) === "personal";
+}
+
 interface AppState {
+  books: Book[];
+  setBooks: (books: Book[]) => void;
   currentBookId: string;
   setCurrentBookId: (id: string) => void;
   companyName: string;
@@ -39,7 +53,9 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      currentBookId: "book-business",
+      books: [],
+      setBooks: (books) => set({ books }),
+      currentBookId: "",
       setCurrentBookId: (id) => set({ currentBookId: id }),
       companyName: DEFAULT_COMPANY_NAME,
       setCompanyName: (companyName) => set({ companyName: normalizeCompanyName(companyName) }),
@@ -73,6 +89,7 @@ export const useAppStore = create<AppState>()(
       setPendingCount: (pendingCount) => set({ pendingCount }),
     }),
     {
+      // Keep the legacy persist key so upgrades retain user settings.
       name: "evochia-app-state",
       partialize: (state) => ({
         currentBookId: state.currentBookId,
@@ -82,6 +99,12 @@ export const useAppStore = create<AppState>()(
         autoBackupEnabled: state.autoBackupEnabled,
         backupDirectory: state.backupDirectory,
       }),
+      merge: (persisted, current) => {
+        if (persisted && typeof persisted === "object") {
+          return { ...current, ...(persisted as Partial<AppState>) };
+        }
+        return current as AppState;
+      },
     },
   ),
 );

@@ -4,7 +4,6 @@ import {
   type DateRange,
   MONTHS_SHORT,
   type PeriodFilter,
-  bookLabel,
   currentQuarter,
 } from "@/components/dashboard/dashboardModel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -176,7 +175,9 @@ export function DashboardFilters({
       <Popover>
         <PopoverTrigger asChild>
           <button type="button" className="chip max-w-full min-w-0 py-2 px-3">
-            <span className="truncate">{bookLabel(bookFilter)}</span>
+            <span className="truncate">
+              {bookOptions.find((o) => o.value === bookFilter)?.label ?? bookFilter}
+            </span>
             <ChevronDown className="h-3 w-3 shrink-0" strokeWidth={2} />
           </button>
         </PopoverTrigger>

@@ -1,6 +1,6 @@
--- Evochia Finance: Supabase Postgres schema
+-- Rheo Finance: Supabase Postgres schema
 -- Remote data tables only. Local-only sync_outbox/sync_metadata remain in SQLite.
--- IDs stay TEXT to mirror local seeded IDs such as book-business and cat-biz-exp-*.
+-- IDs stay TEXT because local SQLite owns IDs and stores them as strings.
 
 -- ============================================================
 -- UPDATED_AT helper

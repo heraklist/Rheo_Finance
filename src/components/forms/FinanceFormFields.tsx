@@ -1,11 +1,7 @@
+import type { Book } from "@/lib/types";
 import { formatDateRelative } from "@/lib/utils";
 
 export type EntryType = "income" | "expense" | "reserve";
-
-const BOOK_OPTIONS = [
-  { label: "Επαγγελματικά", value: "book-business" },
-  { label: "Προσωπικά", value: "book-personal" },
-];
 
 const TYPE_OPTIONS: Array<{ label: string; value: EntryType }> = [
   { label: "Έσοδο", value: "income" },
@@ -21,28 +17,29 @@ const VAT_RATES = [
 ];
 
 interface BookSelectorProps {
+  books: Book[];
   bookId: string;
   showVat: boolean;
   onBookIdChange: (value: string) => void;
 }
 
-export function BookSelector({ bookId, showVat, onBookIdChange }: BookSelectorProps) {
+export function BookSelector({ books, bookId, showVat, onBookIdChange }: BookSelectorProps) {
   return (
     <div>
       <div className="form-label">Βιβλίο</div>
       <div className="grid grid-cols-2 bg-sand p-0.5 rounded-md border border-border-light">
-        {BOOK_OPTIONS.map((book) => (
+        {books.map((book) => (
           <button
-            key={book.value}
+            key={book.id}
             type="button"
-            onClick={() => onBookIdChange(book.value)}
+            onClick={() => onBookIdChange(book.id)}
             className={`text-sm py-2 px-3 rounded-md transition-all ${
-              bookId === book.value
+              bookId === book.id
                 ? "bg-cream text-text-primary shadow-sm font-medium"
                 : "text-text-secondary"
             }`}
           >
-            {book.label}
+            {book.name}
           </button>
         ))}
       </div>

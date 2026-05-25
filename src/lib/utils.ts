@@ -21,7 +21,7 @@ export function formatEuro(amount: number, opts: { compact?: boolean } = {}): st
 /**
  * Format ISO date as Greek "dd MMM" (e.g., "06 Μαΐ").
  */
-const MONTHS_SHORT_EL = [
+export const MONTHS_SHORT_EL = [
   "Ιαν",
   "Φεβ",
   "Μαρ",

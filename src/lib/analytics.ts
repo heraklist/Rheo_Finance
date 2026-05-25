@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { computeNextDue, listRecurringTemplates } from "@/lib/recurring";
 import type { CategoryType, RecurringTemplateWithRelations } from "@/lib/types";
+import { MONTHS_SHORT_EL } from "@/lib/utils";
 
 export interface VatQuarter {
   quarter: 1 | 2 | 3 | 4;
@@ -62,20 +63,7 @@ interface MonthlyAverage {
   monthsWithData: number;
 }
 
-const MONTHS_SHORT = [
-  "Ιαν",
-  "Φεβ",
-  "Μαρ",
-  "Απρ",
-  "Μάι",
-  "Ιουν",
-  "Ιουλ",
-  "Αυγ",
-  "Σεπ",
-  "Οκτ",
-  "Νοέ",
-  "Δεκ",
-];
+const MONTHS_SHORT = MONTHS_SHORT_EL;
 
 const QUARTER_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: "Q1 Ιαν-Μαρ",
@@ -236,18 +224,19 @@ export async function getMonthlyTotals(bookId?: string, monthsBack = 12): Promis
 
 export async function getBookTransactionCounts(): Promise<BookTransactionCounts> {
   const db = await getDb();
-  const rows = await db.select<Array<{ book_id: string; count: number }>>(
-    `SELECT book_id, COUNT(*) AS count
-     FROM transactions
-     GROUP BY book_id`,
+  const rows = await db.select<Array<{ slug: string; count: number }>>(
+    `SELECT b.slug, COUNT(*) AS count
+     FROM transactions t
+     JOIN books b ON b.id = t.book_id
+     GROUP BY b.slug`,
   );
   const counts: BookTransactionCounts = { all: 0, business: 0, personal: 0 };
 
   for (const row of rows) {
     const count = Number(row.count);
     counts.all += count;
-    if (row.book_id === "book-business") counts.business = count;
-    if (row.book_id === "book-personal") counts.personal = count;
+    if (row.slug === "business") counts.business = count;
+    if (row.slug === "personal") counts.personal = count;
   }
 
   return counts;
@@ -356,6 +345,7 @@ function addRecurringToForecast(
     safety++;
   }
 
+  safety = 0;
   while (nextDue && nextDue <= forecastEnd && safety < 240) {
     const bucket = monthsByKey.get(nextDue.slice(0, 7));
     if (bucket) applyForecastAmount(bucket, template.category_type, template.amount_gross);

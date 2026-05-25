@@ -1,5 +1,5 @@
 import { type VatQuarter, getVatByQuarter } from "@/lib/analytics";
-import { useAppStore } from "@/lib/store";
+import { isBusinessBook, useAppStore } from "@/lib/store";
 import { cn, formatEuro } from "@/lib/utils";
 import { AlertCircle, ArrowLeft, ArrowRight, Calculator, ListFilter } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +19,8 @@ function quarterCaption(quarter: VatQuarter): string {
 
 export function VatSummary() {
   const currentBookId = useAppStore((state) => state.currentBookId);
-  const showVat = currentBookId === "book-business";
+  const storeBooks = useAppStore((state) => state.books);
+  const showVat = isBusinessBook(storeBooks, currentBookId);
   const [year, setYear] = useState(new Date().getFullYear());
   const [quarters, setQuarters] = useState<VatQuarter[]>([]);
   const [loading, setLoading] = useState(true);

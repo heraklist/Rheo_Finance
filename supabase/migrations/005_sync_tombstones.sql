@@ -1,4 +1,4 @@
--- Evochia Finance: soft-delete tombstones for sync
+-- Rheo Finance: soft-delete tombstones for sync
 -- Existing projects should run this after 004_delete_current_user_rpc.sql.
 -- The app keeps deleted remote rows as tombstones so other devices can pull deletes.
 

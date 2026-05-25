@@ -92,14 +92,19 @@ export function TransactionDetail() {
   async function handleUpdate(values: TransactionFormValues) {
     if (!transaction) return;
 
-    const updated = await updateTransaction({
-      id: transaction.id,
-      receipt_photo_path: transaction.receipt_photo_path,
-      ...values,
-    });
-    const reloaded = await getTransaction(updated.id);
-    setTransaction(reloaded);
-    setEditing(false);
+    try {
+      const updated = await updateTransaction({
+        id: transaction.id,
+        receipt_photo_path: transaction.receipt_photo_path,
+        ...values,
+      });
+      const reloaded = await getTransaction(updated.id);
+      setTransaction(reloaded);
+      setEditing(false);
+    } catch (err) {
+      console.error("Failed to update transaction:", err);
+      setError("Δεν αποθηκεύτηκαν οι αλλαγές.");
+    }
   }
 
   async function handleDelete() {

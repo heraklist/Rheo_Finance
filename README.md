@@ -85,11 +85,10 @@ Output σε `src-tauri/target/release/bundle/`.
 │   - DB file in OS app data dir           │
 └──────────────────────────────────────────┘
 
-# Phase 2 will add:
-- Supabase EU sync target
-- Outbox + sync engine
-- Auth (magic link)
-- Receipt photo upload
+# Phase 2 (done):
+- Supabase EU sync (outbox + LWW)
+- Auth (email/password + TOTP MFA)
+- Receipt photo upload + Supabase Storage
 ```
 
 ---
@@ -111,14 +110,14 @@ rheo-finance/
 │   ├── index.css                   # Design tokens + Tailwind
 │   ├── components/
 │   │   ├── ui/                     # Custom components (KPI, TxRow, SyncPill...)
-│   │   ├── charts/                 # Recharts wrappers
+│   │   ├── charts/                 # SVG chart components
 │   │   └── layout/                 # AppLayout (header + FAB)
 │   ├── pages/                      # Routed pages
 │   │   ├── Dashboard.tsx           # Main KPIs + recent
 │   │   ├── AddTransaction.tsx      # Form για νέες εγγραφές
 │   │   ├── TransactionsList.tsx    # Full list grouped by date
 │   │   ├── TransactionDetail.tsx   # Detail, edit, delete
-│   │   └── Placeholder.tsx         # Stub για unbuilt routes
+│   │   └── Signup.tsx              # Account registration
 │   ├── lib/                        # Business logic
 │   │   ├── db.ts                   # SQLite client
 │   │   ├── types.ts                # Entity types
@@ -153,26 +152,29 @@ rheo-finance/
 - ✅ Transaction detail με edit/delete
 - ✅ shadcn/ui primitives installed for forms/sheets/popovers/calendar
 - ✅ Supabase schema + RLS migration files
-- ✅ Supabase magic link auth flow
-- ✅ Protected app routes + minimal Settings sign out
+- ✅ Supabase email/password auth + TOTP MFA
+- ✅ User registration (signup page)
+- ✅ Protected app routes + Settings sign out
 - ✅ Saves to local SQLite
 - ✅ Greek copy throughout
 - ✅ Brand identity applied (charcoal + gold + cream palette)
 - ✅ Mobile-responsive layout (works on 375px+)
 - ✅ Sync status pill in header (statically "synced" until Phase 2)
 
-## What's stubbed (placeholder pages)
+## Additional working features
 
-- `/recurring` — recurring templates management
-- `/vat` — quarterly VAT summary
-- `/forecast` — 12-month projection
-- `/settings` — preferences + Excel export
-
-## What's coming in Phase 2
-
-- Outbox-based sync engine
-- Receipt photo upload (camera + Supabase Storage)
-- Cascading category dropdowns
+- ✅ Supabase sync engine (outbox + LWW)
+- ✅ Receipt photo upload + Supabase Storage
+- ✅ Recurring templates management
+- ✅ VAT quarterly summary
+- ✅ 12-month forecast
+- ✅ Settings (company, preferences, MFA, sync, backup, export, updater)
+- ✅ Category CRUD with archive/restore
+- ✅ Excel export (XLSX)
+- ✅ Manual + auto-backup (JSON)
+- ✅ Stronghold secure auth storage (desktop)
+- ✅ GitHub private updater integration
+- ✅ Plans & monthly coverage
 
 ---
 
@@ -208,16 +210,15 @@ To change a color: update both. Or remove duplication later by importing tokens 
 
 ## Reference docs
 
-- [Project Plan v1.1](./docs/Evochia_Finance_Project_Plan_v1.1.md) — full architecture
+- [Project Plan v1.1](./docs/Evochia_Finance_Project_Plan_v1.1.md) — full architecture (legacy filename, content valid)
 - [Claude Design Brief](./docs/Claude_Design_Brief.md) — visual direction
 
 ---
 
 ## About
 
-Rheo started as an internal tool for Evochia (premium private chef + catering, Athens).
-It evolved into an independent product as the patterns generalized to other
-independent professionals. Built by Heraklis.
+Rheo Finance is an independent local-first finance app for freelancers, small
+businesses, and independent professionals. Built by Heraklis.
 
 ---
 

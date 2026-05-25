@@ -304,14 +304,6 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
   const trimmedName = name.trim();
   if (!trimmedName) return null;
 
-  const db = await getDb();
-  const existing = await db.select<Tag[]>(
-    "SELECT * FROM tags WHERE LOWER(name) = LOWER(?) AND is_archived = 0 LIMIT 1",
-    [trimmedName],
-  );
-
-  if (existing[0]) return existing[0];
-
   const ts = now();
   const tag: Tag = {
     id: uuid(),
@@ -324,7 +316,14 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
     server_updated_at: null,
   };
 
-  await runInTransaction(async (txDb) => {
+  const result = await runInTransaction(async (txDb) => {
+    const existing = await txDb.select<Tag[]>(
+      "SELECT * FROM tags WHERE LOWER(name) = LOWER(?) AND is_archived = 0 LIMIT 1",
+      [trimmedName],
+    );
+
+    if (existing[0]) return existing[0];
+
     await txDb.execute(
       `INSERT INTO tags
          (id, name, description, is_archived, created_at, sync_status, local_updated_at, server_updated_at)
@@ -346,7 +345,9 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
        VALUES (?, ?, ?, ?, ?)`,
       ["tag", tag.id, "create", JSON.stringify(tag), ts],
     );
+
+    return tag;
   });
 
-  return tag;
+  return result;
 }

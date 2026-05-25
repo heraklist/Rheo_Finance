@@ -144,10 +144,11 @@ export async function getTotals(opts: {
     if (r.category_type === "income") {
       totals.income = r.total_gross || 0;
       totals.vat_output = r.total_vat || 0;
-    } else if (r.category_type === "expense") {
-      totals.expense = r.total_gross || 0;
-      totals.vat_input = r.total_vat || 0;
+    } else if (r.category_type === "expense" || r.category_type === "reserve") {
+      totals.expense += r.total_gross || 0;
+      totals.vat_input += r.total_vat || 0;
     }
+    // transfer type is zero-sum — excluded from totals intentionally
   }
   totals.net = totals.income - totals.expense;
   totals.vat_net = totals.vat_output - totals.vat_input;
@@ -366,6 +367,17 @@ export async function deleteTransaction(id: string): Promise<void> {
   const ts = now();
 
   await runInTransaction(async (db) => {
+    // Explicitly null out coverage links before deleting (matches sync engine pattern).
+    // This avoids relying solely on FK ON DELETE SET NULL which depends on PRAGMA foreign_keys.
+    await db.execute(
+      "UPDATE coverage_expense SET linked_transaction_id = NULL WHERE linked_transaction_id = ?",
+      [id],
+    );
+    await db.execute(
+      "UPDATE coverage_income SET linked_transaction_id = NULL WHERE linked_transaction_id = ?",
+      [id],
+    );
+
     await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 
     await db.execute(

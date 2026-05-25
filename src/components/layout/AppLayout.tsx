@@ -2,7 +2,7 @@ import { BrandMark } from "@/components/ui/BrandMark";
 import { SyncPill } from "@/components/ui/SyncPill";
 import { UpdateBanner } from "@/components/ui/UpdateBanner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useAppStore } from "@/lib/store";
+import { isBusinessBook, useAppStore } from "@/lib/store";
 import {
   Calculator,
   CalendarDays,
@@ -18,9 +18,9 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 
 export function AppLayout() {
   const location = useLocation();
-  const { currentBookId, syncState, pendingCount } = useAppStore();
+  const { books, currentBookId, syncState, pendingCount } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const showVat = currentBookId === "book-business";
+  const showVat = isBusinessBook(books, currentBookId);
   const hideAppHeader =
     location.pathname === "/add" ||
     location.pathname.startsWith("/transactions/") ||

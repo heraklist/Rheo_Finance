@@ -11,7 +11,6 @@ import {
 } from "@/components/settings/SettingsSections";
 import {
   APP_VERSION,
-  BOOK_OPTIONS,
   CURRENT_YEAR,
   EXPORT_BOOK_OPTIONS,
   PAYMENT_METHODS,
@@ -50,6 +49,7 @@ function messageFromError(err: unknown): string {
 
 export function Settings() {
   const {
+    books: storeBooks,
     user,
     syncState,
     lastSyncedAt,
@@ -101,8 +101,8 @@ export function Settings() {
     income: 0,
     expense: 0,
   });
-  const currentBookLabel =
-    BOOK_OPTIONS.find((book) => book.value === currentBookId)?.label ?? "Τρέχον book";
+  const dynamicBookOptions = storeBooks.map((b) => ({ label: b.name, value: b.id }));
+  const currentBookLabel = storeBooks.find((b) => b.id === currentBookId)?.name ?? "Τρέχον book";
 
   const selectedPeriod = useMemo(
     () => resolveExportPeriod(periodKey, customFromDate, customToDate, quarterPeriods),
@@ -527,7 +527,7 @@ export function Settings() {
       />
 
       <PreferencesSection
-        bookOptions={BOOK_OPTIONS}
+        bookOptions={dynamicBookOptions}
         currentBookId={currentBookId}
         defaultPaymentMethod={defaultPaymentMethod}
         defaultVatRate={defaultVatRate}

@@ -19,9 +19,9 @@ const SNAPSHOT_FILE = "supabase-auth-v2.stronghold";
 const STORAGE_KEY_PREFIX = "supabase:";
 const STRONGHOLD_PASSPHRASE_KEY = "rheo:stronghold-passphrase:v1";
 const NATIVE_SECURE_STORAGE_COMMAND = "plugin:secure_auth_storage";
+const LEGACY_SHARED_AUTH_STORAGE_KEYS = ["updater:github-token"];
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
-let strongholdAvailable: boolean | null = null;
 let tauriPlatformPromise: Promise<string | null> | null = null;
 
 interface NativeSecureStorageValue {
@@ -44,29 +44,34 @@ function strongholdKey(key: string): string {
   return `${STORAGE_KEY_PREFIX}${key}`;
 }
 
-function createStrongholdPassphrase(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
-
-function getStrongholdPassphrase(): string {
-  const existing = localGetItem(STRONGHOLD_PASSPHRASE_KEY);
-  if (existing) return existing;
-
-  const passphrase = createStrongholdPassphrase();
-  localSetItem(STRONGHOLD_PASSPHRASE_KEY, passphrase);
-  return passphrase;
-}
-
-function logStrongholdFailure(operation: string, error: unknown): void {
-  console.error(`Stronghold auth storage ${operation} failed.`, error);
-}
-
 function logNativeSecureStorageFailure(operation: string, error: unknown): void {
   console.error(`Native secure auth storage ${operation} failed.`, error);
+}
+
+async function removeLegacyStrongholdPassphrase(): Promise<void> {
+  if (!localGetItem(STRONGHOLD_PASSPHRASE_KEY)) return;
+
+  localRemoveItem(STRONGHOLD_PASSPHRASE_KEY);
+}
+
+async function migrateKnownLegacyStrongholdItems(keys: string[]): Promise<void> {
+  if (!localGetItem(STRONGHOLD_PASSPHRASE_KEY)) return;
+
+  for (const key of new Set(keys)) {
+    const existingNativeValue = await readNativeSecureItem(key);
+    if (existingNativeValue !== null) {
+      await removeStrongholdItem(key);
+      continue;
+    }
+
+    const legacyValue = await readStrongholdItem(key);
+    if (legacyValue === null) continue;
+
+    await writeNativeSecureItem(key, legacyValue);
+    await removeStrongholdItem(key);
+  }
+
+  await removeLegacyStrongholdPassphrase();
 }
 
 async function getTauriPlatform(): Promise<string | null> {
@@ -82,17 +87,6 @@ async function getTauriPlatform(): Promise<string | null> {
 async function canUseNativeSecureStorage(): Promise<boolean> {
   const currentPlatform = await getTauriPlatform();
   return currentPlatform === "android" || currentPlatform === "windows";
-}
-
-async function canUseStronghold(): Promise<boolean> {
-  if (!isTauri()) return false;
-  if (strongholdAvailable !== null) return strongholdAvailable;
-
-  const currentPlatform = await getTauriPlatform();
-  strongholdAvailable =
-    currentPlatform !== null && currentPlatform !== "android" && currentPlatform !== "ios";
-
-  return strongholdAvailable;
 }
 
 async function loadOrCreateClient(stronghold: Stronghold): Promise<Client> {
@@ -114,33 +108,33 @@ async function initializeStrongholdState(
   return { stronghold, store: client.getStore() };
 }
 
-async function getStrongholdState(): Promise<StrongholdState> {
-  strongholdStatePromise ??= initializeStrongholdState(
-    SNAPSHOT_FILE,
-    getStrongholdPassphrase(),
-  ).catch((error: unknown) => {
-    strongholdStatePromise = null;
-    throw error;
-  });
+async function getLegacyStrongholdState(): Promise<StrongholdState | null> {
+  const passphrase = localGetItem(STRONGHOLD_PASSPHRASE_KEY);
+  if (!passphrase) return null;
+
+  strongholdStatePromise ??= initializeStrongholdState(SNAPSHOT_FILE, passphrase).catch(
+    (error: unknown) => {
+      strongholdStatePromise = null;
+      throw error;
+    },
+  );
   return strongholdStatePromise;
 }
 
-async function writeStrongholdItem(key: string, value: string): Promise<void> {
-  const { stronghold, store } = await getStrongholdState();
-  const encoded = Array.from(new TextEncoder().encode(value));
-  await store.insert(strongholdKey(key), encoded);
-  await stronghold.save();
-  localRemoveItem(key);
-}
-
 async function readStrongholdItem(key: string): Promise<string | null> {
-  const { store } = await getStrongholdState();
+  const state = await getLegacyStrongholdState();
+  if (!state) return null;
+
+  const { store } = state;
   const value = await store.get(strongholdKey(key));
   return value === null ? null : new TextDecoder().decode(value);
 }
 
 async function removeStrongholdItem(key: string): Promise<void> {
-  const { stronghold, store } = await getStrongholdState();
+  const state = await getLegacyStrongholdState();
+  if (!state) return;
+
+  const { stronghold, store } = state;
   const existing = await store.get(strongholdKey(key));
 
   if (existing !== null) {
@@ -175,12 +169,21 @@ export const secureAuthStorage: AuthStorage = {
     if (await canUseNativeSecureStorage()) {
       try {
         const value = await readNativeSecureItem(key);
-        if (value !== null) return value;
+        if (value !== null) {
+          localRemoveItem(key);
+          await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
+          return value;
+        }
 
         const legacyValue = localGetItem(key);
         if (legacyValue !== null) {
           try {
             await writeNativeSecureItem(key, legacyValue);
+            try {
+              await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
+            } catch (error) {
+              logNativeSecureStorageFailure("legacy Stronghold cleanup", error);
+            }
             return legacyValue;
           } catch (error) {
             logNativeSecureStorageFailure("local migration", error);
@@ -194,8 +197,7 @@ export const secureAuthStorage: AuthStorage = {
             if (strongholdValue !== null) {
               try {
                 await writeNativeSecureItem(key, strongholdValue);
-                await removeStrongholdItem(key);
-                localRemoveItem(STRONGHOLD_PASSPHRASE_KEY);
+                await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
               } catch (error) {
                 logNativeSecureStorageFailure("Stronghold migration", error);
               }
@@ -213,31 +215,11 @@ export const secureAuthStorage: AuthStorage = {
       }
     }
 
-    if (!(await canUseStronghold())) return localGetItem(key);
-
-    try {
-      const { store } = await getStrongholdState();
-      const value = await store.get(strongholdKey(key));
-
-      if (value !== null) {
-        return new TextDecoder().decode(value);
-      }
-
-      const legacyValue = localGetItem(key);
-      if (legacyValue !== null) {
-        try {
-          await writeStrongholdItem(key, legacyValue);
-        } catch (error) {
-          logStrongholdFailure("migration", error);
-        }
-        return legacyValue;
-      }
-
-      return null;
-    } catch (error) {
-      logStrongholdFailure("read", error);
+    if (isTauri()) {
       return null;
     }
+
+    return localGetItem(key);
   },
   async setItem(key, value) {
     if (await canUseNativeSecureStorage()) {
@@ -250,17 +232,11 @@ export const secureAuthStorage: AuthStorage = {
       return;
     }
 
-    if (!(await canUseStronghold())) {
-      localSetItem(key, value);
-      return;
+    if (isTauri()) {
+      throw new Error("Secure auth storage is unavailable on this platform.");
     }
 
-    try {
-      await writeStrongholdItem(key, value);
-    } catch (error) {
-      logStrongholdFailure("write", error);
-      throw error;
-    }
+    localSetItem(key, value);
   },
   async removeItem(key) {
     if (await canUseNativeSecureStorage()) {
@@ -273,16 +249,6 @@ export const secureAuthStorage: AuthStorage = {
       return;
     }
 
-    if (!(await canUseStronghold())) {
-      localRemoveItem(key);
-      return;
-    }
-
-    try {
-      await removeStrongholdItem(key);
-    } catch (error) {
-      logStrongholdFailure("remove", error);
-      localRemoveItem(key);
-    }
+    localRemoveItem(key);
   },
 };

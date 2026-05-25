@@ -3,7 +3,7 @@ import { useCompanyName } from "@/hooks/useCompanyName";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { ShieldCheck, ShieldPlus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface EnrollmentState {
   factorId: string;
@@ -45,9 +45,19 @@ export function MfaSettingsPanel() {
   const [verificationCode, setVerificationCode] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const refreshFactors = useCallback(async () => {
     const factors = await supabase.auth.mfa.listFactors();
+
+    if (!mountedRef.current) return;
 
     if (factors.error) {
       console.error("Failed to load MFA factors:", factors.error);
@@ -158,6 +168,11 @@ export function MfaSettingsPanel() {
 
   async function handleUnenroll() {
     if (busy) return;
+
+    const confirmed = window.confirm(
+      "Σίγουρα θες να απενεργοποιήσεις τον authenticator; Θα χρειαστεί νέα σύνδεση για επανενεργοποίηση.",
+    );
+    if (!confirmed) return;
 
     setBusy(true);
     setMessage("");

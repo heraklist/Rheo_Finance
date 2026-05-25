@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.delete_current_user()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = ''
 AS $$
 DECLARE
   current_user_id uuid := auth.uid();

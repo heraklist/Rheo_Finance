@@ -1,4 +1,4 @@
--- Evochia Finance: Plan Hub and Monthly Coverage remote schema
+-- Rheo Finance: Plan Hub and Monthly Coverage remote schema
 -- Run after 005_sync_tombstones.sql.
 
 CREATE TABLE IF NOT EXISTS public.plan (

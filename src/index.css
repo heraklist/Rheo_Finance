@@ -156,6 +156,46 @@
     @apply animate-shimmer rounded-sm;
   }
 
+  .progress-meter {
+    @apply block w-full overflow-hidden rounded-full border-0 bg-sand;
+    appearance: none;
+  }
+
+  .progress-meter::-webkit-progress-bar {
+    background: var(--sand);
+    border-radius: 9999px;
+  }
+
+  .progress-meter::-webkit-progress-value {
+    background: currentColor;
+    border-radius: 9999px;
+  }
+
+  .progress-meter::-moz-progress-bar {
+    background: currentColor;
+    border-radius: 9999px;
+  }
+
+  .progress-meter.bg-income,
+  .progress-meter.text-income {
+    color: var(--income);
+  }
+
+  .progress-meter.bg-warning,
+  .progress-meter.text-warning {
+    color: var(--warning);
+  }
+
+  .progress-meter.bg-expense,
+  .progress-meter.text-expense {
+    color: var(--expense);
+  }
+
+  .progress-meter.bg-gold,
+  .progress-meter.text-gold {
+    color: var(--gold);
+  }
+
   /* FAB */
   .fab {
     @apply fixed right-4 bottom-4 w-[52px] h-[52px] rounded-full z-50;

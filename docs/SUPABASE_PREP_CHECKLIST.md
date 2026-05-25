@@ -5,7 +5,7 @@
 ## 1. Project
 
 - [ ] Supabase → New Project
-- [ ] Name: `evochia-finance`
+- [ ] Name: `rheo-finance`
 - [ ] Region: Frankfurt / EU Central (`eu-central-1`)
 - [ ] Strong database password σε password manager
 - [ ] Περίμενε να ολοκληρωθεί το provisioning
@@ -44,11 +44,11 @@ VITE_SUPABASE_ANON_KEY=eyJxxx...
 Στο Supabase Dashboard:
 
 - [ ] Authentication → Providers → Email enabled
-- [ ] Magic link / OTP enabled
+- [ ] Email/password sign-up enabled
 - [ ] Site URL για desktop dev: `http://localhost:1420`
 - [ ] Redirect URLs να περιλαμβάνουν `http://localhost:1420`
 
-Το production/domain redirect (`https://finance.evochia.gr`) μπαίνει αργότερα όταν χρειαστεί.
+Το production/domain redirect (`https://finance.rheo.app`) μπαίνει αργότερα όταν χρειαστεί.
 
 ## Ready Signal
 

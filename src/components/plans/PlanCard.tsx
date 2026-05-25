@@ -33,10 +33,20 @@ function pressureClass(pressure: number): string {
   return "bg-income";
 }
 
+function isOverdue(targetDate: string | null): boolean {
+  if (!targetDate) return false;
+  const target = new Date(targetDate);
+  if (Number.isNaN(target.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return target < today;
+}
+
 export function PlanCard({ plan }: { plan: PlanWithTotals }) {
   const pressure = calculateBudgetPressure(Math.max(0, plan.funding_gap), plan.target_date, 500);
   const months = monthsUntilTarget(plan.target_date);
   const requiredMonthly = Math.max(0, plan.funding_gap) / months;
+  const overdue = plan.status === "active" && plan.funding_gap > 0 && isOverdue(plan.target_date);
 
   return (
     <Link
@@ -61,6 +71,11 @@ export function PlanCard({ plan }: { plan: PlanWithTotals }) {
             >
               {STATUS_LABELS[plan.status]}
             </span>
+            {overdue ? (
+              <span className="rounded-sm bg-expense/10 px-2 py-0.5 text-[10px] font-semibold text-expense">
+                Εκπρόθεσμο
+              </span>
+            ) : null}
           </div>
           <h2 className="truncate text-h3 text-text-primary">{plan.name}</h2>
           <p className="mt-1 text-caption text-text-muted">
@@ -97,12 +112,12 @@ export function PlanCard({ plan }: { plan: PlanWithTotals }) {
           <span>{formatEuro(requiredMonthly, { compact: true })}/μήνα</span>
           <span>{pressure}% πίεση</span>
         </div>
-        <div className="h-1.5 rounded-full bg-sand">
-          <div
-            className={cn("h-1.5 rounded-full", pressureClass(pressure))}
-            style={{ width: `${Math.min(100, Math.max(0, pressure))}%` }}
-          />
-        </div>
+        <progress
+          aria-label="Πίεση budget"
+          className={cn("progress-meter h-1.5", pressureClass(pressure))}
+          max={100}
+          value={Math.min(100, Math.max(0, pressure))}
+        />
       </div>
     </Link>
   );
