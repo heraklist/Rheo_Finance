@@ -74,14 +74,14 @@ export function SubscriptionSection() {
               className="inline-flex items-center gap-2 rounded-md bg-charcoal px-4 py-2.5 text-sm font-semibold text-cream"
             >
               <Star className="h-4 w-4" strokeWidth={1.7} />
-              Αναβάθμιση σε Pro — 5€/μήνα
+              Αναβάθμιση σε Solo — 6,90€/μήνα
             </button>
             <button
               type="button"
               onClick={() => void openUpgradeUrl("annual")}
               className="inline-flex items-center gap-2 rounded-md border border-border-light px-4 py-2.5 text-sm font-medium text-charcoal hover:bg-sand"
             >
-              48€/έτος (εξοικονόμηση 20%)
+              69€/έτος (εξοικονόμηση 17%)
             </button>
           </>
         )}
@@ -100,7 +100,7 @@ export function SubscriptionSection() {
       {!isPro && (
         <div className="mt-4 rounded-md border border-gold/15 bg-gold/5 p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase text-gold">
-            Τι περιλαμβάνει το Pro
+            Τι περιλαμβάνει το Solo
           </p>
           <ul className="grid gap-1.5 text-body-sm text-text-secondary sm:grid-cols-2">
             <li className="flex items-center gap-2">

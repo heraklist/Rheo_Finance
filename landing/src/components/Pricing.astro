@@ -1,6 +1,6 @@
 ---
 const free = [
-  "1 βιβλίο (Επαγγελματικά ή Προσωπικά)",
+  "1 βιβλίο",
   "Έως 50 καταχωρήσεις / μήνα",
   "Dashboard & γραφήματα",
   "ΦΠΑ τριμήνου",
@@ -8,14 +8,21 @@ const free = [
   "Windows & Android",
 ];
 
-const pro = [
+const solo = [
   "Απεριόριστα βιβλία & καταχωρήσεις",
   "Cloud sync σε όλες τις συσκευές",
   "Αποδείξεις & φωτογραφίες",
   "Επαναλαμβανόμενα templates",
   "Πρόβλεψη 12 μηνών",
+  "Κάλυψη εξόδων μήνα",
+];
+
+const pro = [
+  "Όλα τα Solo +",
   "Excel export για λογιστή",
   "Backup σε Google Drive",
+  "Σχέδια & σενάρια (Plan Builder)",
+  "Κέντρο ελέγχου (Review Queue)",
   "Priority support",
 ];
 ---
@@ -25,7 +32,7 @@ const pro = [
     <div class="mx-auto max-w-xl text-center">
       <h2 class="text-h1 text-charcoal">Απλή τιμολόγηση</h2>
       <p class="mt-3 text-body text-text-secondary">
-        Ξεκίνα δωρεάν. Αναβάθμισε όταν χρειαστείς sync &amp; cloud.
+        Ξεκίνα δωρεάν. Αναβάθμισε μέσα από την εφαρμογή.
       </p>
 
       <!-- Billing toggle -->
@@ -44,37 +51,27 @@ const pro = [
           ></span>
         </button>
         <span id="label-annual" class="text-body-sm text-text-muted">
-          Ετήσιο <span class="ml-1 rounded-full bg-income/10 px-2 py-0.5 text-[11px] font-semibold text-income">-20%</span>
+          Ετήσιο <span class="ml-1 rounded-full bg-income/10 px-2 py-0.5 text-[11px] font-semibold text-income">-17%</span>
         </span>
       </div>
     </div>
 
-    <div class="mt-10 grid gap-6 md:grid-cols-2 md:gap-8">
+    <div class="mt-10 grid gap-5 md:grid-cols-3">
       <!-- Free -->
-      <div class="pricing-card">
+      <div class="pricing-card flex flex-col">
         <p class="text-label uppercase tracking-widest text-text-muted">Free</p>
         <div class="mt-3 flex items-baseline gap-1">
           <span class="text-display text-charcoal">0&euro;</span>
           <span class="text-body-sm text-text-muted">/ για πάντα</span>
         </div>
         <p class="mt-2 text-body-sm text-text-secondary">
-          Για να ξεκινήσεις χωρίς δέσμευση.
+          Βασική οργάνωση χωρίς δέσμευση.
         </p>
-        <ul class="mt-6 flex flex-col gap-2.5">
+        <ul class="mt-6 flex flex-1 flex-col gap-2.5">
           {
             free.map((item) => (
               <li class="flex items-start gap-2 text-body-sm text-text-primary">
-                <svg
-                  class="mt-0.5 shrink-0"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#2D6A4F"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
+                <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {item}
@@ -85,36 +82,24 @@ const pro = [
         <a href="#download" class="btn-secondary mt-8 w-full">Κατέβασε δωρεάν</a>
       </div>
 
-      <!-- Pro -->
-      <div class="pricing-card-pro relative">
-        <span
-          class="absolute -top-3 right-6 rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-text-on-dark"
-        >
+      <!-- Solo -->
+      <div class="pricing-card-pro relative flex flex-col">
+        <span class="absolute -top-3 right-6 rounded-full bg-gold px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-text-on-dark">
           Δημοφιλές
         </span>
-        <p class="text-label uppercase tracking-widest text-gold">Pro</p>
+        <p class="text-label uppercase tracking-widest text-gold">Solo</p>
         <div class="mt-3 flex items-baseline gap-1">
-          <span id="pro-price" class="text-display text-charcoal">5&euro;</span>
-          <span id="pro-period" class="text-body-sm text-text-muted">/ μήνα</span>
+          <span id="solo-price" class="text-display text-charcoal">6,90&euro;</span>
+          <span id="solo-period" class="text-body-sm text-text-muted">/ μήνα</span>
         </div>
-        <p id="pro-subtitle" class="mt-2 text-body-sm text-text-secondary">
-          Sync, αποδείξεις, export — όλα τα εργαλεία.
+        <p id="solo-subtitle" class="mt-2 text-body-sm text-text-secondary">
+          Sync, αποδείξεις, απεριόριστα.
         </p>
-        <ul class="mt-6 flex flex-col gap-2.5">
+        <ul class="mt-6 flex flex-1 flex-col gap-2.5">
           {
-            pro.map((item) => (
+            solo.map((item) => (
               <li class="flex items-start gap-2 text-body-sm text-text-primary">
-                <svg
-                  class="mt-0.5 shrink-0"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#B8860B"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
+                <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {item}
@@ -122,12 +107,47 @@ const pro = [
             ))
           }
         </ul>
-        <a href="#download" class="btn-gold mt-8 w-full">Ξεκίνα με Pro</a>
+        <a href="#download" class="btn-gold mt-8 w-full">Ξεκίνα με Solo</a>
         <p class="mt-2 text-center text-[11px] text-text-muted">
-          Κατέβασε δωρεάν, αναβάθμισε μέσα από την εφαρμογή.
+          Αναβάθμισε μέσα από την εφαρμογή.
+        </p>
+      </div>
+
+      <!-- Pro -->
+      <div class="pricing-card flex flex-col">
+        <p class="text-label uppercase tracking-widest text-charcoal">Pro</p>
+        <div class="mt-3 flex items-baseline gap-1">
+          <span id="pro-price" class="text-display text-charcoal">12,90&euro;</span>
+          <span id="pro-period" class="text-body-sm text-text-muted">/ μήνα</span>
+        </div>
+        <p id="pro-subtitle" class="mt-2 text-body-sm text-text-secondary">
+          Export, σχέδια, προχωρημένα εργαλεία.
+        </p>
+        <ul class="mt-6 flex flex-1 flex-col gap-2.5">
+          {
+            pro.map((item) => (
+              <li class="flex items-start gap-2 text-body-sm text-text-primary">
+                <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1818" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {item}
+              </li>
+            ))
+          }
+        </ul>
+        <a href="#download" class="btn-primary mt-8 w-full">Ξεκίνα με Pro</a>
+        <p class="mt-2 text-center text-[11px] text-text-muted">
+          Αναβάθμισε μέσα από την εφαρμογή.
         </p>
       </div>
     </div>
+
+    <p class="mt-8 text-center text-body-sm text-text-muted">
+      Οι πληρωμές γίνονται μέσω <strong class="font-medium text-text-secondary">Stripe</strong>.
+      Ακύρωση οποτεδήποτε.
+      <a href="/terms" class="underline underline-offset-2 hover:text-charcoal">Όροι</a> ·
+      <a href="/privacy" class="underline underline-offset-2 hover:text-charcoal">Απόρρητο</a>
+    </p>
   </div>
 </section>
 
@@ -136,6 +156,9 @@ const pro = [
   const dot = document.getElementById("toggle-dot");
   const labelMonthly = document.getElementById("label-monthly");
   const labelAnnual = document.getElementById("label-annual");
+  const soloPrice = document.getElementById("solo-price");
+  const soloPeriod = document.getElementById("solo-period");
+  const soloSubtitle = document.getElementById("solo-subtitle");
   const proPrice = document.getElementById("pro-price");
   const proPeriod = document.getElementById("pro-period");
   const proSubtitle = document.getElementById("pro-subtitle");
@@ -152,18 +175,24 @@ const pro = [
       labelMonthly!.classList.replace("text-charcoal", "text-text-muted");
       labelMonthly!.classList.replace("font-medium", "font-normal");
       labelAnnual!.classList.replace("text-text-muted", "text-charcoal");
-      proPrice!.innerHTML = "4&euro;";
+      soloPrice!.innerHTML = "5,75&euro;";
+      soloPeriod!.textContent = "/ μήνα";
+      soloSubtitle!.textContent = "69€ / έτος — εξοικονόμηση 17%.";
+      proPrice!.innerHTML = "10,75&euro;";
       proPeriod!.textContent = "/ μήνα";
-      proSubtitle!.textContent = "48€ / έτος — εξοικονόμηση 20%.";
+      proSubtitle!.textContent = "129€ / έτος — εξοικονόμηση 17%.";
     } else {
       toggle.classList.replace("bg-gold", "bg-border-mid");
       dot!.style.transform = "translateX(0)";
       labelMonthly!.classList.replace("text-text-muted", "text-charcoal");
       labelMonthly!.classList.replace("font-normal", "font-medium");
       labelAnnual!.classList.replace("text-charcoal", "text-text-muted");
-      proPrice!.innerHTML = "5&euro;";
+      soloPrice!.innerHTML = "6,90&euro;";
+      soloPeriod!.textContent = "/ μήνα";
+      soloSubtitle!.textContent = "Sync, αποδείξεις, απεριόριστα.";
+      proPrice!.innerHTML = "12,90&euro;";
       proPeriod!.textContent = "/ μήνα";
-      proSubtitle!.textContent = "Sync, αποδείξεις, export — όλα τα εργαλεία.";
+      proSubtitle!.textContent = "Export, σχέδια, προχωρημένα εργαλεία.";
     }
   });
 </script>
