@@ -18,11 +18,11 @@ export const config = {
   api: { bodyParser: false },
 };
 
-async function getRawBody(req: VercelRequest): Promise<Buffer> {
+async function getRawBody(req: VercelRequest): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
+    const chunks: Uint8Array[] = [];
+    req.on("data", (chunk: Uint8Array) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
 }
