@@ -1,37 +1,21 @@
 # Supabase Setup
 
-Run these files manually in the Supabase SQL Editor before continuing `SESSION_005`.
+Run these files manually in the Supabase SQL Editor before using sync in a fresh Rheo Finance project.
 
 ## Order
 
-1. Open Supabase project `rheo-finance`
-2. Go to SQL Editor → New query
-3. Paste `supabase/migrations/001_schema.sql`
-4. Run
-5. New query
-6. Paste `supabase/migrations/002_rls_policies.sql`
-7. Run
-8. New query
-9. Paste `supabase/migrations/003_storage_receipts.sql`
-10. Run
-11. New query
-12. Paste `supabase/migrations/004_delete_current_user_rpc.sql`
-13. Run
-14. New query
-15. Paste `supabase/migrations/005_sync_tombstones.sql`
-16. Run
-17. New query
-18. Paste `supabase/migrations/006_plans_coverage.sql`
-19. Run
-20. New query
-21. Paste `supabase/migrations/007_rls_policy_hardening.sql`
-22. Run
-23. New query
-24. Paste `supabase/migrations/008_coverage_income_recurring.sql`
-25. Run
-26. New query
-27. Paste `supabase/migrations/009_authenticated_data_api_grants.sql`
-28. Run
+1. Open the Supabase project for Rheo Finance.
+2. Go to SQL Editor -> New query.
+3. Paste `supabase/migrations/001_schema.sql` and run it.
+4. Paste `supabase/migrations/002_rls_policies.sql` and run it.
+5. Paste `supabase/migrations/003_storage_receipts.sql` and run it.
+6. Paste `supabase/migrations/004_delete_current_user_rpc.sql` and run it.
+7. Paste `supabase/migrations/005_sync_tombstones.sql` and run it.
+8. Paste `supabase/migrations/006_plans_coverage.sql` and run it.
+9. Paste `supabase/migrations/007_rls_policy_hardening.sql` and run it.
+10. Paste `supabase/migrations/008_coverage_income_recurring.sql` and run it.
+11. Paste `supabase/migrations/009_authenticated_data_api_grants.sql` and run it.
+12. Paste `supabase/migrations/20260525041610_enforce_user_fk_scope.sql` and run it.
 
 ## Verify
 
@@ -49,9 +33,12 @@ In Table Editor you should see 11 application tables:
 - `coverage_expense`
 - `coverage_income`
 
-For each table, RLS must be enabled.
-For each table, the `authenticated` role must have Data API table privileges.
-The `anon` role should not have direct table privileges.
+For each table:
+
+- RLS must be enabled.
+- The `authenticated` role must have Data API table privileges.
+- The `anon` role should not have direct table privileges.
+- Child rows must be tenant-consistent through `(user_id, parent_id)` foreign keys.
 
 Storage must also have a private bucket named `receipts`. Receipt files are stored as:
 

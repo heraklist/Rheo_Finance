@@ -23,6 +23,7 @@
       "node_modules",
       "dist",
       "build",
+      "landing",
       "docs",
       "src-tauri/target",
       "src-tauri/gen",

@@ -1,11 +1,3 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { PaymentMethod } from "@/lib/types";
 import { isTauri } from "@tauri-apps/api/core";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import {
@@ -19,7 +11,17 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { PaymentMethod } from "@/lib/types";
+
 type Option<T extends string | number> = { label: string; value: T };
+
 const RELEASES_URL = "https://github.com/heraklist/Rheo_Finance/releases/latest";
 
 function sectionClassName(extra = ""): string {
@@ -54,8 +56,8 @@ interface PreferencesSectionProps {
 export function PreferencesSection({
   bookOptions,
   currentBookId,
-  defaultPaymentMethod,
   defaultVatRate,
+  defaultPaymentMethod,
   paymentMethods,
   vatRates,
   onCurrentBookIdChange,

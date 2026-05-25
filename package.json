@@ -1,7 +1,7 @@
 {
   "name": "rheo-finance",
   "private": true,
-  "version": "0.2.13",
+  "version": "0.2.14",
   "type": "module",
   "description": "Rheo Finance - local-first finance management for independent professionals",
   "scripts": {

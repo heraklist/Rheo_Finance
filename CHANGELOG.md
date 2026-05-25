@@ -4,6 +4,18 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.14 - 2026-05-25
+
+### Changed
+
+- Fresh Supabase setup docs now include the complete Rheo migration order for a rebuilt SaaS project.
+- Root Biome lint ignores the separate `landing/` project so app lint stays scoped to Rheo Finance.
+
+### Fixed
+
+- Supabase schema now enforces tenant-consistent child rows with composite `(user_id, id)` foreign keys.
+- Signup and Settings/About copy no longer contains broken encoded Greek text.
+
 ## v0.2.9 - 2026-05-20
 
 ### Changed

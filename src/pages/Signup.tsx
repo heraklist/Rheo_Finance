@@ -1,10 +1,11 @@
+import { UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import { APP_VERSION } from "@/components/settings/settingsOptions";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { UserPlus } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 
 function signUpErrorMessage(message: string): string {
   if (message.includes("already registered") || message.includes("already exists")) {
@@ -186,7 +187,7 @@ export function Signup() {
             className="w-full inline-flex items-center justify-center gap-2 bg-charcoal text-text-on-dark rounded-md py-3 text-sm font-medium hover:bg-charcoal-soft disabled:opacity-50 transition-colors"
           >
             <UserPlus className="w-4 h-4" strokeWidth={1.7} />
-            {submitting ? "Εγγραφή…" : "Εγγραφή"}
+            {submitting ? "Εγγραφή..." : "Εγγραφή"}
           </button>
 
           <p className="text-caption text-center">
