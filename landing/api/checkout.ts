@@ -51,11 +51,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       payment_method_types: ["card"],
       customer_email: user.email,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { userId: user.id, plan },
+      metadata: { userId: user.id, plan, tier: "solo" },
       success_url: `${getBaseUrl(req)}/api/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${getBaseUrl(req)}/#pricing`,
       subscription_data: {
-        metadata: { userId: user.id, plan },
+        metadata: { userId: user.id, plan, tier: "solo" },
       },
     });
 

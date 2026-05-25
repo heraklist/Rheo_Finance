@@ -27,7 +27,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
   });
 }
 
-type SubscriptionTier = "free" | "pro";
+type SubscriptionTier = "free" | "solo" | "pro" | "team";
 type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "incomplete";
 
 interface SubscriptionUpsert {
@@ -100,6 +100,11 @@ function mapStripeStatus(status: string): SubscriptionStatus {
   }
 }
 
+function mapSubscriptionTier(value: unknown): Exclude<SubscriptionTier, "free"> {
+  if (value === "solo" || value === "pro" || value === "team") return value;
+  return "pro";
+}
+
 function subscriptionPeriodEnd(subscription: Stripe.Subscription): string {
   const periodEnd = subscription.items.data[0]?.current_period_end;
   if (!periodEnd) {
@@ -156,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id: userId,
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
-          tier: "pro",
+          tier: mapSubscriptionTier(sub.metadata?.tier),
           status: mapStripeStatus(sub.status),
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,
@@ -176,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id: userId,
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
-          tier: isCanceled ? "free" : "pro",
+          tier: isCanceled ? "free" : mapSubscriptionTier(sub.metadata?.tier),
           status: mapStripeStatus(sub.status),
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,
@@ -198,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id: userId,
           stripe_customer_id: sub.customer as string,
           stripe_subscription_id: sub.id,
-          tier: "pro", // keep pro until actually canceled
+          tier: mapSubscriptionTier(sub.metadata?.tier), // keep paid tier until actually canceled
           status: "past_due",
           current_period_end: subscriptionPeriodEnd(sub),
           cancel_at_period_end: sub.cancel_at_period_end,

@@ -10,7 +10,7 @@
 
 import { supabase } from "@/lib/supabase";
 
-export type SubscriptionTier = "free" | "pro";
+export type SubscriptionTier = "free" | "solo" | "pro" | "team";
 
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "incomplete";
 
@@ -54,6 +54,18 @@ const FREE_LIMITS: TierLimits = {
   prioritySupport: false,
 };
 
+const SOLO_LIMITS: TierLimits = {
+  maxBooks: 999,
+  maxEntriesPerMonth: 999_999,
+  syncEnabled: true,
+  receiptsEnabled: true,
+  excelExportEnabled: false,
+  forecastEnabled: true,
+  recurringEnabled: true,
+  backupCloudEnabled: false,
+  prioritySupport: false,
+};
+
 const PRO_LIMITS: TierLimits = {
   maxBooks: 999,
   maxEntriesPerMonth: 999_999,
@@ -68,7 +80,10 @@ const PRO_LIMITS: TierLimits = {
 
 export function getTierLimits(tier: SubscriptionTier): TierLimits {
   switch (tier) {
+    case "solo":
+      return SOLO_LIMITS;
     case "pro":
+    case "team":
       return PRO_LIMITS;
     default:
       return FREE_LIMITS;
@@ -77,8 +92,12 @@ export function getTierLimits(tier: SubscriptionTier): TierLimits {
 
 export function tierDisplayName(tier: SubscriptionTier): string {
   switch (tier) {
+    case "solo":
+      return "Solo";
     case "pro":
       return "Pro";
+    case "team":
+      return "Team";
     default:
       return "Free";
   }
@@ -176,7 +195,7 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
 
     const data = await res.json();
     const info: SubscriptionInfo = {
-      tier: data.tier ?? "free",
+      tier: normalizeSubscriptionTier(data.tier),
       status: data.status ?? "active",
       currentPeriodEnd: data.current_period_end ?? null,
       cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
@@ -194,4 +213,9 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
 export function clearSubscriptionCache(): void {
   cachedSub = null;
   cachedAt = 0;
+}
+
+function normalizeSubscriptionTier(value: unknown): SubscriptionTier {
+  if (value === "solo" || value === "pro" || value === "team") return value;
+  return "free";
 }

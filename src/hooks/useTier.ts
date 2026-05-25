@@ -16,7 +16,7 @@ import {
 } from "@/lib/subscription";
 
 interface UseTierResult {
-  /** Current tier: "free" | "pro" */
+  /** Current tier: "free" | "solo" | "pro" | "team" */
   tier: SubscriptionTier;
   /** Full subscription info */
   subscription: SubscriptionInfo;
@@ -28,7 +28,7 @@ interface UseTierResult {
   hasFeature: (feature: GatedFeature) => boolean;
   /** Get upgrade message for a locked feature */
   upgradeMessage: (feature: GatedFeature) => string;
-  /** Whether the subscription is actively paid (not free) */
+  /** Whether the subscription has paid-tier capabilities */
   isPro: boolean;
   /** Whether subscription is past due or about to cancel */
   hasWarning: boolean;
@@ -92,7 +92,7 @@ export function useTier(): UseTierResult {
     displayName: tierDisplayName(tier),
     hasFeature: (feature: GatedFeature) => isFeatureAvailable(tier, feature),
     upgradeMessage: (feature: GatedFeature) => featureUpgradeMessage(feature),
-    isPro: tier === "pro",
+    isPro: tier !== "free",
     hasWarning: subscription.status === "past_due" || subscription.cancelAtPeriodEnd,
     loading,
     refresh,

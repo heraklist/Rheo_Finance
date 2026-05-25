@@ -4,6 +4,14 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.21 - 2026-05-25
+
+### Changed
+
+- Settings/About now hides technical updater distribution details from end users.
+- Settings/About now shows the current subscription plan instead of the old private-use license text.
+- Subscription tier types and Supabase constraints now support `free`, `solo`, `pro`, and `team`.
+
 ## v0.2.20 - 2026-05-25
 
 ### Changed

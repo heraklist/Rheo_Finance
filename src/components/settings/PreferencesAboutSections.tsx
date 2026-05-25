@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTier } from "@/hooks/useTier";
 import type { PaymentMethod } from "@/lib/types";
 
 type Option<T extends string | number> = { label: string; value: T };
@@ -141,6 +142,8 @@ export function AboutSection({
   updateMessage,
   onUpdateCheck,
 }: AboutSectionProps) {
+  const { displayName, loading } = useTier();
+
   return (
     <section className={sectionClassName("mb-8")}>
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -161,28 +164,7 @@ export function AboutSection({
         </button>
         <div className="flex items-start gap-2 text-text-muted">
           <ShieldAlert className="w-4 h-4 mt-0.5 text-gold" strokeWidth={1.7} />
-          <p>Άδεια: ιδιωτική χρήση Heraklis.</p>
-        </div>
-        <div className="rounded-md border border-border-light bg-sand p-3">
-          <div className="mb-3 flex items-start gap-2 text-text-muted">
-            <RefreshCcw className="mt-0.5 h-4 w-4 text-gold" strokeWidth={1.7} />
-            <div>
-              <p className="text-sm font-medium text-text-primary">
-                Αυτόματες ενημερώσεις από GitHub Releases
-              </p>
-              <p className="text-caption">
-                Το release feed είναι δημόσιο και δεν χρειάζεται πλέον GitHub token.
-              </p>
-              <p className="text-caption mt-1">
-                Desktop: κατεβάζει και εγκαθιστά αυτόματα το signed update. Android: ανοίγει το
-                signed arm64 APK και η εγκατάσταση επιβεβαιώνεται από το σύστημα.
-              </p>
-              <p className="text-caption mt-1">
-                Αν έχεις παλιό debug APK πριν το v0.2.19, χρειάζεται μία φορά uninstall/install. Από
-                signed APK σε signed APK γίνεται κανονική αναβάθμιση.
-              </p>
-            </div>
-          </div>
+          <p>Πλάνο: {loading ? "Έλεγχος..." : displayName}.</p>
         </div>
         <button
           type="button"
