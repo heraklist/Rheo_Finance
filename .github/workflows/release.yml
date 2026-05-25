@@ -137,7 +137,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+          targets: aarch64-linux-android
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -270,7 +270,7 @@ jobs:
           RUST_MIN_STACK: "8388608"
           VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
-        run: pnpm tauri android build --apk --ci
+        run: pnpm tauri android build --apk --target aarch64 --ci
 
       - name: Build debug Android APK
         if: steps.signing.outputs.mode == 'debug'
@@ -279,7 +279,7 @@ jobs:
           RUST_MIN_STACK: "8388608"
           VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
-        run: pnpm tauri android build --debug --apk --ci
+        run: pnpm tauri android build --debug --apk --target aarch64 --ci
 
       - name: Stage Android artifact
         run: |
@@ -298,11 +298,11 @@ jobs:
           fi
           test -n "$APK_PATH" || (echo "Missing Android APK" && exit 1)
           if [ "${{ steps.signing.outputs.mode }}" = "signed" ]; then
-            cp "$APK_PATH" "dist/Rheo-Finance-v${VERSION}-android.apk"
+            cp "$APK_PATH" "dist/Rheo-Finance-v${VERSION}-android-arm64.apk"
           else
-            cp "$APK_PATH" "dist/Rheo-Finance-v${VERSION}-android-debug.apk"
+            cp "$APK_PATH" "dist/Rheo-Finance-v${VERSION}-android-arm64-debug.apk"
           fi
-          ls -la dist
+          ls -lh dist
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v7

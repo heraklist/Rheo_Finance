@@ -4,6 +4,13 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.19 - 2026-05-25
+
+### Changed
+
+- Android release workflow now builds a signed `arm64-v8a` APK as the primary sideload artifact when release signing secrets are present.
+- Android fallback debug artifact is also limited to `arm64-v8a` to avoid large universal debug APKs.
+
 ## v0.2.18 - 2026-05-25
 
 ### Fixed
