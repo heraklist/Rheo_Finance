@@ -11,7 +11,7 @@ Scope: Phase A closed, SaaS/Supabase baseline active, next work starts from Phas
 | Desktop app | Active | Tauri 2, signed Windows installer, public updater manifest from GitHub Releases. |
 | Android app | Active | arm64 APK release path is configured. Signed release APK is used when Android signing secrets exist; debug fallback remains for incomplete signing secrets. |
 | Landing | Active | Deployed at `https://landing-two-dun-95.vercel.app/`; downloads are pulled from GitHub Releases. |
-| Supabase | Active | New project `jdwetppniotobfsueyzq`; old Supabase project was discarded. Auth, RLS, subscriptions and sync tables are set for SaaS usage. |
+| Supabase | Active | New project `jdwetppniotobfsueyzq`; old Supabase project was discarded. Auth, RLS, subscriptions, admin audit log and sync tables are set for SaaS usage. |
 | Vercel APIs | Active | Admin grant endpoint/page exists for manual plan grants/tester access. Service role key must stay server-side only. |
 | GitHub Releases | Active | Public release feed; user-facing GitHub token field was removed from Settings. |
 | Stripe | Pending | Stripe secrets, price IDs and webhook are not created yet. Manual grants cover owner/tester access until billing is wired. |
@@ -79,6 +79,7 @@ Implemented:
 - Supabase `subscriptions` table and RLS policies
 - Vercel admin grant flow for owner/testers
 - Live hardening migration `20260526131804_restrict_subscription_grants.sql`
+- Live admin-audit and advisor cleanup migrations through `20260526180757_admin_audit_explicit_deny_policy.sql`
 
 Current grant model:
 - App users can read their own subscription row.
@@ -104,6 +105,7 @@ Passed locally:
 - `cargo check --manifest-path src-tauri\Cargo.toml`
 - Fresh SQLite migration harness: all local migrations apply, no FK violations, no sync schema mismatches
 - Supabase live checks for RLS policies and subscription grants
+- Supabase live security/performance advisors: no unindexed-FK findings remain; only intentional/dashboard-level warnings remain
 - Playwright browser smoke for `/login` and `/signup`
 - GitHub Actions live check for release `v0.2.22`: Windows, Android and publish jobs succeeded
 
@@ -191,9 +193,13 @@ Closed:
 - Coverage local `user_id` scoping
 - Public updater feed without user GitHub token field
 - Supabase `subscriptions` write grants for authenticated users
+- Supabase composite FK index coverage
+- Admin audit log grants restricted to `service_role` with explicit deny policy for authenticated users
 
 Still intentional or environment-bound:
 - Stripe billing is not active yet.
 - Team plan is design-only until Phase B4.
 - Android local full build depends on Windows symlink privilege or CI/Linux.
 - Live GitHub Actions inspection requires `gh auth login`.
+- Supabase Auth leaked-password protection must be enabled from the Supabase Auth dashboard.
+- `delete_current_user()` intentionally remains an authenticated SECURITY DEFINER RPC because it deletes the caller's own auth account.
