@@ -7,13 +7,24 @@ import { useEffect, useState } from "react";
  * to a valid book (business by default). Required after the UUID migration
  * which replaces hardcoded "book-business"/"book-personal" IDs.
  */
-export function useBookInit(): boolean {
+export function useBookInit(enabled: boolean): boolean {
   const setCurrentBookId = useAppStore((s) => s.setCurrentBookId);
   const setBooks = useAppStore((s) => s.setBooks);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    if (!enabled) {
+      setReady(true);
+      setBooks([]);
+      setCurrentBookId("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setReady(false);
 
     async function init() {
       try {
@@ -44,7 +55,7 @@ export function useBookInit(): boolean {
     return () => {
       cancelled = true;
     };
-  }, [setCurrentBookId, setBooks]);
+  }, [enabled, setCurrentBookId, setBooks]);
 
   return ready;
 }

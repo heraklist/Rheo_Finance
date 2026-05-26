@@ -16,6 +16,7 @@ import { MonthlyCoverage } from "@/pages/MonthlyCoverage";
 import { PlanBuilder } from "@/pages/PlanBuilder";
 import { PlanHub } from "@/pages/PlanHub";
 import { Recurring } from "@/pages/Recurring";
+import { ReviewQueue } from "@/pages/ReviewQueue";
 import { Settings } from "@/pages/Settings";
 import { Signup } from "@/pages/Signup";
 import { TransactionDetail } from "@/pages/TransactionDetail";
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: "plans", element: <PlanHub /> },
       { path: "plans/:id", element: <PlanBuilder /> },
       { path: "coverage", element: <MonthlyCoverage /> },
+      { path: "review", element: <ReviewQueue /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/categories/:type", element: <CategorySettings /> },
     ],
@@ -70,7 +72,8 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
 
 export function App() {
   const { setAuth, setAuthLoading, setMfaStatus } = useAppStore();
-  const booksReady = useBookInit();
+  const user = useAppStore((state) => state.user);
+  const booksReady = useBookInit(Boolean(user));
   useAutoBackupWorker();
   useRecurringWorker();
   useSyncWorker();
@@ -169,7 +172,7 @@ export function App() {
     };
   }, [setAuth, setAuthLoading, setMfaStatus]);
 
-  if (!booksReady) {
+  if (user && !booksReady) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-cream">
         <div className="h-10 w-32 rounded-md bg-sand" />

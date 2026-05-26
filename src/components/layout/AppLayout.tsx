@@ -1,3 +1,4 @@
+import { QuickAddDrawer } from "@/components/layout/QuickAddDrawer";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { SyncPill } from "@/components/ui/SyncPill";
 import { UpdateBanner } from "@/components/ui/UpdateBanner";
@@ -6,6 +7,7 @@ import { isBusinessBook, useAppStore } from "@/lib/store";
 import {
   Calculator,
   CalendarDays,
+  ClipboardCheck,
   MoreHorizontal,
   Plus,
   Repeat2,
@@ -20,6 +22,7 @@ export function AppLayout() {
   const location = useLocation();
   const { books, currentBookId, syncState, pendingCount } = useAppStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const showVat = isBusinessBook(books, currentBookId);
   const hideAppHeader =
     location.pathname === "/add" ||
@@ -59,6 +62,13 @@ export function AppLayout() {
       label: "Κάλυψη",
       description: "Κάλυψη μηνιαίων εξόδων",
       icon: CalendarDays,
+      visible: true,
+    },
+    {
+      to: "/review",
+      label: "Έλεγχος",
+      description: "Κέντρο ελέγχου εκκρεμοτήτων",
+      icon: ClipboardCheck,
       visible: true,
     },
     {
@@ -152,10 +162,17 @@ export function AppLayout() {
       </main>
 
       {showFab && (
-        <Link to="/add" className="fab" aria-label="Νέα συναλλαγή">
+        <button
+          type="button"
+          onClick={() => setQuickAddOpen(true)}
+          className="fab"
+          aria-label="Γρήγορη προσθήκη"
+        >
           <Plus className="w-5.5 h-5.5" strokeWidth={1.8} />
-        </Link>
+        </button>
       )}
+
+      <QuickAddDrawer open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
     </div>
   );
 }
