@@ -1,3 +1,4 @@
+import { getAverageMonthlyNet } from "@/lib/analytics";
 import { parseGreekAmount } from "@/lib/money";
 import {
   calculateBudgetPressure,
@@ -184,6 +185,7 @@ export function PlanBuilder() {
   const [timelineOverride, setTimelineOverride] = useState<number | null>(null);
   const [budgetAdjust, setBudgetAdjust] = useState(0);
   const [benefitEstimate, setBenefitEstimate] = useState(0);
+  const [monthlyAvailable, setMonthlyAvailable] = useState(0);
 
   const loadPlan = useCallback(async () => {
     if (!id) return;
@@ -209,6 +211,10 @@ export function PlanBuilder() {
   useEffect(() => {
     void loadPlan();
   }, [loadPlan]);
+
+  useEffect(() => {
+    void getAverageMonthlyNet(6).then((avg) => setMonthlyAvailable(Math.max(0, avg)));
+  }, []);
 
   async function refreshPendingAndPlan() {
     setPendingCount(await getPendingCount());
@@ -491,6 +497,7 @@ export function PlanBuilder() {
         timelineOverride={timelineOverride}
         budgetAdjust={budgetAdjust}
         benefitEstimate={benefitEstimate}
+        monthlyAvailable={monthlyAvailable}
         setTimelineOverride={setTimelineOverride}
         setBudgetAdjust={setBudgetAdjust}
         setBenefitEstimate={setBenefitEstimate}
@@ -687,6 +694,7 @@ function PlanV2Metrics({
   timelineOverride,
   budgetAdjust,
   benefitEstimate,
+  monthlyAvailable,
   setTimelineOverride,
   setBudgetAdjust,
   setBenefitEstimate,
@@ -702,6 +710,7 @@ function PlanV2Metrics({
   timelineOverride: number | null;
   budgetAdjust: number;
   benefitEstimate: number;
+  monthlyAvailable: number;
   setTimelineOverride: (v: number | null) => void;
   setBudgetAdjust: (v: number) => void;
   setBenefitEstimate: (v: number) => void;
@@ -716,14 +725,9 @@ function PlanV2Metrics({
   const timeline = timelineOverride ?? monthsUntilTarget(plan.target_date);
   const requiredMonthly = timeline > 0 ? Math.ceil(adjustedGap / timeline) : adjustedGap;
 
-  // Estimate available monthly from a reasonable personal budget assumption
-  const estimatedMonthlyAvailable = 2500;
-  const afterCommitments = estimatedMonthlyAvailable - requiredMonthly + benefitEstimate;
-  const pressure = calculateBudgetPressure(
-    adjustedGap,
-    plan.target_date,
-    estimatedMonthlyAvailable,
-  );
+  // Derived from actual average monthly net income (last 6 months)
+  const afterCommitments = monthlyAvailable - requiredMonthly + benefitEstimate;
+  const pressure = calculateBudgetPressure(adjustedGap, plan.target_date, monthlyAvailable);
 
   const statusLabel = useMemo(() => {
     if (pressure > 78) return "Υψηλή πίεση";

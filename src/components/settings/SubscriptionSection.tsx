@@ -1,9 +1,10 @@
 import { useTier } from "@/hooks/useTier";
+import { type UsageCounts, getUsageCounts } from "@/lib/analytics";
 import type { SubscriptionTier } from "@/lib/subscription";
 import { openBillingPortal, openUpgradeUrl } from "@/lib/upgrade";
 import { cn, formatDateRelative } from "@/lib/utils";
 import { CreditCard, RefreshCcw, Star } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // === Tier data ===
 
@@ -98,6 +99,15 @@ function BillingToggle({
 export function SubscriptionSection(): React.JSX.Element {
   const { subscription, tier, isPro, hasWarning, loading, refresh } = useTier();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [usage, setUsage] = useState<UsageCounts>({
+    activePlans: 0,
+    exportsThisMonth: 0,
+    books: 0,
+  });
+
+  useEffect(() => {
+    void getUsageCounts().then(setUsage);
+  }, []);
 
   return (
     <section className="rounded-md border border-border-light bg-cream p-4">
@@ -183,13 +193,17 @@ export function SubscriptionSection(): React.JSX.Element {
       <div className="mt-4 rounded-md border border-border-light bg-sand/40 p-4">
         <h3 className="mb-3 font-semibold text-text-primary">Χρήση πλάνου</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          <UsageMeter label="Ενεργά πλάνα" used={0} max={tier === "free" ? 2 : 999} />
+          <UsageMeter
+            label="Ενεργά πλάνα"
+            used={usage.activePlans}
+            max={tier === "free" ? 2 : 999}
+          />
           <UsageMeter
             label="Εξαγωγές μήνα"
-            used={0}
+            used={usage.exportsThisMonth}
             max={tier === "free" ? 1 : tier === "solo" ? 10 : 999}
           />
-          <UsageMeter label="Λογαριασμοί" used={0} max={tier === "free" ? 1 : 999} />
+          <UsageMeter label="Λογαριασμοί" used={usage.books} max={tier === "free" ? 1 : 999} />
         </div>
       </div>
 

@@ -12,6 +12,10 @@ export interface SyncableEntity {
 
 export type BookSlug = "business" | "personal";
 
+/** Canonical book slug constants — use instead of string literals in queries. */
+export const BOOK_SLUG_BUSINESS: BookSlug = "business";
+export const BOOK_SLUG_PERSONAL: BookSlug = "personal";
+
 export interface Book extends SyncableEntity {
   slug: BookSlug;
   name: string;

@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { computeNextDue, listRecurringTemplates } from "@/lib/recurring";
+import { BOOK_SLUG_BUSINESS, BOOK_SLUG_PERSONAL } from "@/lib/types";
 import type { CategoryType, RecurringTemplateWithRelations } from "@/lib/types";
 import { MONTHS_SHORT_EL } from "@/lib/utils";
 
@@ -235,11 +236,51 @@ export async function getBookTransactionCounts(): Promise<BookTransactionCounts>
   for (const row of rows) {
     const count = Number(row.count);
     counts.all += count;
-    if (row.slug === "business") counts.business = count;
-    if (row.slug === "personal") counts.personal = count;
+    if (row.slug === BOOK_SLUG_BUSINESS) counts.business = count;
+    if (row.slug === BOOK_SLUG_PERSONAL) counts.personal = count;
   }
 
   return counts;
+}
+
+/**
+ * Usage counts for subscription meter display.
+ * Counts active plans, exports this month, and distinct books.
+ */
+export interface UsageCounts {
+  activePlans: number;
+  exportsThisMonth: number;
+  books: number;
+}
+
+export async function getUsageCounts(): Promise<UsageCounts> {
+  const db = await getDb();
+
+  const [planRows, bookRows] = await Promise.all([
+    db.select<Array<{ count: number }>>(
+      "SELECT COUNT(*) AS count FROM plans WHERE status = 'active'",
+    ),
+    db.select<Array<{ count: number }>>("SELECT COUNT(*) AS count FROM books"),
+  ]);
+
+  return {
+    activePlans: Number(planRows[0]?.count ?? 0),
+    // Export tracking not yet implemented — will wire when Excel export ships
+    exportsThisMonth: 0,
+    books: Number(bookRows[0]?.count ?? 0),
+  };
+}
+
+/**
+ * Average monthly net income over the last N months (for budget estimation).
+ * Returns 0 if no transaction history exists.
+ */
+export async function getAverageMonthlyNet(monthsBack = 6): Promise<number> {
+  const totals = await getMonthlyTotals(undefined, monthsBack);
+  const withData = totals.filter((m) => m.income > 0 || m.expense > 0);
+  if (withData.length === 0) return 0;
+  const totalNet = withData.reduce((sum, m) => sum + (m.income - m.expense), 0);
+  return Math.round(totalNet / withData.length);
 }
 
 async function getOpeningBalance(bookId: string | undefined, beforeDate: string): Promise<number> {

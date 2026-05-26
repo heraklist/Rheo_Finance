@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { computeNextDue } from "@/lib/recurring";
+import { BOOK_SLUG_BUSINESS } from "@/lib/types";
 import type { TransactionWithRelations } from "@/lib/types";
 
 // === Review Queue Types ===
@@ -92,13 +93,13 @@ async function getMissingReceiptItems(): Promise<ReviewItem[]> {
      FROM transactions t
      JOIN categories c ON t.category_id = c.id
      JOIN books b ON t.book_id = b.id
-     WHERE b.slug = 'business'
+     WHERE b.slug = ?
        AND c.type = 'expense'
        AND t.receipt_photo_path IS NULL
        AND t.date >= ?
      ORDER BY t.date DESC
      LIMIT 20`,
-    [cutoffIso],
+    [BOOK_SLUG_BUSINESS, cutoffIso],
   );
 
   return rows.map((tx) => ({
