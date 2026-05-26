@@ -115,3 +115,45 @@ export async function upsertGrant(params: {
     throw new Error(`Supabase grant upsert failed: ${response.status} ${text}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+export interface AuditEntry {
+  adminId: string;
+  adminEmail: string;
+  action: string;
+  targetUserId: string | null;
+  targetEmail: string;
+  payload: Record<string, unknown>;
+}
+
+export async function writeAuditLog(
+  supabaseUrl: string,
+  serviceKey: string,
+  entry: AuditEntry,
+): Promise<void> {
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/admin_audit_log`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        admin_id: entry.adminId,
+        admin_email: entry.adminEmail,
+        action: entry.action,
+        target_user_id: entry.targetUserId,
+        target_email: entry.targetEmail,
+        payload: entry.payload,
+      }),
+    });
+  } catch (err) {
+    // Audit failure must never block the grant operation.
+    console.error("Audit log write failed:", err);
+  }
+}

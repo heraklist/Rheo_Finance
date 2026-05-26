@@ -133,6 +133,33 @@ import Base from "../../layouts/Base.astro";
 
           <button type="submit" class="btn-gold">Αποθήκευση πρόσβασης</button>
         </form>
+
+        <!-- Existing grants table -->
+        <div class="mt-8 border-t border-border-light pt-6">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-h3 font-bold text-charcoal">Τρέχουσες πρόσβαση</h3>
+            <button id="refresh-grants" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">
+              Ανανέωση
+            </button>
+          </div>
+          <div id="grants-table-wrap" class="overflow-x-auto rounded-lg border border-border-light">
+            <table class="w-full min-w-[640px] text-body-sm">
+              <thead class="bg-sand text-left text-text-secondary">
+                <tr>
+                  <th class="px-3 py-2 font-medium">Email</th>
+                  <th class="px-3 py-2 font-medium">Πλάνο</th>
+                  <th class="px-3 py-2 font-medium">Τύπος</th>
+                  <th class="px-3 py-2 font-medium">Status</th>
+                  <th class="px-3 py-2 font-medium">Λήξη</th>
+                  <th class="px-3 py-2 font-medium">Ενημέρωση</th>
+                </tr>
+              </thead>
+              <tbody id="grants-body" class="divide-y divide-border-light">
+                <tr><td colspan="6" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </section>
   </main>
@@ -150,6 +177,34 @@ import Base from "../../layouts/Base.astro";
   const signOut = document.getElementById("sign-out");
 
   let supabase;
+
+  // --- Grants table (declared early for hoisting) ---
+  const grantsBody = document.getElementById("grants-body");
+  const refreshBtn = document.getElementById("refresh-grants");
+
+  function tierBadge(tier) {
+    const colors = {
+      free: "bg-gray-100 text-gray-700",
+      solo: "bg-blue-50 text-blue-700",
+      pro: "bg-amber-50 text-amber-700",
+      team: "bg-purple-50 text-purple-700",
+    };
+    return `<span class="inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${colors[tier] || ""}">${(tier || "—").toUpperCase()}</span>`;
+  }
+
+  function statusBadge(st) {
+    const isActive = st === "active";
+    return `<span class="inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}">${st || "—"}</span>`;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("el-GR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
 
   function inputValue(id) {
     const element = document.getElementById(id);
@@ -175,6 +230,7 @@ import Base from "../../layouts/Base.astro";
     loginPanel?.classList.add("hidden");
     grantPanel?.classList.remove("hidden");
     if (adminEmail) adminEmail.textContent = email;
+    loadGrants();
   }
 
   function showLoginPanel() {
@@ -249,6 +305,18 @@ import Base from "../../layouts/Base.astro";
 
   grantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    const confirmEmail = inputValue("grant-email");
+    const confirmTier = inputValue("grant-tier").toUpperCase();
+    const confirmSource = inputValue("grant-source");
+    if (
+      !confirm(
+        `Επιβεβαίωση: Δώσε ${confirmTier} πρόσβαση στον ${confirmEmail} (${confirmSource});`,
+      )
+    ) {
+      return;
+    }
+
     showStatus("Αποθηκεύεται η πρόσβαση...");
 
     const token = await currentAccessToken();
@@ -277,10 +345,50 @@ import Base from "../../layouts/Base.astro";
         `Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})`,
         "success",
       );
+      loadGrants();
     } catch (err) {
       showStatus(err instanceof Error ? err.message : "Δεν αποθηκεύτηκε η πρόσβαση.", "error");
     }
   });
+
+  // --- Grants table: load + render ---
+  async function loadGrants() {
+    if (!grantsBody) return;
+    const token = await currentAccessToken();
+    if (!token) return;
+
+    grantsBody.innerHTML =
+      '<tr><td colspan="6" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
+
+    try {
+      const grants = await api("/api/admin/list-grants", token);
+
+      if (!Array.isArray(grants) || grants.length === 0) {
+        grantsBody.innerHTML =
+          '<tr><td colspan="6" class="px-3 py-4 text-center text-text-muted">Δεν βρέθηκαν εγγραφές.</td></tr>';
+        return;
+      }
+
+      grantsBody.innerHTML = grants
+        .map(
+          (g) => `
+        <tr class="hover:bg-sand/40">
+          <td class="px-3 py-2 font-medium text-charcoal">${g.email}</td>
+          <td class="px-3 py-2">${tierBadge(g.tier)}</td>
+          <td class="px-3 py-2 text-text-secondary">${g.source || "—"}</td>
+          <td class="px-3 py-2">${statusBadge(g.status)}</td>
+          <td class="px-3 py-2 text-text-secondary">${formatDate(g.expires_at)}</td>
+          <td class="px-3 py-2 text-text-muted">${formatDate(g.updated_at)}</td>
+        </tr>`,
+        )
+        .join("");
+    } catch {
+      grantsBody.innerHTML =
+        '<tr><td colspan="6" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+    }
+  }
+
+  refreshBtn?.addEventListener("click", loadGrants);
 
   signOut?.addEventListener("click", async () => {
     await supabase.auth.signOut();

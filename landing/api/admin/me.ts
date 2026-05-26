@@ -1,10 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { handleOptions } from "../_cors.js";
+import { handleAdminOptions } from "../_cors.js";
 import { verifyAdminUser } from "./_access.js";
+import { rateLimited } from "./_rate-limit.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleOptions(req, res)) return;
+  if (handleAdminOptions(req, res)) return;
+  if (rateLimited(req, res)) return;
 
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET, OPTIONS");

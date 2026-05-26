@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { handleOptions } from "../_cors.js";
+import { handleAdminOptions } from "../_cors.js";
 import { cleanEnv } from "../_env.js";
-import { findUserByEmail, normalizeGrantRequest, upsertGrant } from "./_grant.js";
+import { findUserByEmail, normalizeGrantRequest, upsertGrant, writeAuditLog } from "./_grant.js";
+import { rateLimited } from "./_rate-limit.js";
 
 function adminToken(req: VercelRequest): string | null {
   const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "");
@@ -10,7 +11,8 @@ function adminToken(req: VercelRequest): string | null {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleOptions(req, res)) return;
+  if (handleAdminOptions(req, res)) return;
+  if (rateLimited(req, res, { maxRequests: 5 })) return;
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST, OPTIONS");
@@ -46,6 +48,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       reason: grant.reason,
     });
 
+    await writeAuditLog(supabaseUrl, serviceKey, {
+      adminId: "token-auth",
+      adminEmail: "cli",
+      action: "grant_upsert",
+      targetUserId: user.id,
+      targetEmail: grant.email,
+      payload: { tier: grant.tier, source: grant.source, expiresAt: grant.expiresAt },
+    });
+
     return res.status(200).json({
       user_id: user.id,
       email: grant.email,
@@ -55,7 +66,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error("Admin grant failed:", err);
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
