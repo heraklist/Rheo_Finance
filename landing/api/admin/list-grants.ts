@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { handleAdminOptions } from "../_cors.js";
 import { cleanEnv } from "../_env.js";
-import { verifyAdminUser } from "./_access.js";
+import { verifyAdminOrViewer } from "./_access.js";
 import { rateLimited } from "./_rate-limit.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    await verifyAdminUser(req);
+    await verifyAdminOrViewer(req);
 
     // Fetch all subscriptions (service_role bypasses RLS).
     const response = await fetch(

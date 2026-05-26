@@ -7,9 +7,9 @@ import Base from "../../layouts/Base.astro";
   description="Εσωτερική διαχείριση πλάνων χρηστών Rheo Finance."
 >
   <main class="min-h-screen bg-cream py-10">
-    <section class="section-container max-w-4xl">
+    <section class="section-container max-w-5xl">
       <a href="/" class="mb-8 inline-flex items-center gap-2 text-body-sm font-semibold text-gold">
-        ← Πίσω στο Rheo
+        &larr; Πίσω στο Rheo
       </a>
 
       <div class="mb-8">
@@ -25,6 +25,12 @@ import Base from "../../layouts/Base.astro";
         </p>
       </div>
 
+      <!-- #5: Session timeout warning -->
+      <div id="session-warning" class="mb-4 hidden rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-body-sm text-amber-900">
+        <span>Η session λήγει σύντομα.</span>
+        <button id="refresh-session" type="button" class="ml-2 font-semibold text-amber-700 underline">Ανανέωση session</button>
+      </div>
+
       <div id="status" class="mb-5 hidden rounded-lg border px-4 py-3 text-body-sm"></div>
 
       <!-- Login panel -->
@@ -33,30 +39,17 @@ import Base from "../../layouts/Base.astro";
         <p class="mb-5 text-body-sm text-text-secondary">
           Χρησιμοποίησε τον λογαριασμό Supabase που έχει admin πρόσβαση.
         </p>
-
         <form id="login-form" class="grid gap-4">
           <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
             Email
-            <input
-              id="login-email"
-              type="email"
-              required
-              autocomplete="email"
-              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-            />
+            <input id="login-email" type="email" required autocomplete="email"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold" />
           </label>
-
           <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
             Password
-            <input
-              id="login-password"
-              type="password"
-              required
-              autocomplete="current-password"
-              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-            />
+            <input id="login-password" type="password" required autocomplete="current-password"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold" />
           </label>
-
           <button type="submit" class="btn-primary">Σύνδεση</button>
         </form>
       </section>
@@ -68,76 +61,59 @@ import Base from "../../layouts/Base.astro";
           <div>
             <p class="text-body-sm text-text-secondary">Συνδεδεμένος admin</p>
             <p id="admin-email" class="font-semibold text-charcoal"></p>
+            <span id="admin-role-badge" class="hidden mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold"></span>
           </div>
-          <button id="sign-out" type="button" class="btn-secondary !px-4 !py-2">Αποσύνδεση</button>
+          <div class="flex items-center gap-2">
+            <!-- #16: Auto-refresh toggle -->
+            <label class="flex items-center gap-1.5 text-xs text-text-secondary cursor-pointer select-none">
+              <input id="auto-refresh-toggle" type="checkbox" class="accent-gold" />
+              Live mode
+            </label>
+            <button id="sign-out" type="button" class="btn-secondary !px-4 !py-2">Αποσύνδεση</button>
+          </div>
         </div>
 
-        <!-- Grant form -->
-        <div class="rounded-xl border border-border-light bg-white/70 p-6">
+        <!-- Grant form (hidden for viewers) -->
+        <div id="write-panel" class="rounded-xl border border-border-light bg-white/70 p-6">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-h3 font-bold text-charcoal" id="form-title">Νέα πρόσβαση</h3>
             <div class="flex items-center gap-2">
-              <button id="form-reset" type="button" class="hidden text-xs font-semibold text-gold hover:underline">
-                Καθαρισμός φόρμας
-              </button>
-              <button id="toggle-bulk" type="button" class="text-xs font-semibold text-text-secondary hover:text-charcoal hover:underline">
-                Bulk mode
-              </button>
+              <button id="form-reset" type="button" class="hidden text-xs font-semibold text-gold hover:underline">Καθαρισμός</button>
+              <button id="toggle-bulk" type="button" class="text-xs font-semibold text-text-secondary hover:text-charcoal hover:underline">Bulk mode</button>
             </div>
           </div>
 
-          <!-- #1: Quick templates -->
+          <!-- Quick templates -->
           <div class="mb-4 flex flex-wrap gap-2" id="templates-bar">
-            <button type="button" data-tpl="beta30" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
-              Beta tester 30η
-            </button>
-            <button type="button" data-tpl="solo-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
-              Solo permanent
-            </button>
-            <button type="button" data-tpl="pro-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
-              Pro permanent
-            </button>
-            <button type="button" data-tpl="owner" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
-              Owner (Team)
-            </button>
+            <button type="button" data-tpl="beta30" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">Beta tester 30η</button>
+            <button type="button" data-tpl="solo-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">Solo permanent</button>
+            <button type="button" data-tpl="pro-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">Pro permanent</button>
+            <button type="button" data-tpl="owner" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">Owner (Team)</button>
           </div>
 
           <!-- Single grant form -->
           <form id="grant-form" class="grid gap-5">
             <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
               Email χρήστη
-              <input
-                id="grant-email"
-                type="email"
-                required
-                autocomplete="off"
-                placeholder="user@example.com"
-                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-              />
+              <input id="grant-email" type="email" required autocomplete="off" placeholder="user@example.com"
+                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold" />
             </label>
+            <!-- #10: Duplicate detection warning -->
+            <div id="dup-warning" class="hidden rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"></div>
 
             <div class="grid gap-4 md:grid-cols-2">
               <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
                 Πλάνο
-                <select
-                  id="grant-tier"
-                  required
-                  class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-                >
+                <select id="grant-tier" required class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold">
                   <option value="free">Free</option>
                   <option value="solo">Solo</option>
                   <option value="pro">Pro</option>
                   <option value="team">Team</option>
                 </select>
               </label>
-
               <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
                 Τύπος πρόσβασης
-                <select
-                  id="grant-source"
-                  required
-                  class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-                >
+                <select id="grant-source" required class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold">
                   <option value="manual">Manual</option>
                   <option value="tester">Tester</option>
                   <option value="owner">Owner</option>
@@ -147,37 +123,32 @@ import Base from "../../layouts/Base.astro";
 
             <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
               Λήξη πρόσβασης
-              <input
-                id="grant-expires"
-                type="datetime-local"
-                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-              />
+              <input id="grant-expires" type="datetime-local"
+                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold" />
               <span class="text-xs font-normal text-text-muted">Άφησέ το κενό για πρόσβαση χωρίς ημερομηνία λήξης.</span>
             </label>
 
             <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
               Αιτιολογία
-              <textarea
-                id="grant-reason"
-                rows="2"
-                placeholder="π.χ. Beta tester access"
-                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
-              ></textarea>
+              <textarea id="grant-reason" rows="2" placeholder="π.χ. Beta tester access"
+                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"></textarea>
+            </label>
+
+            <!-- #12: Email notification checkbox -->
+            <label class="flex items-center gap-2 text-body-sm text-text-secondary cursor-pointer select-none">
+              <input id="grant-notify" type="checkbox" class="accent-gold" />
+              Ειδοποίησε τον χρήστη μέσω email
             </label>
 
             <button type="submit" class="btn-gold">Αποθήκευση πρόσβασης</button>
           </form>
 
-          <!-- #2: Bulk grant form (hidden by default) -->
+          <!-- Bulk panel -->
           <div id="bulk-panel" class="mt-5 hidden border-t border-border-light pt-5">
             <h4 class="mb-2 text-body-sm font-semibold text-charcoal">Bulk grant</h4>
             <p class="mb-3 text-xs text-text-muted">Ένα email ανά γραμμή. Θα πάρουν το tier/source/expiry από τη φόρμα πάνω.</p>
-            <textarea
-              id="bulk-emails"
-              rows="4"
-              placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
-              class="w-full rounded-lg border border-border-mid bg-cream px-4 py-3 text-sm text-charcoal outline-none focus:border-gold"
-            ></textarea>
+            <textarea id="bulk-emails" rows="4" placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
+              class="w-full rounded-lg border border-border-mid bg-cream px-4 py-3 text-sm text-charcoal outline-none focus:border-gold"></textarea>
             <div class="mt-3 flex items-center gap-3">
               <button id="bulk-submit" type="button" class="btn-gold !py-2 !text-xs">Εφαρμογή σε όλους</button>
               <span id="bulk-progress" class="text-xs text-text-muted"></span>
@@ -185,57 +156,86 @@ import Base from "../../layouts/Base.astro";
           </div>
         </div>
 
-        <!-- Tier stats -->
-        <div id="tier-stats" class="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <!-- filled by JS -->
+        <!-- Tier stats + #3: Expiring soon badge -->
+        <div class="space-y-3">
+          <div id="expiring-badge" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-body-sm font-semibold text-amber-800"></div>
+          <div id="tier-stats" class="grid grid-cols-2 gap-3 md:grid-cols-4"></div>
+        </div>
+
+        <!-- #7: Tier change history chart -->
+        <div id="activity-chart-wrap" class="hidden rounded-xl border border-border-light bg-white/70 p-6">
+          <h3 class="mb-3 text-h3 font-bold text-charcoal">Δραστηριότητα (τελευταίες 8 εβδ.)</h3>
+          <div id="activity-chart" class="flex items-end gap-1" style="height:120px;"></div>
         </div>
 
         <!-- Grants table -->
         <div class="rounded-xl border border-border-light bg-white/70 p-6">
           <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h3 class="text-h3 font-bold text-charcoal">Τρέχουσες πρόσβαση</h3>
-            <div class="flex items-center gap-2">
-              <input
-                id="grants-search"
-                type="text"
-                placeholder="Αναζήτηση email..."
-                class="rounded-lg border border-border-mid bg-cream px-3 py-1.5 text-sm text-charcoal outline-none focus:border-gold"
-              />
-              <button id="refresh-grants" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">
-                Ανανέωση
-              </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <input id="grants-search" type="text" placeholder="Αναζήτηση email..."
+                class="rounded-lg border border-border-mid bg-cream px-3 py-1.5 text-sm text-charcoal outline-none focus:border-gold" />
+              <!-- #1: CSV export -->
+              <button id="export-csv" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">CSV</button>
+              <!-- #14: Batch extend -->
+              <button id="batch-extend-btn" type="button" class="hidden btn-secondary !px-3 !py-1.5 text-xs">+30 ημ. επιλεγμένα</button>
+              <button id="refresh-grants" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">Ανανέωση</button>
             </div>
           </div>
-          <div id="grants-table-wrap" class="overflow-x-auto rounded-lg border border-border-light">
-            <table class="w-full min-w-[780px] text-body-sm">
-              <thead class="bg-sand text-left text-text-secondary">
+
+          <!-- #9: Status filter tabs -->
+          <div class="mb-3 flex flex-wrap gap-1" id="filter-tabs">
+            <button data-filter="all" class="rounded-full border border-gold bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">Όλοι</button>
+            <button data-filter="active" class="rounded-full border border-border-mid px-3 py-1 text-xs font-semibold text-text-secondary hover:border-green-400">Active</button>
+            <button data-filter="expired" class="rounded-full border border-border-mid px-3 py-1 text-xs font-semibold text-text-secondary hover:border-red-400">Expired</button>
+            <button data-filter="free" class="rounded-full border border-border-mid px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gray-400">Free</button>
+          </div>
+
+          <div id="grants-table-wrap" class="overflow-x-auto rounded-lg border border-border-light" style="max-height:600px;">
+            <table class="w-full min-w-[900px] text-body-sm">
+              <!-- #8: Sticky header -->
+              <thead class="bg-sand text-left text-text-secondary sticky top-0 z-10">
                 <tr>
-                  <th class="px-3 py-2 font-medium">Email</th>
-                  <th class="px-3 py-2 font-medium">Πλάνο</th>
+                  <!-- #14: Batch select -->
+                  <th class="w-8 px-2 py-2"><input id="select-all-cb" type="checkbox" class="accent-gold" title="Επιλογή όλων" /></th>
+                  <!-- #2: Sortable columns -->
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="email">Email <span class="sort-icon"></span></th>
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="tier">Πλάνο <span class="sort-icon"></span></th>
                   <th class="px-3 py-2 font-medium">Τύπος</th>
-                  <th class="px-3 py-2 font-medium">Status</th>
-                  <th class="px-3 py-2 font-medium">Τελ. login</th>
-                  <th class="px-3 py-2 font-medium">Λήξη</th>
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="status">Status <span class="sort-icon"></span></th>
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="last_sign_in_at">Τελ. login <span class="sort-icon"></span></th>
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="user_created_at">Εγγραφή <span class="sort-icon"></span></th>
+                  <th class="px-3 py-2 font-medium cursor-pointer select-none hover:text-charcoal" data-sort="expires_at">Λήξη <span class="sort-icon"></span></th>
                   <th class="px-3 py-2 font-medium">Αιτιολογία</th>
                   <th class="px-3 py-2 font-medium text-right">Ενέργειες</th>
                 </tr>
               </thead>
               <tbody id="grants-body" class="divide-y divide-border-light">
-                <tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
+                <tr><td colspan="10" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- #4: Per-user audit (expandable) -->
+        <!-- Per-user audit panel -->
         <div id="user-audit-panel" class="hidden rounded-xl border border-gold/30 bg-gold/5 p-6">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-h3 font-bold text-charcoal">
               Ιστορικό: <span id="user-audit-email" class="text-gold"></span>
             </h3>
-            <button id="close-user-audit" type="button" class="text-xs font-semibold text-text-secondary hover:underline">
-              Κλείσιμο
-            </button>
+            <button id="close-user-audit" type="button" class="text-xs font-semibold text-text-secondary hover:underline">Κλείσιμο</button>
+          </div>
+          <!-- #11: User notes -->
+          <div class="mb-4">
+            <div class="mb-2 flex items-center gap-2">
+              <h4 class="text-body-sm font-semibold text-charcoal">Σημειώσεις</h4>
+              <span id="notes-count" class="rounded-full bg-sand px-2 py-0.5 text-xs text-text-muted">0</span>
+            </div>
+            <div id="user-notes-list" class="mb-3 space-y-2 text-xs"></div>
+            <div id="note-form-wrap" class="flex gap-2">
+              <input id="note-input" type="text" placeholder="Νέα σημείωση..." class="flex-1 rounded-lg border border-border-mid bg-cream px-3 py-1.5 text-sm text-charcoal outline-none focus:border-gold" />
+              <button id="add-note-btn" type="button" class="btn-gold !py-1.5 !px-3 !text-xs">Προσθήκη</button>
+            </div>
           </div>
           <div class="overflow-x-auto rounded-lg border border-border-light">
             <table class="w-full min-w-[500px] text-body-sm">
@@ -258,9 +258,7 @@ import Base from "../../layouts/Base.astro";
         <div class="rounded-xl border border-border-light bg-white/70 p-6">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-h3 font-bold text-charcoal">Ιστορικό αλλαγών</h3>
-            <button id="refresh-audit" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">
-              Ανανέωση
-            </button>
+            <button id="refresh-audit" type="button" class="btn-secondary !px-3 !py-1.5 text-xs">Ανανέωση</button>
           </div>
           <div class="overflow-x-auto rounded-lg border border-border-light">
             <table class="w-full min-w-[600px] text-body-sm">
@@ -288,60 +286,78 @@ import Base from "../../layouts/Base.astro";
   import { createClient } from "@supabase/supabase-js";
 
   // --- DOM refs ---
-  const status = document.getElementById("status");
-  const loginPanel = document.getElementById("login-panel");
-  const grantPanel = document.getElementById("grant-panel");
-  const loginForm = document.getElementById("login-form");
-  const grantForm = document.getElementById("grant-form");
-  const adminEmailEl = document.getElementById("admin-email");
-  const signOutBtn = document.getElementById("sign-out");
-  const grantsBody = document.getElementById("grants-body");
-  const auditBody = document.getElementById("audit-body");
-  const refreshBtn = document.getElementById("refresh-grants");
-  const refreshAuditBtn = document.getElementById("refresh-audit");
-  const searchInput = document.getElementById("grants-search");
-  const tierStatsEl = document.getElementById("tier-stats");
-  const formTitle = document.getElementById("form-title");
-  const formResetBtn = document.getElementById("form-reset");
-  const templatesBar = document.getElementById("templates-bar");
-  const toggleBulkBtn = document.getElementById("toggle-bulk");
-  const bulkPanel = document.getElementById("bulk-panel");
-  const bulkEmailsEl = document.getElementById("bulk-emails");
-  const bulkSubmitBtn = document.getElementById("bulk-submit");
-  const bulkProgressEl = document.getElementById("bulk-progress");
-  const userAuditPanel = document.getElementById("user-audit-panel");
-  const userAuditEmail = document.getElementById("user-audit-email");
-  const userAuditBody = document.getElementById("user-audit-body");
-  const closeUserAuditBtn = document.getElementById("close-user-audit");
+  const $ = (id) => document.getElementById(id);
+  const status = $("status");
+  const loginPanel = $("login-panel");
+  const grantPanel = $("grant-panel");
+  const loginForm = $("login-form");
+  const grantForm = $("grant-form");
+  const adminEmailEl = $("admin-email");
+  const adminRoleBadge = $("admin-role-badge");
+  const signOutBtn = $("sign-out");
+  const grantsBody = $("grants-body");
+  const auditBody = $("audit-body");
+  const refreshBtn = $("refresh-grants");
+  const refreshAuditBtn = $("refresh-audit");
+  const searchInput = $("grants-search");
+  const tierStatsEl = $("tier-stats");
+  const expiringBadge = $("expiring-badge");
+  const formTitle = $("form-title");
+  const formResetBtn = $("form-reset");
+  const templatesBar = $("templates-bar");
+  const toggleBulkBtn = $("toggle-bulk");
+  const bulkPanel = $("bulk-panel");
+  const bulkEmailsEl = $("bulk-emails");
+  const bulkSubmitBtn = $("bulk-submit");
+  const bulkProgressEl = $("bulk-progress");
+  const userAuditPanel = $("user-audit-panel");
+  const userAuditEmail = $("user-audit-email");
+  const userAuditBody = $("user-audit-body");
+  const closeUserAuditBtn = $("close-user-audit");
+  const userNotesList = $("user-notes-list");
+  const noteInput = $("note-input");
+  const addNoteBtn = $("add-note-btn");
+  const notesCount = $("notes-count");
+  const noteFormWrap = $("note-form-wrap");
+  const exportCsvBtn = $("export-csv");
+  const filterTabs = $("filter-tabs");
+  const selectAllCb = $("select-all-cb");
+  const batchExtendBtn = $("batch-extend-btn");
+  const sessionWarning = $("session-warning");
+  const refreshSessionBtn = $("refresh-session");
+  const autoRefreshToggle = $("auto-refresh-toggle");
+  const activityChartWrap = $("activity-chart-wrap");
+  const activityChart = $("activity-chart");
+  const dupWarning = $("dup-warning");
+  const writePanel = $("write-panel");
 
   let supabase;
   let allGrants = [];
+  let allAuditEntries = [];
+  let adminRole = "admin";
+  let currentSort = { key: "", dir: "asc" };
+  let currentFilter = "all";
+  let selectedEmails = new Set();
+  let autoRefreshInterval = null;
+  let sessionCheckInterval = null;
 
   // --- Helpers ---
 
   function inputValue(id) {
-    const el = document.getElementById(id);
-    return el instanceof HTMLInputElement ||
-      el instanceof HTMLSelectElement ||
-      el instanceof HTMLTextAreaElement
-      ? el.value.trim()
-      : "";
+    const el = $(id);
+    return el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement
+      ? el.value.trim() : "";
   }
 
   function setInputValue(id, value) {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
       el.value = value || "";
     }
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function showStatus(message, kind = "info") {
@@ -355,18 +371,37 @@ import Base from "../../layouts/Base.astro";
     status.textContent = message;
   }
 
-  function showGrantPanel(email) {
+  function showGrantPanel(email, role) {
+    adminRole = role || "admin";
     loginPanel?.classList.add("hidden");
     grantPanel?.classList.remove("hidden");
     if (adminEmailEl) adminEmailEl.textContent = email;
+
+    // #13: Role badge
+    if (adminRoleBadge) {
+      adminRoleBadge.classList.remove("hidden");
+      if (adminRole === "viewer") {
+        adminRoleBadge.textContent = "Viewer";
+        adminRoleBadge.className = "mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600";
+        writePanel?.classList.add("hidden");
+      } else {
+        adminRoleBadge.textContent = "Admin";
+        adminRoleBadge.className = "mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold bg-gold/10 text-gold";
+        writePanel?.classList.remove("hidden");
+      }
+    }
+
     loadGrants();
     loadAuditLog();
+    startSessionCheck();
   }
 
   function showLoginPanel() {
     grantPanel?.classList.add("hidden");
     loginPanel?.classList.remove("hidden");
     if (adminEmailEl) adminEmailEl.textContent = "";
+    stopAutoRefresh();
+    stopSessionCheck();
   }
 
   async function apiCall(path, accessToken, options = {}) {
@@ -391,12 +426,7 @@ import Base from "../../layouts/Base.astro";
   // --- Badges & formatters ---
 
   function tierBadge(tier) {
-    const colors = {
-      free: "bg-gray-100 text-gray-700",
-      solo: "bg-blue-50 text-blue-700",
-      pro: "bg-amber-50 text-amber-700",
-      team: "bg-purple-50 text-purple-700",
-    };
+    const colors = { free: "bg-gray-100 text-gray-700", solo: "bg-blue-50 text-blue-700", pro: "bg-amber-50 text-amber-700", team: "bg-purple-50 text-purple-700" };
     return `<span class="inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${colors[tier] || ""}">${(tier || "—").toUpperCase()}</span>`;
   }
 
@@ -407,38 +437,28 @@ import Base from "../../layouts/Base.astro";
 
   function formatDate(iso) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("el-GR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(iso).toLocaleDateString("el-GR", { day: "2-digit", month: "short", year: "numeric" });
   }
 
   function formatDateTime(iso) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleString("el-GR", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return new Date(iso).toLocaleString("el-GR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
   }
 
-  // Last login — relative date in Greek
   function formatRelativeLogin(iso) {
     if (!iso) return '<span class="text-text-muted">Ποτέ</span>';
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `Πριν ${mins} λ.`;
+    if (mins < 1) return "Τώρα";
+    if (mins < 60) return `${mins} λ.`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `Πριν ${hours} ώ.`;
+    if (hours < 24) return `${hours} ώ.`;
     const days = Math.floor(hours / 24);
-    if (days < 30) return `Πριν ${days} ημ.`;
+    if (days < 30) return `${days} ημ.`;
     const months = Math.floor(days / 30);
-    return `Πριν ${months} μ.`;
+    return `${months} μ.`;
   }
 
-  // #6 — Expiry warning: returns CSS class if expiring within 7 days
   function expiryClass(expiresAt) {
     if (!expiresAt) return "";
     const diff = new Date(expiresAt).getTime() - Date.now();
@@ -459,58 +479,105 @@ import Base from "../../layouts/Base.astro";
     return dateStr;
   }
 
-  // #5 — Reason: truncate with title tooltip
   function reasonCell(reason) {
     if (!reason) return '<span class="text-text-muted">—</span>';
-    const short = reason.length > 25 ? reason.slice(0, 25) + "…" : reason;
+    const short = reason.length > 20 ? reason.slice(0, 20) + "…" : reason;
     return `<span title="${escapeHtml(reason)}" class="cursor-help text-text-secondary">${escapeHtml(short)}</span>`;
   }
 
-  // --- #4: Tier stats ---
+  // --- Tier stats + #3 Expiring badge ---
   function renderStats(grants) {
     if (!tierStatsEl) return;
     const counts = { free: 0, solo: 0, pro: 0, team: 0 };
+    let expiringSoon = 0;
     for (const g of grants) {
       if (counts[g.tier] !== undefined) counts[g.tier]++;
+      if (g.expires_at) {
+        const diff = new Date(g.expires_at).getTime() - Date.now();
+        if (diff > 0 && diff < 7 * 24 * 60 * 60 * 1000) expiringSoon++;
+      }
     }
-    const total = grants.length;
     const items = [
       { label: "Free", count: counts.free, color: "border-gray-200 bg-gray-50 text-gray-700" },
       { label: "Solo", count: counts.solo, color: "border-blue-200 bg-blue-50 text-blue-700" },
       { label: "Pro", count: counts.pro, color: "border-amber-200 bg-amber-50 text-amber-700" },
       { label: "Team", count: counts.team, color: "border-purple-200 bg-purple-50 text-purple-700" },
     ];
-    tierStatsEl.innerHTML = items
-      .map(
-        (i) => `
+    tierStatsEl.innerHTML = items.map((i) => `
       <div class="rounded-lg border ${i.color} px-4 py-3 text-center">
         <p class="text-2xl font-bold">${i.count}</p>
         <p class="text-xs font-semibold">${i.label}</p>
-      </div>`,
-      )
-      .join("");
+      </div>`).join("");
+
+    // #3: Expiring soon badge
+    if (expiringBadge) {
+      if (expiringSoon > 0) {
+        expiringBadge.textContent = `${expiringSoon} πρόσβαση${expiringSoon > 1 ? "ς" : ""} λήγ${expiringSoon > 1 ? "ουν" : "ει"} σε 7 ημέρες`;
+        expiringBadge.classList.remove("hidden");
+      } else {
+        expiringBadge.classList.add("hidden");
+      }
+    }
   }
 
-  // --- #1: Click-to-edit ---
+  // --- #7: Activity chart ---
+  function renderActivityChart(entries) {
+    if (!activityChart || !activityChartWrap) return;
+    if (!entries || entries.length === 0) { activityChartWrap.classList.add("hidden"); return; }
+
+    const weeks = {};
+    const now = Date.now();
+    // Initialize last 8 weeks
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(now - i * 7 * 24 * 60 * 60 * 1000);
+      const wk = `${d.getFullYear()}-W${String(Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7)).padStart(2, "0")}`;
+      weeks[wk] = { grants: 0, revokes: 0, label: formatDate(d.toISOString()) };
+    }
+
+    for (const e of entries) {
+      const d = new Date(e.created_at);
+      const wk = `${d.getFullYear()}-W${String(Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7)).padStart(2, "0")}`;
+      if (weeks[wk]) {
+        const tier = e.payload?.tier;
+        if (tier === "free") weeks[wk].revokes++;
+        else weeks[wk].grants++;
+      }
+    }
+
+    const vals = Object.values(weeks);
+    const maxVal = Math.max(1, ...vals.map((w) => w.grants + w.revokes));
+
+    activityChart.innerHTML = vals.map((w) => {
+      const gH = Math.round((w.grants / maxVal) * 100);
+      const rH = Math.round((w.revokes / maxVal) * 100);
+      return `
+        <div class="flex-1 flex flex-col items-center gap-0.5" title="${w.label}: ${w.grants} grants, ${w.revokes} revokes">
+          <div class="w-full flex flex-col justify-end" style="height:100px;">
+            <div class="w-full rounded-t bg-green-400" style="height:${gH}px;"></div>
+            <div class="w-full rounded-b bg-red-300" style="height:${rH}px;"></div>
+          </div>
+          <span class="text-[9px] text-text-muted truncate w-full text-center">${w.label.split(" ").slice(0, 2).join(" ")}</span>
+        </div>`;
+    }).join("");
+
+    activityChartWrap.classList.remove("hidden");
+  }
+
+  // --- Click-to-edit ---
   function fillForm(grant) {
+    if (adminRole === "viewer") return;
     setInputValue("grant-email", grant.email);
     setInputValue("grant-tier", grant.tier);
     setInputValue("grant-source", grant.source || "manual");
     setInputValue("grant-reason", grant.grant_reason || "");
-
-    // Convert ISO expiry to datetime-local format
     if (grant.expires_at) {
       const d = new Date(grant.expires_at);
-      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-      setInputValue("grant-expires", local);
+      setInputValue("grant-expires", new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     } else {
       setInputValue("grant-expires", "");
     }
-
     if (formTitle) formTitle.textContent = `Επεξεργασία: ${grant.email}`;
     formResetBtn?.classList.remove("hidden");
-
-    // Scroll to form
     grantForm?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -518,11 +585,12 @@ import Base from "../../layouts/Base.astro";
     grantForm?.reset();
     if (formTitle) formTitle.textContent = "Νέα πρόσβαση";
     formResetBtn?.classList.add("hidden");
+    dupWarning?.classList.add("hidden");
   }
 
   formResetBtn?.addEventListener("click", resetForm);
 
-  // --- #1: Grant templates ---
+  // --- Grant templates ---
   const TEMPLATES = {
     "beta30": { tier: "pro", source: "tester", reason: "Beta tester access", daysFromNow: 30 },
     "solo-perm": { tier: "solo", source: "manual", reason: "", daysFromNow: null },
@@ -537,41 +605,50 @@ import Base from "../../layouts/Base.astro";
     if (!btn) return;
     const tpl = TEMPLATES[btn.getAttribute("data-tpl")];
     if (!tpl) return;
-
     setInputValue("grant-tier", tpl.tier);
     setInputValue("grant-source", tpl.source);
     setInputValue("grant-reason", tpl.reason);
-
     if (tpl.daysFromNow) {
       const d = new Date(Date.now() + tpl.daysFromNow * 24 * 60 * 60 * 1000);
-      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-      setInputValue("grant-expires", local);
+      setInputValue("grant-expires", new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     } else {
       setInputValue("grant-expires", "");
     }
-
     if (formTitle) formTitle.textContent = `Νέα πρόσβαση — ${btn.textContent.trim()}`;
-    // Focus email field
-    document.getElementById("grant-email")?.focus();
+    $(("grant-email"))?.focus();
   });
 
-  // --- #2 Bulk mode toggle ---
+  // --- #10: Duplicate detection ---
+  function checkDuplicate() {
+    const email = inputValue("grant-email").toLowerCase();
+    const tier = inputValue("grant-tier");
+    if (!email || !dupWarning) return;
+    const existing = allGrants.find((g) => g.email?.toLowerCase() === email);
+    if (existing && existing.tier === tier) {
+      dupWarning.textContent = `Ο χρήστης ${email} έχει ήδη ${tier.toUpperCase()}. Η αποθήκευση θα κάνει overwrite.`;
+      dupWarning.classList.remove("hidden");
+    } else if (existing) {
+      dupWarning.textContent = `Ο χρήστης ${email} έχει τώρα ${(existing.tier || "").toUpperCase()}. Θα αλλάξει σε ${tier.toUpperCase()}.`;
+      dupWarning.classList.remove("hidden");
+    } else {
+      dupWarning.classList.add("hidden");
+    }
+  }
+
+  $("grant-email")?.addEventListener("input", checkDuplicate);
+  $("grant-tier")?.addEventListener("change", checkDuplicate);
+
+  // --- Bulk mode toggle ---
   toggleBulkBtn?.addEventListener("click", () => {
     bulkPanel?.classList.toggle("hidden");
-    if (toggleBulkBtn) {
-      toggleBulkBtn.textContent = bulkPanel?.classList.contains("hidden") ? "Bulk mode" : "Single mode";
-    }
+    if (toggleBulkBtn) toggleBulkBtn.textContent = bulkPanel?.classList.contains("hidden") ? "Bulk mode" : "Single mode";
   });
 
   // --- Bulk submit ---
   bulkSubmitBtn?.addEventListener("click", async () => {
     const raw = bulkEmailsEl instanceof HTMLTextAreaElement ? bulkEmailsEl.value : "";
     const emails = raw.split("\n").map((l) => l.trim().toLowerCase()).filter((l) => l.includes("@"));
-
-    if (emails.length === 0) {
-      showStatus("Δεν βρέθηκαν valid emails.", "error");
-      return;
-    }
+    if (emails.length === 0) { showStatus("Δεν βρέθηκαν valid emails.", "error"); return; }
 
     const tier = inputValue("grant-tier");
     const source = inputValue("grant-source");
@@ -584,50 +661,28 @@ import Base from "../../layouts/Base.astro";
     const token = await currentAccessToken();
     if (!token) { showLoginPanel(); return; }
 
-    let ok = 0;
-    let fail = 0;
+    let ok = 0, fail = 0;
     for (let i = 0; i < emails.length; i++) {
       if (bulkProgressEl) bulkProgressEl.textContent = `${i + 1}/${emails.length}...`;
       try {
-        await apiCall("/api/admin/grant-session", token, {
-          method: "POST",
-          body: JSON.stringify({ email: emails[i], tier, source, expiresAt, reason }),
-        });
+        await apiCall("/api/admin/grant-session", token, { method: "POST", body: JSON.stringify({ email: emails[i], tier, source, expiresAt, reason }) });
         ok++;
-      } catch {
-        fail++;
-      }
+      } catch { fail++; }
     }
-
     if (bulkProgressEl) bulkProgressEl.textContent = "";
     showStatus(`Bulk: ${ok} OK, ${fail} failed (${emails.length} total)`, fail > 0 ? "error" : "success");
     loadGrants();
     loadAuditLog();
   });
 
-  // --- Revoke (downgrade to free) ---
+  // --- Revoke ---
   async function revokeGrant(email) {
     if (!confirm(`Ανάκληση πρόσβασης για ${email}; Θα γίνει downgrade σε Free.`)) return;
-
     const token = await currentAccessToken();
-    if (!token) {
-      showLoginPanel();
-      return;
-    }
-
+    if (!token) { showLoginPanel(); return; }
     showStatus(`Ανάκληση πρόσβασης ${email}...`);
-
     try {
-      await apiCall("/api/admin/grant-session", token, {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          tier: "free",
-          source: "manual",
-          expiresAt: null,
-          reason: "Revoked by admin",
-        }),
-      });
+      await apiCall("/api/admin/grant-session", token, { method: "POST", body: JSON.stringify({ email, tier: "free", source: "manual", expiresAt: null, reason: "Revoked by admin" }) });
       showStatus(`Ανακλήθηκε: ${email} → FREE`, "success");
       loadGrants();
       loadAuditLog();
@@ -636,191 +691,437 @@ import Base from "../../layouts/Base.astro";
     }
   }
 
+  // --- #14: Batch extend expiry ---
+  function updateBatchBtn() {
+    if (batchExtendBtn) {
+      if (selectedEmails.size > 0 && adminRole === "admin") {
+        batchExtendBtn.classList.remove("hidden");
+        batchExtendBtn.textContent = `+30 ημ. (${selectedEmails.size})`;
+      } else {
+        batchExtendBtn.classList.add("hidden");
+      }
+    }
+  }
+
+  selectAllCb?.addEventListener("change", () => {
+    const checked = selectAllCb instanceof HTMLInputElement && selectAllCb.checked;
+    selectedEmails.clear();
+    if (checked) {
+      const filtered = getFilteredGrants();
+      for (const g of filtered) selectedEmails.add(g.email);
+    }
+    document.querySelectorAll(".row-cb").forEach((cb) => { if (cb instanceof HTMLInputElement) cb.checked = checked; });
+    updateBatchBtn();
+  });
+
+  batchExtendBtn?.addEventListener("click", async () => {
+    if (selectedEmails.size === 0) return;
+    if (!confirm(`Παράταση +30 ημερών για ${selectedEmails.size} χρήστες;`)) return;
+
+    const token = await currentAccessToken();
+    if (!token) { showLoginPanel(); return; }
+
+    let ok = 0, fail = 0;
+    for (const email of selectedEmails) {
+      const g = allGrants.find((x) => x.email === email);
+      if (!g) { fail++; continue; }
+      const base = g.expires_at ? new Date(g.expires_at) : new Date();
+      const newExpiry = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      try {
+        await apiCall("/api/admin/grant-session", token, {
+          method: "POST",
+          body: JSON.stringify({ email, tier: g.tier, source: g.source || "manual", expiresAt: newExpiry, reason: "Extended +30 days by admin" }),
+        });
+        ok++;
+      } catch { fail++; }
+    }
+    selectedEmails.clear();
+    updateBatchBtn();
+    showStatus(`Παράταση: ${ok} OK, ${fail} failed`, fail > 0 ? "error" : "success");
+    loadGrants();
+    loadAuditLog();
+  });
+
+  // --- #2: Column sorting ---
+  function sortGrants(grants, key, dir) {
+    return [...grants].sort((a, b) => {
+      let va = a[key] ?? "", vb = b[key] ?? "";
+      if (typeof va === "string") va = va.toLowerCase();
+      if (typeof vb === "string") vb = vb.toLowerCase();
+      if (va < vb) return dir === "asc" ? -1 : 1;
+      if (va > vb) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  document.querySelectorAll("[data-sort]").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.getAttribute("data-sort");
+      if (currentSort.key === key) {
+        currentSort.dir = currentSort.dir === "asc" ? "desc" : "asc";
+      } else {
+        currentSort = { key, dir: "asc" };
+      }
+      // Update sort icons
+      document.querySelectorAll("[data-sort] .sort-icon").forEach((s) => { s.textContent = ""; });
+      const icon = th.querySelector(".sort-icon");
+      if (icon) icon.textContent = currentSort.dir === "asc" ? " ↑" : " ↓";
+      filterAndRender();
+    });
+  });
+
+  // --- #9: Status filter tabs ---
+  filterTabs?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const btn = target.closest("[data-filter]");
+    if (!btn) return;
+    currentFilter = btn.getAttribute("data-filter") || "all";
+    filterTabs.querySelectorAll("button").forEach((b) => {
+      b.className = b === btn
+        ? "rounded-full border border-gold bg-gold/10 px-3 py-1 text-xs font-semibold text-gold"
+        : "rounded-full border border-border-mid px-3 py-1 text-xs font-semibold text-text-secondary";
+    });
+    filterAndRender();
+  });
+
   // --- Grants table ---
+
+  function getFilteredGrants() {
+    const query = (searchInput instanceof HTMLInputElement ? searchInput.value : "").toLowerCase().trim();
+    let filtered = allGrants;
+    if (query) filtered = filtered.filter((g) => g.email?.toLowerCase().includes(query));
+    if (currentFilter === "active") filtered = filtered.filter((g) => g.status === "active");
+    else if (currentFilter === "expired") filtered = filtered.filter((g) => g.expires_at && new Date(g.expires_at).getTime() < Date.now());
+    else if (currentFilter === "free") filtered = filtered.filter((g) => g.tier === "free");
+    if (currentSort.key) filtered = sortGrants(filtered, currentSort.key, currentSort.dir);
+    return filtered;
+  }
 
   function renderGrants(grants) {
     if (!grantsBody) return;
-
     if (!grants || grants.length === 0) {
-      grantsBody.innerHTML =
-        '<tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Δεν βρέθηκαν εγγραφές.</td></tr>';
+      grantsBody.innerHTML = '<tr><td colspan="10" class="px-3 py-4 text-center text-text-muted">Δεν βρέθηκαν εγγραφές.</td></tr>';
       return;
     }
 
-    grantsBody.innerHTML = grants
-      .map(
-        (g, i) => `
+    const isAdmin = adminRole === "admin";
+    grantsBody.innerHTML = grants.map((g) => `
       <tr class="${expiryClass(g.expires_at)} hover:bg-sand/40 transition-colors">
-        <td class="px-3 py-2 font-medium text-charcoal">${escapeHtml(g.email)}</td>
-        <td class="px-3 py-2">${tierBadge(escapeHtml(g.tier))}</td>
+        <td class="px-2 py-2">${isAdmin ? `<input type="checkbox" class="row-cb accent-gold" data-email="${escapeHtml(g.email)}" ${selectedEmails.has(g.email) ? "checked" : ""} />` : ""}</td>
+        <td class="px-3 py-2 font-medium text-charcoal">
+          <span class="cursor-pointer hover:text-gold" data-action="copy" data-email="${escapeHtml(g.email)}" title="Αντιγραφή email">${escapeHtml(g.email)}</span>
+        </td>
+        <td class="px-3 py-2">${tierBadge(g.tier)}</td>
         <td class="px-3 py-2 text-text-secondary">${escapeHtml(g.source || "—")}</td>
-        <td class="px-3 py-2">${statusBadge(escapeHtml(g.status))}</td>
-        <td class="px-3 py-2 text-text-muted text-xs">${formatRelativeLogin(g.last_sign_in_at)}</td>
+        <td class="px-3 py-2">${statusBadge(g.status)}</td>
+        <td class="px-3 py-2 text-text-muted text-xs" title="${g.last_sign_in_at ? formatDateTime(g.last_sign_in_at) : "Ποτέ"}">${formatRelativeLogin(g.last_sign_in_at)}</td>
+        <td class="px-3 py-2 text-text-muted text-xs">${formatDate(g.user_created_at)}</td>
         <td class="px-3 py-2">${expiryLabel(g.expires_at)}</td>
         <td class="px-3 py-2">${reasonCell(g.grant_reason)}</td>
         <td class="px-3 py-2 text-right whitespace-nowrap">
-          <button data-action="edit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-gold hover:bg-gold/10">
-            Επεξ/σία
-          </button>
-          <button data-action="audit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-text-secondary hover:bg-sand">
-            Ιστορικό
-          </button>
-          ${
-            g.tier !== "free"
-              ? `<button data-action="revoke" data-email="${escapeHtml(g.email)}" class="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">
-                  Ανάκληση
-                </button>`
-              : ""
-          }
+          ${isAdmin ? `<button data-action="edit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-gold hover:bg-gold/10">Επεξ/σία</button>` : ""}
+          <button data-action="audit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-text-secondary hover:bg-sand">Ιστορικό</button>
+          ${isAdmin && g.tier !== "free" ? `<button data-action="revoke" data-email="${escapeHtml(g.email)}" class="rounded px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">Ανάκληση</button>` : ""}
         </td>
-      </tr>`,
-      )
-      .join("");
+      </tr>`).join("");
   }
 
   // Event delegation for table actions
   grantsBody?.addEventListener("click", (e) => {
     const target = e.target;
     if (!(target instanceof Element)) return;
+
+    // #14: Checkbox selection
+    if (target.classList.contains("row-cb") && target instanceof HTMLInputElement) {
+      const email = target.getAttribute("data-email");
+      if (email) { target.checked ? selectedEmails.add(email) : selectedEmails.delete(email); }
+      updateBatchBtn();
+      return;
+    }
+
+    // #4: Click-to-copy email
+    const copyEl = target.closest("[data-action='copy']");
+    if (copyEl) {
+      const email = copyEl.getAttribute("data-email");
+      if (email) {
+        navigator.clipboard.writeText(email).then(() => {
+          copyEl.textContent = "Copied!";
+          setTimeout(() => { copyEl.textContent = email; }, 1200);
+        });
+      }
+      return;
+    }
+
     const btn = target.closest("[data-action]");
     if (!btn) return;
     const email = btn.getAttribute("data-email");
     if (!email) return;
+    const action = btn.getAttribute("data-action");
     const grant = allGrants.find((g) => g.email === email);
-
-    if (btn.getAttribute("data-action") === "edit" && grant) fillForm(grant);
-    if (btn.getAttribute("data-action") === "revoke") revokeGrant(email);
-    if (btn.getAttribute("data-action") === "audit") loadUserAudit(email);
+    if (action === "edit" && grant) fillForm(grant);
+    if (action === "revoke") revokeGrant(email);
+    if (action === "audit") loadUserAudit(email);
   });
 
   async function loadGrants() {
     if (!grantsBody) return;
     const token = await currentAccessToken();
     if (!token) return;
-
-    grantsBody.innerHTML =
-      '<tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
-
+    grantsBody.innerHTML = '<tr><td colspan="10" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
     try {
       const grants = await apiCall("/api/admin/list-grants", token);
       allGrants = Array.isArray(grants) ? grants : [];
       renderStats(allGrants);
       filterAndRender();
     } catch {
-      grantsBody.innerHTML =
-        '<tr><td colspan="8" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+      grantsBody.innerHTML = '<tr><td colspan="10" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
     }
   }
 
-  // #7 — Search/filter
   function filterAndRender() {
-    const query = (searchInput instanceof HTMLInputElement ? searchInput.value : "").toLowerCase().trim();
-    const filtered = query
-      ? allGrants.filter((g) => g.email?.toLowerCase().includes(query))
-      : allGrants;
+    const filtered = getFilteredGrants();
     renderGrants(filtered);
   }
 
   searchInput?.addEventListener("input", filterAndRender);
 
-  // --- #3: Audit log ---
+  // --- #1: CSV export ---
+  exportCsvBtn?.addEventListener("click", () => {
+    if (allGrants.length === 0) { showStatus("Δεν υπάρχουν δεδομένα.", "error"); return; }
+    const headers = ["Email", "Tier", "Source", "Status", "Last Login", "Created", "Expires", "Reason"];
+    const rows = allGrants.map((g) => [
+      g.email, g.tier, g.source || "", g.status || "",
+      g.last_sign_in_at || "", g.user_created_at || "",
+      g.expires_at || "", g.grant_reason || "",
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rheo-grants-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus("CSV εξαγωγή ολοκληρώθηκε.", "success");
+  });
+
+  // --- Audit log ---
   async function loadAuditLog() {
     if (!auditBody) return;
     const token = await currentAccessToken();
     if (!token) return;
-
-    auditBody.innerHTML =
-      '<tr><td colspan="5" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
-
+    auditBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
     try {
       const entries = await apiCall("/api/admin/audit-log", token);
+      allAuditEntries = Array.isArray(entries) ? entries : [];
 
-      if (!Array.isArray(entries) || entries.length === 0) {
-        auditBody.innerHTML =
-          '<tr><td colspan="5" class="px-3 py-4 text-center text-text-muted">Δεν υπάρχουν εγγραφές.</td></tr>';
-        return;
-      }
-
-      auditBody.innerHTML = entries
-        .map((e) => {
+      if (allAuditEntries.length === 0) {
+        auditBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-text-muted">Δεν υπάρχουν εγγραφές.</td></tr>';
+      } else {
+        auditBody.innerHTML = allAuditEntries.map((e) => {
           const p = e.payload || {};
           const detail = [p.tier && String(p.tier).toUpperCase(), p.source].filter(Boolean).join(" / ");
-          return `
-          <tr class="hover:bg-sand/40">
+          return `<tr class="hover:bg-sand/40">
             <td class="px-3 py-2 text-text-muted">${formatDateTime(e.created_at)}</td>
             <td class="px-3 py-2 text-text-secondary">${escapeHtml(e.admin_email)}</td>
             <td class="px-3 py-2 font-medium text-charcoal">${escapeHtml(e.target_email || "—")}</td>
-            <td class="px-3 py-2">${tierBadge(escapeHtml(p.tier || "—"))}</td>
+            <td class="px-3 py-2">${tierBadge(p.tier || "—")}</td>
             <td class="px-3 py-2 text-text-secondary">${escapeHtml(detail || "—")}</td>
           </tr>`;
-        })
-        .join("");
+        }).join("");
+      }
+
+      // #7: Render activity chart from audit entries
+      renderActivityChart(allAuditEntries);
     } catch {
-      auditBody.innerHTML =
-        '<tr><td colspan="5" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+      auditBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
     }
   }
 
-  // --- Per-user audit ---
+  // --- Per-user audit + #11: Notes ---
+  let currentAuditEmail = "";
+
   async function loadUserAudit(email) {
     if (!userAuditPanel || !userAuditBody || !userAuditEmail) return;
-
+    currentAuditEmail = email;
     userAuditEmail.textContent = email;
     userAuditPanel.classList.remove("hidden");
     userAuditPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    userAuditBody.innerHTML =
-      '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
+    // Hide note form for viewers
+    if (noteFormWrap) noteFormWrap.style.display = adminRole === "admin" ? "" : "none";
 
+    // Load audit entries
+    userAuditBody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
     const token = await currentAccessToken();
     if (!token) return;
 
-    try {
-      const entries = await apiCall(`/api/admin/audit-log?email=${encodeURIComponent(email)}`, token);
+    // Load audit + notes in parallel
+    const [auditRes, notesRes] = await Promise.allSettled([
+      apiCall(`/api/admin/audit-log?email=${encodeURIComponent(email)}`, token),
+      apiCall(`/api/admin/notes?email=${encodeURIComponent(email)}`, token),
+    ]);
 
-      if (!Array.isArray(entries) || entries.length === 0) {
-        userAuditBody.innerHTML =
-          '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Δεν υπάρχουν εγγραφές.</td></tr>';
-        return;
-      }
+    // Render audit
+    const entries = auditRes.status === "fulfilled" && Array.isArray(auditRes.value) ? auditRes.value : [];
+    if (entries.length === 0) {
+      userAuditBody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Δεν υπάρχουν εγγραφές.</td></tr>';
+    } else {
+      userAuditBody.innerHTML = entries.map((e) => {
+        const p = e.payload || {};
+        const detail = [p.tier && String(p.tier).toUpperCase(), p.source, p.expiresAt ? `→ ${formatDate(p.expiresAt)}` : null].filter(Boolean).join(" / ");
+        return `<tr class="hover:bg-sand/40">
+          <td class="px-3 py-2 text-text-muted">${formatDateTime(e.created_at)}</td>
+          <td class="px-3 py-2 text-text-secondary">${escapeHtml(e.admin_email)}</td>
+          <td class="px-3 py-2">${escapeHtml(e.action || "—")}</td>
+          <td class="px-3 py-2 text-text-secondary">${escapeHtml(detail || "—")}</td>
+        </tr>`;
+      }).join("");
+    }
 
-      userAuditBody.innerHTML = entries
-        .map((e) => {
-          const p = e.payload || {};
-          const detail = [p.tier && String(p.tier).toUpperCase(), p.source, p.expiresAt ? `→ ${formatDate(p.expiresAt)}` : null]
-            .filter(Boolean)
-            .join(" / ");
-          return `
-          <tr class="hover:bg-sand/40">
-            <td class="px-3 py-2 text-text-muted">${formatDateTime(e.created_at)}</td>
-            <td class="px-3 py-2 text-text-secondary">${escapeHtml(e.admin_email)}</td>
-            <td class="px-3 py-2">${escapeHtml(e.action || "—")}</td>
-            <td class="px-3 py-2 text-text-secondary">${escapeHtml(detail || "—")}</td>
-          </tr>`;
-        })
-        .join("");
-    } catch {
-      userAuditBody.innerHTML =
-        '<tr><td colspan="4" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+    // Render notes
+    const notes = notesRes.status === "fulfilled" && Array.isArray(notesRes.value) ? notesRes.value : [];
+    renderUserNotes(notes);
+  }
+
+  function renderUserNotes(notes) {
+    if (!userNotesList || !notesCount) return;
+    notesCount.textContent = String(notes.length);
+    if (notes.length === 0) {
+      userNotesList.innerHTML = '<p class="text-text-muted text-xs">Δεν υπάρχουν σημειώσεις.</p>';
+    } else {
+      userNotesList.innerHTML = notes.map((n) => `
+        <div class="rounded border border-border-light bg-white/60 px-3 py-2">
+          <p class="text-text-secondary">${escapeHtml(n.note)}</p>
+          <p class="mt-1 text-text-muted" style="font-size:10px;">${escapeHtml(n.admin_email)} — ${formatDateTime(n.created_at)}</p>
+        </div>`).join("");
     }
   }
 
+  addNoteBtn?.addEventListener("click", async () => {
+    const note = noteInput instanceof HTMLInputElement ? noteInput.value.trim() : "";
+    if (!note || !currentAuditEmail) return;
+    const token = await currentAccessToken();
+    if (!token) return;
+    try {
+      await apiCall("/api/admin/notes", token, { method: "POST", body: JSON.stringify({ email: currentAuditEmail, note }) });
+      if (noteInput instanceof HTMLInputElement) noteInput.value = "";
+      // Reload notes
+      const notes = await apiCall(`/api/admin/notes?email=${encodeURIComponent(currentAuditEmail)}`, token);
+      renderUserNotes(Array.isArray(notes) ? notes : []);
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Σφάλμα αποθήκευσης σημείωσης.", "error");
+    }
+  });
+
   closeUserAuditBtn?.addEventListener("click", () => {
     userAuditPanel?.classList.add("hidden");
+    currentAuditEmail = "";
+  });
+
+  // --- #5: Session timeout warning ---
+  function startSessionCheck() {
+    stopSessionCheck();
+    sessionCheckInterval = setInterval(async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session) { showLoginPanel(); return; }
+      const expiresAt = session.expires_at * 1000;
+      const remaining = expiresAt - Date.now();
+      if (remaining < 2 * 60 * 1000 && remaining > 0) {
+        sessionWarning?.classList.remove("hidden");
+      } else {
+        sessionWarning?.classList.add("hidden");
+      }
+    }, 30000);
+  }
+
+  function stopSessionCheck() {
+    if (sessionCheckInterval) { clearInterval(sessionCheckInterval); sessionCheckInterval = null; }
+    sessionWarning?.classList.add("hidden");
+  }
+
+  refreshSessionBtn?.addEventListener("click", async () => {
+    const { error } = await supabase.auth.refreshSession();
+    if (error) {
+      showStatus("Αποτυχία ανανέωσης session.", "error");
+    } else {
+      sessionWarning?.classList.add("hidden");
+      showStatus("Session ανανεώθηκε.", "success");
+    }
+  });
+
+  // --- #16: Auto-refresh polling ---
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshInterval = setInterval(() => { loadGrants(); loadAuditLog(); }, 30000);
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+  }
+
+  autoRefreshToggle?.addEventListener("change", () => {
+    if (autoRefreshToggle instanceof HTMLInputElement && autoRefreshToggle.checked) {
+      startAutoRefresh();
+      showStatus("Live mode: ανανέωση κάθε 30\"", "info");
+    } else {
+      stopAutoRefresh();
+    }
+  });
+
+  // --- #12: Email notification ---
+  async function sendNotification(email, tier) {
+    const token = await currentAccessToken();
+    if (!token) return;
+    try {
+      const result = await apiCall("/api/admin/notify", token, { method: "POST", body: JSON.stringify({ email, tier }) });
+      if (result.sent) {
+        showStatus(`Email ειδοποίηση στάλθηκε στον ${email}`, "success");
+      } else {
+        showStatus(`Email δεν στάλθηκε: ${result.reason || "unknown"}`, "info");
+      }
+    } catch {
+      // Non-blocking: notification failure doesn't affect grant
+    }
+  }
+
+  // --- #15: Keyboard shortcuts ---
+  document.addEventListener("keydown", (e) => {
+    // Don't trigger when typing in inputs
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+    if (!grantPanel || grantPanel.classList.contains("hidden")) return;
+
+    if (e.key === "n" && adminRole === "admin") {
+      e.preventDefault();
+      resetForm();
+      $("grant-email")?.focus();
+    }
+    if (e.key === "s" || e.key === "/") {
+      e.preventDefault();
+      searchInput?.focus();
+    }
+    if (e.key === "Escape") {
+      userAuditPanel?.classList.add("hidden");
+      currentAuditEmail = "";
+    }
+    if (e.key === "r") {
+      e.preventDefault();
+      loadGrants();
+      loadAuditLog();
+    }
   });
 
   // --- Auth flow ---
 
   async function checkAdminSession() {
     const token = await currentAccessToken();
-    if (!token) {
-      showLoginPanel();
-      return;
-    }
-
+    if (!token) { showLoginPanel(); return; }
     try {
       const me = await apiCall("/api/admin/me", token);
-      showGrantPanel(me.email);
+      showGrantPanel(me.email, me.role);
     } catch {
       await supabase.auth.signOut();
       showLoginPanel();
@@ -842,62 +1143,42 @@ import Base from "../../layouts/Base.astro";
   loginForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     showStatus("Γίνεται σύνδεση...");
-
     const { error } = await supabase.auth.signInWithPassword({
       email: inputValue("login-email"),
       password: inputValue("login-password"),
     });
-
-    if (error) {
-      showStatus("Δεν έγινε σύνδεση. Έλεγξε email/password.", "error");
-      return;
-    }
-
+    if (error) { showStatus("Δεν έγινε σύνδεση. Έλεγξε email/password.", "error"); return; }
     await checkAdminSession();
   });
 
   grantForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-
     const confirmEmail = inputValue("grant-email");
     const confirmTier = inputValue("grant-tier").toUpperCase();
     const confirmSource = inputValue("grant-source");
-    if (
-      !confirm(
-        `Επιβεβαίωση: Δώσε ${confirmTier} πρόσβαση στον ${confirmEmail} (${confirmSource});`,
-      )
-    ) {
-      return;
-    }
+    if (!confirm(`Επιβεβαίωση: Δώσε ${confirmTier} πρόσβαση στον ${confirmEmail} (${confirmSource});`)) return;
 
     showStatus("Αποθηκεύεται η πρόσβαση...");
-
     const token = await currentAccessToken();
-    if (!token) {
-      showLoginPanel();
-      showStatus("Η συνεδρία έληξε. Συνδέσου ξανά.", "error");
-      return;
-    }
+    if (!token) { showLoginPanel(); showStatus("Η συνεδρία έληξε. Συνδέσου ξανά.", "error"); return; }
 
     const expiresValue = inputValue("grant-expires");
     const expiresAt = expiresValue ? new Date(expiresValue).toISOString() : null;
+    const shouldNotify = $("grant-notify") instanceof HTMLInputElement && $("grant-notify").checked;
 
     try {
       const result = await apiCall("/api/admin/grant-session", token, {
         method: "POST",
         body: JSON.stringify({
-          email: inputValue("grant-email"),
-          tier: inputValue("grant-tier"),
-          source: inputValue("grant-source"),
-          expiresAt,
-          reason: inputValue("grant-reason") || null,
+          email: inputValue("grant-email"), tier: inputValue("grant-tier"),
+          source: inputValue("grant-source"), expiresAt, reason: inputValue("grant-reason") || null,
         }),
       });
+      showStatus(`Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})`, "success");
 
-      showStatus(
-        `Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})`,
-        "success",
-      );
+      // #12: Send notification if checked
+      if (shouldNotify) sendNotification(result.email, result.tier);
+
       resetForm();
       loadGrants();
       loadAuditLog();
