@@ -1,0 +1,292 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base
+  title="Rheo Admin - Πλάνα χρηστών"
+  description="Εσωτερική διαχείριση πλάνων χρηστών Rheo Finance."
+>
+  <main class="min-h-screen bg-cream py-10">
+    <section class="section-container max-w-3xl">
+      <a href="/" class="mb-8 inline-flex items-center gap-2 text-body-sm font-semibold text-gold">
+        ← Πίσω στο Rheo
+      </a>
+
+      <div class="mb-8">
+        <div class="mb-3 flex items-center gap-3">
+          <img src="/app-icon.png" alt="" class="h-10 w-10 rounded-lg" />
+          <div>
+            <p class="text-body-sm font-semibold text-gold">Rheo Admin</p>
+            <h1 class="text-display-sm font-bold text-charcoal">Πλάνα χρηστών</h1>
+          </div>
+        </div>
+        <p class="max-w-2xl text-body text-text-secondary">
+          Δώσε ή άλλαξε πρόσβαση Free, Solo, Pro ή Team χωρίς χρήση terminal.
+        </p>
+      </div>
+
+      <div id="status" class="mb-5 hidden rounded-lg border px-4 py-3 text-body-sm"></div>
+
+      <section id="login-panel" class="rounded-xl border border-border-light bg-white/70 p-6">
+        <h2 class="mb-2 text-h2 font-bold text-charcoal">Σύνδεση admin</h2>
+        <p class="mb-5 text-body-sm text-text-secondary">
+          Χρησιμοποίησε τον λογαριασμό Supabase που έχει admin πρόσβαση.
+        </p>
+
+        <form id="login-form" class="grid gap-4">
+          <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+            Email
+            <input
+              id="login-email"
+              type="email"
+              required
+              autocomplete="email"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+            />
+          </label>
+
+          <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+            Password
+            <input
+              id="login-password"
+              type="password"
+              required
+              autocomplete="current-password"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+            />
+          </label>
+
+          <button type="submit" class="btn-primary">Σύνδεση</button>
+        </form>
+      </section>
+
+      <section id="grant-panel" class="hidden rounded-xl border border-border-light bg-white/70 p-6">
+        <div class="mb-6 flex flex-col gap-3 border-b border-border-light pb-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p class="text-body-sm text-text-secondary">Συνδεδεμένος admin</p>
+            <p id="admin-email" class="font-semibold text-charcoal"></p>
+          </div>
+          <button id="sign-out" type="button" class="btn-secondary !px-4 !py-2">Αποσύνδεση</button>
+        </div>
+
+        <form id="grant-form" class="grid gap-5">
+          <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+            Email χρήστη
+            <input
+              id="grant-email"
+              type="email"
+              required
+              autocomplete="off"
+              placeholder="user@example.com"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+            />
+          </label>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+              Πλάνο
+              <select
+                id="grant-tier"
+                required
+                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+              >
+                <option value="free">Free</option>
+                <option value="solo">Solo</option>
+                <option value="pro">Pro</option>
+                <option value="team">Team</option>
+              </select>
+            </label>
+
+            <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+              Τύπος πρόσβασης
+              <select
+                id="grant-source"
+                required
+                class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+              >
+                <option value="manual">Manual</option>
+                <option value="tester">Tester</option>
+                <option value="owner">Owner</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+            Λήξη πρόσβασης
+            <input
+              id="grant-expires"
+              type="datetime-local"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+            />
+            <span class="text-xs font-normal text-text-muted">Άφησέ το κενό για πρόσβαση χωρίς ημερομηνία λήξης.</span>
+          </label>
+
+          <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
+            Αιτιολογία
+            <textarea
+              id="grant-reason"
+              rows="3"
+              placeholder="π.χ. Beta tester access"
+              class="rounded-lg border border-border-mid bg-cream px-4 py-3 text-charcoal outline-none focus:border-gold"
+            ></textarea>
+          </label>
+
+          <button type="submit" class="btn-gold">Αποθήκευση πρόσβασης</button>
+        </form>
+      </section>
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { createClient } from "@supabase/supabase-js";
+
+  const status = document.getElementById("status");
+  const loginPanel = document.getElementById("login-panel");
+  const grantPanel = document.getElementById("grant-panel");
+  const loginForm = document.getElementById("login-form");
+  const grantForm = document.getElementById("grant-form");
+  const adminEmail = document.getElementById("admin-email");
+  const signOut = document.getElementById("sign-out");
+
+  let supabase;
+
+  function inputValue(id) {
+    const element = document.getElementById(id);
+    return element instanceof HTMLInputElement ||
+      element instanceof HTMLSelectElement ||
+      element instanceof HTMLTextAreaElement
+      ? element.value.trim()
+      : "";
+  }
+
+  function showStatus(message, kind = "info") {
+    if (!status) return;
+    const styles = {
+      info: "border-border-light bg-white/70 text-text-secondary",
+      success: "border-green-700/20 bg-green-50 text-green-900",
+      error: "border-red-700/20 bg-red-50 text-red-900",
+    };
+    status.className = `mb-5 rounded-lg border px-4 py-3 text-body-sm ${styles[kind]}`;
+    status.textContent = message;
+  }
+
+  function showGrantPanel(email) {
+    loginPanel?.classList.add("hidden");
+    grantPanel?.classList.remove("hidden");
+    if (adminEmail) adminEmail.textContent = email;
+  }
+
+  function showLoginPanel() {
+    grantPanel?.classList.add("hidden");
+    loginPanel?.classList.remove("hidden");
+    if (adminEmail) adminEmail.textContent = "";
+  }
+
+  async function api(path, accessToken, options = {}) {
+    const response = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        ...(options.headers || {}),
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  async function currentAccessToken() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || null;
+  }
+
+  async function checkAdminSession() {
+    const token = await currentAccessToken();
+    if (!token) {
+      showLoginPanel();
+      return;
+    }
+
+    try {
+      const me = await api("/api/admin/me", token);
+      showGrantPanel(me.email);
+    } catch {
+      await supabase.auth.signOut();
+      showLoginPanel();
+      showStatus("Δεν υπάρχει admin πρόσβαση για αυτόν τον λογαριασμό.", "error");
+    }
+  }
+
+  async function init() {
+    try {
+      const configResponse = await fetch("/api/admin/config");
+      const config = await configResponse.json();
+      supabase = createClient(config.supabaseUrl, config.supabasePublishableKey);
+      await checkAdminSession();
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Δεν φορτώθηκε το admin panel.", "error");
+    }
+  }
+
+  loginForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showStatus("Γίνεται σύνδεση...");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: inputValue("login-email"),
+      password: inputValue("login-password"),
+    });
+
+    if (error) {
+      showStatus("Δεν έγινε σύνδεση. Έλεγξε email/password.", "error");
+      return;
+    }
+
+    await checkAdminSession();
+  });
+
+  grantForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showStatus("Αποθηκεύεται η πρόσβαση...");
+
+    const token = await currentAccessToken();
+    if (!token) {
+      showLoginPanel();
+      showStatus("Η συνεδρία έληξε. Συνδέσου ξανά.", "error");
+      return;
+    }
+
+    const expiresValue = inputValue("grant-expires");
+    const expiresAt = expiresValue ? new Date(expiresValue).toISOString() : null;
+
+    try {
+      const result = await api("/api/admin/grant-session", token, {
+        method: "POST",
+        body: JSON.stringify({
+          email: inputValue("grant-email"),
+          tier: inputValue("grant-tier"),
+          source: inputValue("grant-source"),
+          expiresAt,
+          reason: inputValue("grant-reason") || null,
+        }),
+      });
+
+      showStatus(
+        `Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})`,
+        "success",
+      );
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Δεν αποθηκεύτηκε η πρόσβαση.", "error");
+    }
+  });
+
+  signOut?.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    showLoginPanel();
+    showStatus("Έγινε αποσύνδεση.");
+  });
+
+  init();
+</script>

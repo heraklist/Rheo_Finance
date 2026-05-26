@@ -2,12 +2,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { handleOptions } from "../_cors.js";
 import { cleanEnv } from "../_env.js";
+import { verifyAdminUser } from "./_access.js";
 import { findUserByEmail, normalizeGrantRequest, upsertGrant } from "./_grant.js";
-
-function adminToken(req: VercelRequest): string | null {
-  const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "");
-  return match?.[1]?.trim() || null;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleOptions(req, res)) return;
@@ -17,22 +13,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const configuredAdminToken = cleanEnv(process.env.ADMIN_GRANT_TOKEN);
   const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
   const serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_KEY);
-
-  if (!configuredAdminToken || !supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !serviceKey) {
     return res.status(500).json({ error: "Server misconfigured" });
   }
 
-  if (adminToken(req) !== configuredAdminToken) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const grant = normalizeGrantRequest(req.body);
-  if ("error" in grant) return res.status(400).json({ error: grant.error });
-
   try {
+    const admin = await verifyAdminUser(req);
+    const grant = normalizeGrantRequest(req.body);
+    if ("error" in grant) return res.status(400).json({ error: grant.error });
+
     const user = await findUserByEmail(supabaseUrl, serviceKey, grant.email);
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -47,6 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     return res.status(200).json({
+      admin: admin.email,
       user_id: user.id,
       email: grant.email,
       tier: grant.tier,
@@ -54,7 +46,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expires_at: grant.expiresAt,
     });
   } catch (err) {
-    console.error("Admin grant failed:", err);
+    if (err instanceof Error && err.message === "Forbidden") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    console.error("Session admin grant failed:", err);
     const message = err instanceof Error ? err.message : "Internal server error";
     return res.status(500).json({ error: message });
   }
