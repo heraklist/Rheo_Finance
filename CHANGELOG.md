@@ -4,6 +4,13 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.23 - 2026-05-26
+
+### Fixed
+
+- Sync now adopts existing Supabase reference data on a fresh local install instead of re-pushing seed books with new local IDs.
+- Prevents duplicate `(user_id, slug)` conflicts when the same account signs in on a new desktop or Android install.
+
 ## v0.2.22 - 2026-05-25
 
 ### Added

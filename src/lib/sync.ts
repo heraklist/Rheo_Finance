@@ -486,6 +486,123 @@ function laterTimestamp(current: string | null, candidate: string | null): strin
   return current;
 }
 
+async function countRows(table: string): Promise<number> {
+  const db = await getDb();
+  const rows = await db.select<Array<{ count: number }>>(`SELECT COUNT(*) AS count FROM ${table}`);
+  return Number(rows[0]?.count ?? 0);
+}
+
+async function isBaselineLocalDatabase(): Promise<boolean> {
+  const db = await getDb();
+  const [metaRows, outboxRows] = await Promise.all([
+    db.select<Array<{ value: string }>>(
+      "SELECT value FROM sync_metadata WHERE key = 'last_synced_at' LIMIT 1",
+    ),
+    db.select<Array<{ count: number }>>("SELECT COUNT(*) AS count FROM sync_outbox"),
+  ]);
+
+  const lastSync = metaRows[0]?.value ?? "1970-01-01T00:00:00.000Z";
+  if (lastSync !== "" && lastSync !== "1970-01-01T00:00:00.000Z") return false;
+  if (Number(outboxRows[0]?.count ?? 0) > 0) return false;
+
+  const userDataTables = [
+    "transactions",
+    "plan",
+    "plan_expense_item",
+    "plan_income_item",
+    "coverage_expense",
+    "coverage_income",
+    "recurring_templates",
+    "tags",
+  ];
+
+  for (const table of userDataTables) {
+    if ((await countRows(table)) > 0) return false;
+  }
+
+  return true;
+}
+
+async function getRemoteRowCount(table: string, userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function fetchAllRemoteRows(config: SyncTableConfig, userId: string): Promise<SyncRow[]> {
+  const { data, error } = await supabase
+    .from(config.table)
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as SyncRow[];
+}
+
+async function adoptRemoteBaselineIfNeeded(userId: string): Promise<boolean> {
+  if (!(await isBaselineLocalDatabase())) return false;
+
+  const remoteBookCount = await getRemoteRowCount("books", userId);
+  if (remoteBookCount === 0) return false;
+
+  const remoteRowsByType = new Map<SyncEntityType, SyncRow[]>();
+  for (const entityType of PULL_ORDER) {
+    const rows = await fetchAllRemoteRows(SYNC_TABLES[entityType], userId);
+    remoteRowsByType.set(entityType, rows);
+  }
+
+  await runInTransaction(async (db) => {
+    await db.execute("DELETE FROM coverage_income");
+    await db.execute("DELETE FROM coverage_expense");
+    await db.execute("DELETE FROM plan_income_item");
+    await db.execute("DELETE FROM plan_expense_item");
+    await db.execute("DELETE FROM plan");
+    await db.execute("DELETE FROM transactions");
+    await db.execute("DELETE FROM recurring_templates");
+    await db.execute("DELETE FROM categories");
+    await db.execute("DELETE FROM accounts");
+    await db.execute("DELETE FROM tags");
+    await db.execute("DELETE FROM books");
+  });
+
+  let highWatermark: string | null = null;
+  for (const entityType of PULL_ORDER) {
+    const rows = remoteRowsByType.get(entityType) ?? [];
+    for (const row of rows) {
+      const remoteUpdatedAt = timestampValue(row.updated_at);
+      highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
+      await applyRemoteRowToLocal(entityType, row);
+    }
+  }
+
+  const ts = now();
+  const db = await getDb();
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('current_user_id', ?, ?)`,
+    [userId, ts],
+  );
+
+  if (highWatermark !== null) {
+    await db.execute(
+      `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+       VALUES ('last_synced_at', ?, ?)`,
+      [highWatermark, ts],
+    );
+  }
+
+  return true;
+}
+
+async function ensureRemoteBaseline(userId: string): Promise<void> {
+  await adoptRemoteBaselineIfNeeded(userId);
+}
+
 function localUpdatedAt(row: SyncRow): string {
   return (
     timestampValue(row.local_updated_at) ??
@@ -953,6 +1070,7 @@ export async function pushChanges(): Promise<number> {
   const user = useAppStore.getState().user;
   if (!user) return 0;
 
+  await ensureRemoteBaseline(user.id);
   await upsertLocalReferenceData(user.id);
 
   const entries = await db.select<OutboxEntry[]>(
