@@ -76,10 +76,33 @@ import Base from "../../layouts/Base.astro";
         <div class="rounded-xl border border-border-light bg-white/70 p-6">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-h3 font-bold text-charcoal" id="form-title">Νέα πρόσβαση</h3>
-            <button id="form-reset" type="button" class="hidden text-xs font-semibold text-gold hover:underline">
-              Καθαρισμός φόρμας
+            <div class="flex items-center gap-2">
+              <button id="form-reset" type="button" class="hidden text-xs font-semibold text-gold hover:underline">
+                Καθαρισμός φόρμας
+              </button>
+              <button id="toggle-bulk" type="button" class="text-xs font-semibold text-text-secondary hover:text-charcoal hover:underline">
+                Bulk mode
+              </button>
+            </div>
+          </div>
+
+          <!-- #1: Quick templates -->
+          <div class="mb-4 flex flex-wrap gap-2" id="templates-bar">
+            <button type="button" data-tpl="beta30" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
+              Beta tester 30η
+            </button>
+            <button type="button" data-tpl="solo-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
+              Solo permanent
+            </button>
+            <button type="button" data-tpl="pro-perm" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
+              Pro permanent
+            </button>
+            <button type="button" data-tpl="owner" class="rounded-full border border-border-mid bg-sand px-3 py-1 text-xs font-semibold text-text-secondary hover:border-gold hover:text-gold">
+              Owner (Team)
             </button>
           </div>
+
+          <!-- Single grant form -->
           <form id="grant-form" class="grid gap-5">
             <label class="grid gap-2 text-body-sm font-semibold text-text-secondary">
               Email χρήστη
@@ -144,6 +167,22 @@ import Base from "../../layouts/Base.astro";
 
             <button type="submit" class="btn-gold">Αποθήκευση πρόσβασης</button>
           </form>
+
+          <!-- #2: Bulk grant form (hidden by default) -->
+          <div id="bulk-panel" class="mt-5 hidden border-t border-border-light pt-5">
+            <h4 class="mb-2 text-body-sm font-semibold text-charcoal">Bulk grant</h4>
+            <p class="mb-3 text-xs text-text-muted">Ένα email ανά γραμμή. Θα πάρουν το tier/source/expiry από τη φόρμα πάνω.</p>
+            <textarea
+              id="bulk-emails"
+              rows="4"
+              placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
+              class="w-full rounded-lg border border-border-mid bg-cream px-4 py-3 text-sm text-charcoal outline-none focus:border-gold"
+            ></textarea>
+            <div class="mt-3 flex items-center gap-3">
+              <button id="bulk-submit" type="button" class="btn-gold !py-2 !text-xs">Εφαρμογή σε όλους</button>
+              <span id="bulk-progress" class="text-xs text-text-muted"></span>
+            </div>
+          </div>
         </div>
 
         <!-- Tier stats -->
@@ -175,13 +214,41 @@ import Base from "../../layouts/Base.astro";
                   <th class="px-3 py-2 font-medium">Πλάνο</th>
                   <th class="px-3 py-2 font-medium">Τύπος</th>
                   <th class="px-3 py-2 font-medium">Status</th>
+                  <th class="px-3 py-2 font-medium">Τελ. login</th>
                   <th class="px-3 py-2 font-medium">Λήξη</th>
                   <th class="px-3 py-2 font-medium">Αιτιολογία</th>
                   <th class="px-3 py-2 font-medium text-right">Ενέργειες</th>
                 </tr>
               </thead>
               <tbody id="grants-body" class="divide-y divide-border-light">
-                <tr><td colspan="7" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
+                <tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- #4: Per-user audit (expandable) -->
+        <div id="user-audit-panel" class="hidden rounded-xl border border-gold/30 bg-gold/5 p-6">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-h3 font-bold text-charcoal">
+              Ιστορικό: <span id="user-audit-email" class="text-gold"></span>
+            </h3>
+            <button id="close-user-audit" type="button" class="text-xs font-semibold text-text-secondary hover:underline">
+              Κλείσιμο
+            </button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-border-light">
+            <table class="w-full min-w-[500px] text-body-sm">
+              <thead class="bg-sand text-left text-text-secondary">
+                <tr>
+                  <th class="px-3 py-2 font-medium">Ημερομηνία</th>
+                  <th class="px-3 py-2 font-medium">Admin</th>
+                  <th class="px-3 py-2 font-medium">Ενέργεια</th>
+                  <th class="px-3 py-2 font-medium">Λεπτομέρειες</th>
+                </tr>
+              </thead>
+              <tbody id="user-audit-body" class="divide-y divide-border-light">
+                <tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>
               </tbody>
             </table>
           </div>
@@ -236,6 +303,16 @@ import Base from "../../layouts/Base.astro";
   const tierStatsEl = document.getElementById("tier-stats");
   const formTitle = document.getElementById("form-title");
   const formResetBtn = document.getElementById("form-reset");
+  const templatesBar = document.getElementById("templates-bar");
+  const toggleBulkBtn = document.getElementById("toggle-bulk");
+  const bulkPanel = document.getElementById("bulk-panel");
+  const bulkEmailsEl = document.getElementById("bulk-emails");
+  const bulkSubmitBtn = document.getElementById("bulk-submit");
+  const bulkProgressEl = document.getElementById("bulk-progress");
+  const userAuditPanel = document.getElementById("user-audit-panel");
+  const userAuditEmail = document.getElementById("user-audit-email");
+  const userAuditBody = document.getElementById("user-audit-body");
+  const closeUserAuditBtn = document.getElementById("close-user-audit");
 
   let supabase;
   let allGrants = [];
@@ -347,6 +424,20 @@ import Base from "../../layouts/Base.astro";
     });
   }
 
+  // Last login — relative date in Greek
+  function formatRelativeLogin(iso) {
+    if (!iso) return '<span class="text-text-muted">Ποτέ</span>';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `Πριν ${mins} λ.`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `Πριν ${hours} ώ.`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `Πριν ${days} ημ.`;
+    const months = Math.floor(days / 30);
+    return `Πριν ${months} μ.`;
+  }
+
   // #6 — Expiry warning: returns CSS class if expiring within 7 days
   function expiryClass(expiresAt) {
     if (!expiresAt) return "";
@@ -431,7 +522,90 @@ import Base from "../../layouts/Base.astro";
 
   formResetBtn?.addEventListener("click", resetForm);
 
-  // --- #2: Revoke (downgrade to free) ---
+  // --- #1: Grant templates ---
+  const TEMPLATES = {
+    "beta30": { tier: "pro", source: "tester", reason: "Beta tester access", daysFromNow: 30 },
+    "solo-perm": { tier: "solo", source: "manual", reason: "", daysFromNow: null },
+    "pro-perm": { tier: "pro", source: "manual", reason: "", daysFromNow: null },
+    "owner": { tier: "team", source: "owner", reason: "Owner access", daysFromNow: null },
+  };
+
+  templatesBar?.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const btn = target.closest("[data-tpl]");
+    if (!btn) return;
+    const tpl = TEMPLATES[btn.getAttribute("data-tpl")];
+    if (!tpl) return;
+
+    setInputValue("grant-tier", tpl.tier);
+    setInputValue("grant-source", tpl.source);
+    setInputValue("grant-reason", tpl.reason);
+
+    if (tpl.daysFromNow) {
+      const d = new Date(Date.now() + tpl.daysFromNow * 24 * 60 * 60 * 1000);
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      setInputValue("grant-expires", local);
+    } else {
+      setInputValue("grant-expires", "");
+    }
+
+    if (formTitle) formTitle.textContent = `Νέα πρόσβαση — ${btn.textContent.trim()}`;
+    // Focus email field
+    document.getElementById("grant-email")?.focus();
+  });
+
+  // --- #2 Bulk mode toggle ---
+  toggleBulkBtn?.addEventListener("click", () => {
+    bulkPanel?.classList.toggle("hidden");
+    if (toggleBulkBtn) {
+      toggleBulkBtn.textContent = bulkPanel?.classList.contains("hidden") ? "Bulk mode" : "Single mode";
+    }
+  });
+
+  // --- Bulk submit ---
+  bulkSubmitBtn?.addEventListener("click", async () => {
+    const raw = bulkEmailsEl instanceof HTMLTextAreaElement ? bulkEmailsEl.value : "";
+    const emails = raw.split("\n").map((l) => l.trim().toLowerCase()).filter((l) => l.includes("@"));
+
+    if (emails.length === 0) {
+      showStatus("Δεν βρέθηκαν valid emails.", "error");
+      return;
+    }
+
+    const tier = inputValue("grant-tier");
+    const source = inputValue("grant-source");
+    const expiresValue = inputValue("grant-expires");
+    const expiresAt = expiresValue ? new Date(expiresValue).toISOString() : null;
+    const reason = inputValue("grant-reason") || null;
+
+    if (!confirm(`Εφαρμογή ${tier.toUpperCase()} (${source}) σε ${emails.length} χρήστες;`)) return;
+
+    const token = await currentAccessToken();
+    if (!token) { showLoginPanel(); return; }
+
+    let ok = 0;
+    let fail = 0;
+    for (let i = 0; i < emails.length; i++) {
+      if (bulkProgressEl) bulkProgressEl.textContent = `${i + 1}/${emails.length}...`;
+      try {
+        await apiCall("/api/admin/grant-session", token, {
+          method: "POST",
+          body: JSON.stringify({ email: emails[i], tier, source, expiresAt, reason }),
+        });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+
+    if (bulkProgressEl) bulkProgressEl.textContent = "";
+    showStatus(`Bulk: ${ok} OK, ${fail} failed (${emails.length} total)`, fail > 0 ? "error" : "success");
+    loadGrants();
+    loadAuditLog();
+  });
+
+  // --- Revoke (downgrade to free) ---
   async function revokeGrant(email) {
     if (!confirm(`Ανάκληση πρόσβασης για ${email}; Θα γίνει downgrade σε Free.`)) return;
 
@@ -469,7 +643,7 @@ import Base from "../../layouts/Base.astro";
 
     if (!grants || grants.length === 0) {
       grantsBody.innerHTML =
-        '<tr><td colspan="7" class="px-3 py-4 text-center text-text-muted">Δεν βρέθηκαν εγγραφές.</td></tr>';
+        '<tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Δεν βρέθηκαν εγγραφές.</td></tr>';
       return;
     }
 
@@ -481,11 +655,15 @@ import Base from "../../layouts/Base.astro";
         <td class="px-3 py-2">${tierBadge(escapeHtml(g.tier))}</td>
         <td class="px-3 py-2 text-text-secondary">${escapeHtml(g.source || "—")}</td>
         <td class="px-3 py-2">${statusBadge(escapeHtml(g.status))}</td>
+        <td class="px-3 py-2 text-text-muted text-xs">${formatRelativeLogin(g.last_sign_in_at)}</td>
         <td class="px-3 py-2">${expiryLabel(g.expires_at)}</td>
         <td class="px-3 py-2">${reasonCell(g.grant_reason)}</td>
-        <td class="px-3 py-2 text-right">
+        <td class="px-3 py-2 text-right whitespace-nowrap">
           <button data-action="edit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-gold hover:bg-gold/10">
             Επεξ/σία
+          </button>
+          <button data-action="audit" data-email="${escapeHtml(g.email)}" class="mr-1 rounded px-2 py-1 text-xs font-semibold text-text-secondary hover:bg-sand">
+            Ιστορικό
           </button>
           ${
             g.tier !== "free"
@@ -512,6 +690,7 @@ import Base from "../../layouts/Base.astro";
 
     if (btn.getAttribute("data-action") === "edit" && grant) fillForm(grant);
     if (btn.getAttribute("data-action") === "revoke") revokeGrant(email);
+    if (btn.getAttribute("data-action") === "audit") loadUserAudit(email);
   });
 
   async function loadGrants() {
@@ -520,7 +699,7 @@ import Base from "../../layouts/Base.astro";
     if (!token) return;
 
     grantsBody.innerHTML =
-      '<tr><td colspan="7" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
+      '<tr><td colspan="8" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
 
     try {
       const grants = await apiCall("/api/admin/list-grants", token);
@@ -529,7 +708,7 @@ import Base from "../../layouts/Base.astro";
       filterAndRender();
     } catch {
       grantsBody.innerHTML =
-        '<tr><td colspan="7" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+        '<tr><td colspan="8" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
     }
   }
 
@@ -581,6 +760,54 @@ import Base from "../../layouts/Base.astro";
         '<tr><td colspan="5" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
     }
   }
+
+  // --- Per-user audit ---
+  async function loadUserAudit(email) {
+    if (!userAuditPanel || !userAuditBody || !userAuditEmail) return;
+
+    userAuditEmail.textContent = email;
+    userAuditPanel.classList.remove("hidden");
+    userAuditPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    userAuditBody.innerHTML =
+      '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Φόρτωση...</td></tr>';
+
+    const token = await currentAccessToken();
+    if (!token) return;
+
+    try {
+      const entries = await apiCall(`/api/admin/audit-log?email=${encodeURIComponent(email)}`, token);
+
+      if (!Array.isArray(entries) || entries.length === 0) {
+        userAuditBody.innerHTML =
+          '<tr><td colspan="4" class="px-3 py-4 text-center text-text-muted">Δεν υπάρχουν εγγραφές.</td></tr>';
+        return;
+      }
+
+      userAuditBody.innerHTML = entries
+        .map((e) => {
+          const p = e.payload || {};
+          const detail = [p.tier && String(p.tier).toUpperCase(), p.source, p.expiresAt ? `→ ${formatDate(p.expiresAt)}` : null]
+            .filter(Boolean)
+            .join(" / ");
+          return `
+          <tr class="hover:bg-sand/40">
+            <td class="px-3 py-2 text-text-muted">${formatDateTime(e.created_at)}</td>
+            <td class="px-3 py-2 text-text-secondary">${escapeHtml(e.admin_email)}</td>
+            <td class="px-3 py-2">${escapeHtml(e.action || "—")}</td>
+            <td class="px-3 py-2 text-text-secondary">${escapeHtml(detail || "—")}</td>
+          </tr>`;
+        })
+        .join("");
+    } catch {
+      userAuditBody.innerHTML =
+        '<tr><td colspan="4" class="px-3 py-4 text-center text-red-700">Σφάλμα φόρτωσης.</td></tr>';
+    }
+  }
+
+  closeUserAuditBtn?.addEventListener("click", () => {
+    userAuditPanel?.classList.add("hidden");
+  });
 
   // --- Auth flow ---
 

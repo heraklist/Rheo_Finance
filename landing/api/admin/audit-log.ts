@@ -23,8 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await verifyAdminUser(req);
 
+    // Optional email filter for per-user audit history
+    const emailFilter = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+    const emailClause = emailFilter
+      ? `&target_email=eq.${encodeURIComponent(emailFilter)}`
+      : "";
+
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/admin_audit_log?select=id,admin_email,action,target_email,payload,created_at&order=created_at.desc&limit=50`,
+      `${supabaseUrl}/rest/v1/admin_audit_log?select=id,admin_email,action,target_email,payload,created_at&order=created_at.desc&limit=50${emailClause}`,
       {
         headers: {
           apikey: serviceKey,

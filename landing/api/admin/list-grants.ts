@@ -44,8 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Enrich with user emails via admin API.
     // Batch: fetch all users, then map by id.
-    const userIds: string[] = subscriptions.map((s: { user_id: string }) => s.user_id);
     const emailMap = new Map<string, string>();
+    const lastLoginMap = new Map<string, string | null>();
+    const createdAtMap = new Map<string, string | null>();
 
     // Supabase admin API doesn't support bulk ID lookup, so we fetch page by page.
     // For <100 subs this is fine.
@@ -59,17 +60,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     );
 
+    interface AuthUser {
+      id: string;
+      email?: string;
+      last_sign_in_at?: string;
+      created_at?: string;
+    }
+
     if (usersRes.ok) {
       const usersData = await usersRes.json();
-      const users = Array.isArray(usersData.users) ? usersData.users : [];
+      const users: AuthUser[] = Array.isArray(usersData.users) ? usersData.users : [];
       for (const u of users) {
         if (u.id && u.email) emailMap.set(u.id, u.email);
+      }
+      // Build last-login map
+      for (const u of users) {
+        if (u.id) {
+          lastLoginMap.set(u.id, u.last_sign_in_at ?? null);
+          createdAtMap.set(u.id, u.created_at ?? null);
+        }
       }
     }
 
     const enriched = subscriptions.map((s: Record<string, unknown>) => ({
       ...s,
       email: emailMap.get(s.user_id as string) ?? "—",
+      last_sign_in_at: lastLoginMap.get(s.user_id as string) ?? null,
+      user_created_at: createdAtMap.get(s.user_id as string) ?? null,
     }));
 
     return res.status(200).json(enriched);
