@@ -54,8 +54,8 @@ interface AndroidManifest {
 
 const LANDING_URL = "https://landing-two-dun-95.vercel.app";
 const RELEASES_PAGE_URL = `${LANDING_URL}/#download`;
-const DESKTOP_MANIFEST_URL = `${LANDING_URL}/api/update/desktop`;
-const ANDROID_MANIFEST_URL = `${LANDING_URL}/api/update/android`;
+const DESKTOP_MANIFEST_URL = `${LANDING_URL}/api/download?manifest=desktop`;
+const ANDROID_MANIFEST_URL = `${LANDING_URL}/api/download?manifest=android`;
 
 async function openExternalUrl(url: string): Promise<void> {
   try {

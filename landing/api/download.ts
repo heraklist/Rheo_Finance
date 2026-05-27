@@ -5,6 +5,11 @@ import { cleanEnv } from "./_env.js";
 const OWNER = "heraklist";
 const REPO = "Rheo_Finance";
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+const PUBLIC_BASE_URL = cleanEnv(process.env.PUBLIC_LANDING_URL) ?? "https://landing-two-dun-95.vercel.app";
+const MANIFEST_PATTERNS: Record<string, RegExp> = {
+  desktop: /^latest-desktop\.json$/i,
+  android: /^latest-android\.json$/i,
+};
 
 // Map platform param to asset filename patterns
 const PLATFORM_PATTERNS: Record<string, RegExp> = {
@@ -15,13 +20,8 @@ const PLATFORM_PATTERNS: Record<string, RegExp> = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const platform = (req.query.platform as string)?.toLowerCase();
+  const manifest = (req.query.manifest as string)?.toLowerCase();
   const version = typeof req.query.version === "string" ? req.query.version : undefined;
-
-  if (!platform || !PLATFORM_PATTERNS[platform]) {
-    return res.status(400).json({
-      error: "Missing or invalid platform. Use ?platform=windows or ?platform=android",
-    });
-  }
 
   if (version && !VERSION_PATTERN.test(version)) {
     return res.status(400).json({ error: "Invalid version. Use a semver value like 0.2.24" });
@@ -38,19 +38,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 1. Get requested release. Pinning by version avoids manifest/download race conditions.
-    const releasePath = version ? `releases/tags/v${version}` : "releases/latest";
-    const releaseRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${releasePath}`, {
-      headers: githubHeaders,
-    });
+    const release = await fetchRelease(version, githubHeaders);
 
-    if (!releaseRes.ok) {
-      return res.status(502).json({ error: "Failed to fetch release info" });
+    if (manifest) {
+      return await sendUpdateManifest(res, manifest, release, githubHeaders);
     }
 
-    const release = await releaseRes.json();
+    if (!platform || !PLATFORM_PATTERNS[platform]) {
+      return res.status(400).json({
+        error: "Missing or invalid platform. Use ?platform=windows or ?platform=android",
+      });
+    }
 
-    // 2. Find matching asset
     const pattern = PLATFORM_PATTERNS[platform];
     const asset = release.assets?.find((a: { name: string }) => pattern.test(a.name));
 
@@ -60,7 +59,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 3. Get temporary download URL (GitHub returns 302 to S3)
     const assetRes = await fetch(asset.url, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -75,11 +73,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(502).json({ error: "Failed to get download URL" });
     }
 
-    // 4. Set download filename header and redirect user
     res.setHeader("Content-Disposition", `attachment; filename="${asset.name}"`);
     return res.redirect(302, downloadUrl);
   } catch (err) {
     console.error("Download proxy error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
+}
+
+async function fetchRelease(version: string | undefined, githubHeaders: Record<string, string>) {
+  const releasePath = version ? `releases/tags/v${version}` : "releases/latest";
+  const releaseRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${releasePath}`, {
+    headers: githubHeaders,
+  });
+
+  if (!releaseRes.ok) {
+    throw new Error(`Failed to fetch release info: ${releaseRes.status}`);
+  }
+
+  return releaseRes.json();
+}
+
+async function sendUpdateManifest(
+  res: VercelResponse,
+  manifest: string,
+  release: { assets?: Array<{ name: string; url: string }> },
+  githubHeaders: Record<string, string>,
+) {
+  const pattern = MANIFEST_PATTERNS[manifest];
+  if (!pattern) {
+    return res.status(400).json({ error: "Invalid manifest. Use ?manifest=desktop or ?manifest=android" });
+  }
+
+  const asset = release.assets?.find((candidate) => pattern.test(candidate.name));
+  if (!asset) {
+    return res.status(404).json({ error: `${manifest} update manifest not found` });
+  }
+
+  const manifestRes = await fetch(asset.url, {
+    headers: {
+      ...githubHeaders,
+      Accept: "application/octet-stream",
+    },
+  });
+
+  if (!manifestRes.ok) {
+    return res.status(502).json({ error: `Failed to fetch ${manifest} update manifest` });
+  }
+
+  const body = (await manifestRes.json()) as {
+    platforms?: Record<string, { signature?: string; url?: string }>;
+    url?: string;
+    version?: string;
+  };
+  const manifestVersion = typeof body.version === "string" ? body.version : undefined;
+  const versionQuery = manifestVersion ? `&version=${encodeURIComponent(manifestVersion)}` : "";
+
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+  if (manifest === "android") {
+    return res.status(200).json({
+      ...body,
+      url: `${PUBLIC_BASE_URL}/api/download?platform=android${versionQuery}`,
+    });
+  }
+
+  return res.status(200).json({
+    ...body,
+    platforms: {
+      ...body.platforms,
+      "windows-x86_64": {
+        ...body.platforms?.["windows-x86_64"],
+        url: `${PUBLIC_BASE_URL}/api/download?platform=windows-update${versionQuery}`,
+      },
+    },
+  });
 }
