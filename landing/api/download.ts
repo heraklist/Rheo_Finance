@@ -26,10 +26,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Invalid version. Use a semver value like 0.2.24" });
   }
 
-  const token = cleanEnv(process.env.GITHUB_PAT);
+  const token = cleanEnv(process.env.GITHUB_PAT) ?? cleanEnv(process.env.GITHUB_TOKEN);
   const githubHeaders: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "rheo-landing-download-proxy",
   };
 
   if (token) {
@@ -76,7 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.redirect(302, downloadUrl);
   } catch (err) {
     console.error("Download proxy error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    const message = err instanceof Error ? err.message : "Unknown download proxy error";
+    return res.status(500).json({ error: "Download proxy failed", message });
   }
 }
 
