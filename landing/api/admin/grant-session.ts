@@ -6,6 +6,41 @@ import { verifyAdminUser } from "./_access.js";
 import { findUserByEmail, normalizeGrantRequest, upsertGrant, writeAuditLog } from "./_grant.js";
 import { rateLimited } from "./_rate-limit.js";
 
+async function sendNotificationEmail(
+  to: string,
+  tier: string,
+  resendKey: string,
+  fromEmail: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to,
+        subject: "Rheo Finance — Ενημέρωση πρόσβασης",
+        html: `
+          <div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:24px;">
+            <p style="color:#333;">Γεια σου,</p>
+            <p style="color:#333;">Η πρόσβασή σου στο <strong>Rheo Finance</strong> ενημερώθηκε:</p>
+            <div style="background:#f8f6f0;border-radius:8px;padding:16px;margin:16px 0;">
+              <p style="margin:0;font-size:18px;font-weight:bold;color:#b8860b;">${tier.toUpperCase()}</p>
+            </div>
+            <p style="color:#666;font-size:14px;">Αν έχεις ερωτήσεις, απάντησε σε αυτό το email.</p>
+            <p style="color:#999;font-size:12px;margin-top:24px;">— Rheo Finance</p>
+          </div>`,
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleAdminOptions(req, res)) return;
   if (rateLimited(req, res, { maxRequests: 5 })) return;
@@ -48,6 +83,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       payload: { tier: grant.tier, source: grant.source, expiresAt: grant.expiresAt },
     });
 
+    // #12: Optional email notification
+    let notified = false;
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    if (body.notify === true) {
+      const resendKey = cleanEnv(process.env.RESEND_API_KEY);
+      if (resendKey) {
+        const fromEmail = cleanEnv(process.env.NOTIFY_FROM_EMAIL) || "noreply@rheo.finance";
+        notified = await sendNotificationEmail(grant.email, grant.tier, resendKey, fromEmail);
+      }
+    }
+
     return res.status(200).json({
       admin: admin.email,
       user_id: user.id,
@@ -55,6 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       tier: grant.tier,
       source: grant.source,
       expires_at: grant.expiresAt,
+      notified,
     });
   } catch (err) {
     if (err instanceof Error && err.message === "Forbidden") {

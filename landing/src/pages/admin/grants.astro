@@ -961,7 +961,7 @@ import Base from "../../layouts/Base.astro";
     // Load audit + notes in parallel
     const [auditRes, notesRes] = await Promise.allSettled([
       apiCall(`/api/admin/audit-log?email=${encodeURIComponent(email)}`, token),
-      apiCall(`/api/admin/notes?email=${encodeURIComponent(email)}`, token),
+      apiCall(`/api/admin/audit-log?type=notes&email=${encodeURIComponent(email)}`, token),
     ]);
 
     // Render audit
@@ -1006,10 +1006,10 @@ import Base from "../../layouts/Base.astro";
     const token = await currentAccessToken();
     if (!token) return;
     try {
-      await apiCall("/api/admin/notes", token, { method: "POST", body: JSON.stringify({ email: currentAuditEmail, note }) });
+      await apiCall("/api/admin/audit-log", token, { method: "POST", body: JSON.stringify({ email: currentAuditEmail, note }) });
       if (noteInput instanceof HTMLInputElement) noteInput.value = "";
       // Reload notes
-      const notes = await apiCall(`/api/admin/notes?email=${encodeURIComponent(currentAuditEmail)}`, token);
+      const notes = await apiCall(`/api/admin/audit-log?type=notes&email=${encodeURIComponent(currentAuditEmail)}`, token);
       renderUserNotes(Array.isArray(notes) ? notes : []);
     } catch (err) {
       showStatus(err instanceof Error ? err.message : "Σφάλμα αποθήκευσης σημείωσης.", "error");
@@ -1072,21 +1072,7 @@ import Base from "../../layouts/Base.astro";
     }
   });
 
-  // --- #12: Email notification ---
-  async function sendNotification(email, tier) {
-    const token = await currentAccessToken();
-    if (!token) return;
-    try {
-      const result = await apiCall("/api/admin/notify", token, { method: "POST", body: JSON.stringify({ email, tier }) });
-      if (result.sent) {
-        showStatus(`Email ειδοποίηση στάλθηκε στον ${email}`, "success");
-      } else {
-        showStatus(`Email δεν στάλθηκε: ${result.reason || "unknown"}`, "info");
-      }
-    } catch {
-      // Non-blocking: notification failure doesn't affect grant
-    }
-  }
+  // #12: Notification is now handled by grant-session via notify flag in body
 
   // --- #15: Keyboard shortcuts ---
   document.addEventListener("keydown", (e) => {
@@ -1172,12 +1158,15 @@ import Base from "../../layouts/Base.astro";
         body: JSON.stringify({
           email: inputValue("grant-email"), tier: inputValue("grant-tier"),
           source: inputValue("grant-source"), expiresAt, reason: inputValue("grant-reason") || null,
+          notify: shouldNotify,
         }),
       });
-      showStatus(`Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})`, "success");
 
-      // #12: Send notification if checked
-      if (shouldNotify) sendNotification(result.email, result.tier);
+      // #12: Show notification status from response
+      const notifyMsg = shouldNotify
+        ? (result.notified ? ` — email στάλθηκε` : ` — email δεν στάλθηκε`)
+        : "";
+      showStatus(`Αποθηκεύτηκε: ${result.email} → ${result.tier} (${result.source})${notifyMsg}`, "success");
 
       resetForm();
       loadGrants();
