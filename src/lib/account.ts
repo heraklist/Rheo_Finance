@@ -1,3 +1,4 @@
+import { clearSubscriptionCache } from "@/lib/subscription";
 import { supabase } from "@/lib/supabase";
 
 export async function deleteCurrentAccount(): Promise<void> {
@@ -7,5 +8,6 @@ export async function deleteCurrentAccount(): Promise<void> {
     throw error;
   }
 
+  clearSubscriptionCache();
   await supabase.auth.signOut();
 }
