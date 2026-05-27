@@ -52,6 +52,11 @@ pnpm-debug.log*
 # TypeScript
 *.tsbuildinfo
 
+# Test artifacts
+playwright-report/
+test-results/
+coverage/
+
 # OS
 Thumbs.db
 

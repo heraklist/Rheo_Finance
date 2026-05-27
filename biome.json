@@ -28,7 +28,9 @@
       "supabase/.temp",
       "src-tauri/target",
       "src-tauri/gen",
-      "*.tsbuildinfo"
+      "*.tsbuildinfo",
+      "e2e",
+      "playwright-report"
     ]
   }
 }
