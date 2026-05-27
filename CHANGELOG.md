@@ -11,7 +11,6 @@ The format is based on Keep a Changelog, and this project follows semantic versi
 - Desktop and Android update checks now use the Rheo landing Vercel download proxy instead of direct GitHub Release asset URLs.
 - The Vercel update proxy keeps GitHub credentials server-side while returning Tauri-compatible manifests and signed release download URLs to the app.
 - Update downloads are pinned to the manifest version to avoid downloading a newer asset with an older signature.
-- Desktop updater downloads now target the signed NSIS update package instead of the human-facing installer executable.
 
 ### Changed
 

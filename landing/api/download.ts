@@ -14,7 +14,6 @@ const MANIFEST_PATTERNS: Record<string, RegExp> = {
 // Map platform param to asset filename patterns
 const PLATFORM_PATTERNS: Record<string, RegExp> = {
   windows: /\.(msi|exe)$/i,
-  "windows-update": /\.nsis\.zip$/i,
   android: /\.apk$/i,
 };
 
@@ -146,7 +145,7 @@ async function sendUpdateManifest(
       ...body.platforms,
       "windows-x86_64": {
         ...body.platforms?.["windows-x86_64"],
-        url: `${PUBLIC_BASE_URL}/api/download?platform=windows-update${versionQuery}`,
+        url: `${PUBLIC_BASE_URL}/api/download?platform=windows${versionQuery}`,
       },
     },
   });
