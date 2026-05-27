@@ -17,7 +17,7 @@ import { rateLimited } from "./_rate-limit.js";
 // GET  ?type=health                 → system table counts
 // ---------------------------------------------------------------------------
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isValidUUID(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
@@ -181,15 +181,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const email = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
       if (!email) return res.status(400).json({ error: "email required" });
 
-      // Fetch all user data in parallel
-      const [subsR, auditR, notesR, ticketsR] = await Promise.all([
-        supaFetch(supabaseUrl, serviceKey, `subscriptions?select=*&user_id=in.(select user_id from subscriptions)&limit=10`),
+      const [auditR, notesR, ticketsR] = await Promise.all([
         supaFetch(supabaseUrl, serviceKey, `admin_audit_log?target_email=eq.${encodeURIComponent(email)}&order=created_at.desc`),
         supaFetch(supabaseUrl, serviceKey, `admin_user_notes?user_email=eq.${encodeURIComponent(email)}&order=created_at.desc`),
         supaFetch(supabaseUrl, serviceKey, `admin_support_tickets?user_email=eq.${encodeURIComponent(email)}&order=created_at.desc`),
       ]);
 
-      // Also look up subscription by email via user list
       const usersR = await fetch(`${supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(email)}&page=1&per_page=5`, {
         headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
       });
