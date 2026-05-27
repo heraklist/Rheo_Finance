@@ -17,6 +17,12 @@ import { rateLimited } from "./_rate-limit.js";
 // GET  ?type=health                 → system table counts
 // ---------------------------------------------------------------------------
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(value: unknown): value is string {
+  return typeof value === "string" && UUID_RE.test(value);
+}
+
 function supaFetch(url: string, key: string, path: string, init?: RequestInit) {
   return fetch(`${url}/rest/v1/${path}`, {
     ...init,
@@ -56,6 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Toggle active status if id provided
         if (b.id && typeof b.active === "boolean") {
+          if (!isValidUUID(b.id)) return res.status(400).json({ error: "Invalid id" });
           const r = await supaFetch(supabaseUrl, serviceKey, `admin_announcements?id=eq.${b.id}`, {
             method: "PATCH",
             headers: { Prefer: "return=minimal" },
@@ -136,6 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Update status if id provided
         if (b.id && b.status) {
+          if (!isValidUUID(b.id)) return res.status(400).json({ error: "Invalid id" });
           const r = await supaFetch(supabaseUrl, serviceKey, `admin_support_tickets?id=eq.${b.id}`, {
             method: "PATCH",
             headers: { Prefer: "return=minimal" },

@@ -498,11 +498,15 @@ async function isBaselineLocalDatabase(): Promise<boolean> {
     db.select<Array<{ value: string }>>(
       "SELECT value FROM sync_metadata WHERE key = 'last_synced_at' LIMIT 1",
     ),
-    db.select<Array<{ count: number }>>("SELECT COUNT(*) AS count FROM sync_outbox"),
+    db.select<Array<{ count: number }>>(
+      `SELECT COUNT(*) AS count FROM sync_outbox
+       WHERE entity_type NOT IN ('book', 'account', 'category', 'tag')`,
+    ),
   ]);
 
   const lastSync = metaRows[0]?.value ?? "1970-01-01T00:00:00.000Z";
   if (lastSync !== "" && lastSync !== "1970-01-01T00:00:00.000Z") return false;
+  // Only block adoption for non-reference outbox entries (transactions, plans, etc.)
   if (Number(outboxRows[0]?.count ?? 0) > 0) return false;
 
   const userDataTables = [
@@ -557,6 +561,11 @@ async function adoptRemoteBaselineIfNeeded(userId: string): Promise<boolean> {
   }
 
   await runInTransaction(async (db) => {
+    // Clear stale reference-data outbox entries — adoption replaces them
+    await db.execute(
+      `DELETE FROM sync_outbox
+       WHERE entity_type IN ('book', 'account', 'category', 'tag')`,
+    );
     await db.execute("DELETE FROM coverage_income");
     await db.execute("DELETE FROM coverage_expense");
     await db.execute("DELETE FROM plan_income_item");
@@ -999,6 +1008,104 @@ async function applyRemoteRowToLocal(
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Book ID conflict resolution — handles UNIQUE (user_id, slug) violations
+// ---------------------------------------------------------------------------
+
+/** Tables that hold a book_id FK and need remapping when local book ID differs from remote. */
+const BOOK_FK_TABLES = [
+  "accounts",
+  "categories",
+  "recurring_templates",
+  "transactions",
+  "plan",
+  "coverage_expense",
+  "coverage_income",
+] as const;
+
+function isUniqueViolation(err: unknown): boolean {
+  const msg = syncErrorMessage(err).toLowerCase();
+  return msg.includes("unique") || msg.includes("duplicate key") || msg.includes("23505");
+}
+
+/**
+ * When pushing a local book fails because Supabase already has a book with the
+ * same (user_id, slug) but a different PK, we adopt the remote ID:
+ * 1. Fetch the remote book by slug
+ * 2. Remap every local FK reference from oldId → remoteId
+ * 3. Update the local book row's own ID
+ * 4. Remap any outbox entries referencing the old ID
+ */
+async function resolveBookIdConflict(
+  localBookId: string,
+  slug: JsonValue,
+  userId: string,
+): Promise<boolean> {
+  if (typeof slug !== "string") return false;
+
+  // Find the existing remote book by (user_id, slug)
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) return false;
+
+  const remoteId = (data as SyncRow).id;
+  if (typeof remoteId !== "string" || remoteId === localBookId) return false;
+
+  const ts = now();
+
+  await runInTransaction(async (txDb) => {
+    // Temporarily disable FK enforcement inside this transaction
+    // (runInTransaction enables it — we need to override for the ID swap)
+    await txDb.execute("PRAGMA foreign_keys = OFF");
+
+    // Remap all child tables
+    for (const table of BOOK_FK_TABLES) {
+      await txDb.execute(`UPDATE ${table} SET book_id = ? WHERE book_id = ?`, [
+        remoteId,
+        localBookId,
+      ]);
+    }
+
+    // Remap outbox payload references
+    await txDb.execute(
+      `UPDATE sync_outbox
+       SET payload = json_set(payload, '$.book_id', ?)
+       WHERE json_extract(payload, '$.book_id') = ?`,
+      [remoteId, localBookId],
+    );
+
+    // Update outbox entity_id for the book itself
+    await txDb.execute(
+      `UPDATE sync_outbox SET entity_id = ? WHERE entity_type = 'book' AND entity_id = ?`,
+      [remoteId, localBookId],
+    );
+
+    // Update the book row's own ID
+    await txDb.execute("UPDATE books SET id = ? WHERE id = ?", [remoteId, localBookId]);
+
+    // Mark it synced with the remote timestamp
+    const remoteUpdatedAt = timestampValue((data as SyncRow).updated_at) ?? ts;
+    await txDb.execute(
+      `UPDATE books
+       SET sync_status = 'synced',
+           local_updated_at = ?,
+           server_updated_at = ?
+       WHERE id = ?`,
+      [remoteUpdatedAt, remoteUpdatedAt, remoteId],
+    );
+
+    // Re-enable FK enforcement
+    await txDb.execute("PRAGMA foreign_keys = ON");
+  });
+
+  return true;
+}
+
 async function upsertLocalReferenceData(userId: string) {
   const db = await getDb();
 
@@ -1014,31 +1121,46 @@ async function upsertLocalReferenceData(userId: string) {
       const entityId = row.id;
       if (typeof entityId !== "string") continue;
 
-      const remoteUpdatedAt = await getRemoteUpdatedAt(config.table, entityId);
-      const remoteMs = timestampMs(remoteUpdatedAt);
-      const localMs = timestampMs(localUpdatedAt(row));
+      try {
+        const remoteUpdatedAt = await getRemoteUpdatedAt(config.table, entityId);
+        const remoteMs = timestampMs(remoteUpdatedAt);
+        const localMs = timestampMs(localUpdatedAt(row));
 
-      if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
-        console.error(
-          `[sync] LWW: remote newer for ${entityType} ${entityId} ` +
-            `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(row)}). Skipping push.`,
+        if (remoteMs !== null && localMs !== null && remoteMs > localMs) {
+          console.error(
+            `[sync] LWW: remote newer for ${entityType} ${entityId} ` +
+              `(remote=${remoteUpdatedAt}, local=${localUpdatedAt(row)}). Skipping push.`,
+          );
+          const remoteRow = await getRemoteRow(config, entityId);
+          if (remoteRow) await applyRemoteRowToLocal(entityType, remoteRow);
+          continue;
+        }
+
+        const remoteRow = toRemoteRow(entityType, row, userId);
+        const syncedAt = await upsertRemoteRow(config, remoteRow);
+
+        await db.execute(
+          `UPDATE ${config.localTable}
+           SET sync_status = 'synced',
+               local_updated_at = ?,
+               server_updated_at = ?
+           WHERE id = ?`,
+          [syncedAt, syncedAt, entityId],
         );
-        const remoteRow = await getRemoteRow(config, entityId);
-        if (remoteRow) await applyRemoteRowToLocal(entityType, remoteRow);
-        continue;
+      } catch (err) {
+        if (entityType === "book" && isUniqueViolation(err)) {
+          const resolved = await resolveBookIdConflict(entityId, row.slug ?? null, userId);
+          if (resolved) {
+            console.error(
+              `[sync] Resolved book ID conflict for slug="${String(row.slug)}" ` +
+                `(local=${entityId} → adopted remote ID)`,
+            );
+            continue;
+          }
+        }
+        // Log but don't throw — let other entities sync
+        console.error(`[sync] Failed to push ${entityType} ${entityId}:`, syncErrorMessage(err));
       }
-
-      const remoteRow = toRemoteRow(entityType, row, userId);
-      const syncedAt = await upsertRemoteRow(config, remoteRow);
-
-      await db.execute(
-        `UPDATE ${config.localTable}
-         SET sync_status = 'synced',
-             local_updated_at = ?,
-             server_updated_at = ?
-         WHERE id = ?`,
-        [syncedAt, syncedAt, entityId],
-      );
     }
   }
 }
