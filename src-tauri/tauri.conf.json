@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Rheo Finance",
-  "version": "0.2.23",
+  "version": "0.2.24",
   "identifier": "app.rheo.finance",
   "build": {
     "beforeDevCommand": "corepack pnpm dev",
@@ -50,9 +50,7 @@
       "preload": ["sqlite:evochia.db"]
     },
     "updater": {
-      "endpoints": [
-        "https://github.com/heraklist/Rheo_Finance/releases/latest/download/latest-desktop.json"
-      ],
+      "endpoints": ["https://landing-two-dun-95.vercel.app/api/update/desktop"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1RDQ3OTcwMDJEMkMyMjEKUldRaHd0SUNjSG5VVlhrV0JHTmhCd0VibXBjVW5VWlZ0REVoRzFGSUVsNnJjUXZKYkVoUUdjeUYK"
     }
   }

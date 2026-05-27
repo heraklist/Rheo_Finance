@@ -4,6 +4,19 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.24 - 2026-05-27
+
+### Fixed
+
+- Desktop and Android update checks now use the Rheo landing Vercel update proxy instead of direct GitHub Release asset URLs.
+- The Vercel update proxy keeps GitHub credentials server-side while returning Tauri-compatible manifests and signed release download URLs to the app.
+- Update downloads are pinned to the manifest version to avoid downloading a newer asset with an older signature.
+- Desktop updater downloads now target the signed NSIS update package instead of the human-facing installer executable.
+
+### Changed
+
+- Updated safe patch/minor dependencies for Supabase, React Query, React Hook Form, and date-fns.
+
 ## v0.2.23 - 2026-05-26
 
 ### Fixed
