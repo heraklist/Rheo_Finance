@@ -1,8 +1,8 @@
+import { AlertCircle, ArrowLeft, ArrowRight, Info, TrendingUp } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { type ForecastResult, getForecast } from "@/lib/analytics";
 import { useAppStore } from "@/lib/store";
 import { cn, formatEuro } from "@/lib/utils";
-import { AlertCircle, ArrowLeft, ArrowRight, Info, TrendingUp } from "lucide-react";
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 
 const LazyForecastLineChart = lazy(async () => {
   const module = await import("@/components/charts/ForecastLineChart");

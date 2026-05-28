@@ -104,11 +104,7 @@ export async function getTransaction(id: string): Promise<TransactionWithRelatio
  * Get totals for a given date range and book.
  * Returns total income, total expense, net.
  */
-export async function getTotals(opts: {
-  bookId?: string;
-  fromDate: string;
-  toDate: string;
-}) {
+export async function getTotals(opts: { bookId?: string; fromDate: string; toDate: string }) {
   const db = await getDb();
   const conditions: string[] = ["t.date >= ?", "t.date <= ?"];
   const params: (string | number)[] = [opts.fromDate, opts.toDate];

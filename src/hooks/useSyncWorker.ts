@@ -1,7 +1,7 @@
+import { useEffect } from "react";
 import { generateDueRecurringTransactions } from "@/lib/recurring";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount, syncAll } from "@/lib/sync";
-import { useEffect } from "react";
 
 const SYNC_INTERVAL_MS = 30_000;
 

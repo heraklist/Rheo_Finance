@@ -1,6 +1,6 @@
+import { Check, Trash2 } from "lucide-react";
 import type { CoverageExpense, CoverageIncome } from "@/lib/types";
 import { cn, formatEuro } from "@/lib/utils";
-import { Check, Trash2 } from "lucide-react";
 
 type CoverageRowItem = CoverageExpense | CoverageIncome;
 

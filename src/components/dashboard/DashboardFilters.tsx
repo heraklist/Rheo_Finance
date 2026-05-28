@@ -1,14 +1,14 @@
+import { Calendar, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import {
   type BookFilter,
+  currentQuarter,
   type DashboardBookOption,
   type DateRange,
   MONTHS_SHORT,
   type PeriodFilter,
-  currentQuarter,
 } from "@/components/dashboard/dashboardModel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
 
 interface DashboardFiltersProps {
   bookFilter: BookFilter;

@@ -1,10 +1,10 @@
+import { CreditCard, RefreshCcw, Star } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTier } from "@/hooks/useTier";
-import { type UsageCounts, getUsageCounts } from "@/lib/analytics";
+import { getUsageCounts, type UsageCounts } from "@/lib/analytics";
 import type { SubscriptionTier } from "@/lib/subscription";
 import { openBillingPortal, openUpgradeUrl } from "@/lib/upgrade";
 import { cn, formatDateRelative } from "@/lib/utils";
-import { CreditCard, RefreshCcw, Star } from "lucide-react";
-import { useEffect, useState } from "react";
 
 // === Tier data ===
 
@@ -22,6 +22,8 @@ const TIERS: TierInfo[] = [
   { key: "pro", name: "Pro", monthly: "€12,90", annual: "€129", note: "Για προχωρημένα σενάρια" },
   { key: "team", name: "Team", monthly: "€29", annual: "€290", note: "Phase 2" },
 ];
+
+const COMPARISON_COLUMNS = ["feature", "free", "solo", "pro", "team"] as const;
 
 const COMPARISON_ROWS: Array<[string, string, string, string, string]> = [
   ["Βασική οργάνωση", "✓", "✓", "✓", "✓"],
@@ -222,8 +224,11 @@ export function SubscriptionSection(): React.JSX.Element {
           <tbody>
             {COMPARISON_ROWS.map((row) => (
               <tr key={row[0]} className="border-t border-border-light">
-                {row.map((cell, i) => (
-                  <td key={`${row[0]}-${i}`} className="p-3 text-text-primary">
+                {row.map((cell, columnIndex) => (
+                  <td
+                    key={`${row[0]}-${COMPARISON_COLUMNS[columnIndex]}`}
+                    className="p-3 text-text-primary"
+                  >
                     {cell}
                   </td>
                 ))}

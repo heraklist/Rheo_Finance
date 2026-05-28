@@ -1,7 +1,7 @@
+import { useEffect } from "react";
 import { runRecurringDailyCheck } from "@/lib/recurring";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
-import { useEffect } from "react";
 
 export function useRecurringWorker() {
   const { authLoading, setPendingCount, user } = useAppStore();

@@ -1,16 +1,18 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardChartSection } from "@/components/dashboard/DashboardChartSection";
 import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 import { DashboardKpiGrid } from "@/components/dashboard/DashboardKpiGrid";
-import { RecentTransactionsSection } from "@/components/dashboard/RecentTransactionsSection";
 import {
   type BookFilter,
   type DashboardBookOption,
   EMPTY_BOOK_COUNTS,
-  type PeriodFilter,
   isoDate,
   monthLabel,
+  type PeriodFilter,
   periodToRange,
 } from "@/components/dashboard/dashboardModel";
+import { RecentTransactionsSection } from "@/components/dashboard/RecentTransactionsSection";
 import {
   type BookTransactionCounts,
   getBookTransactionCounts,
@@ -19,8 +21,6 @@ import {
 import { isPersonalBook, useAppStore } from "@/lib/store";
 import { getTotals, listTransactions } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface Totals {
   income: number;

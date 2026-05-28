@@ -1,9 +1,9 @@
-import { type VatQuarter, getVatByQuarter } from "@/lib/analytics";
-import { isBusinessBook, useAppStore } from "@/lib/store";
-import { cn, formatEuro } from "@/lib/utils";
 import { AlertCircle, ArrowLeft, ArrowRight, Calculator, ListFilter } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { getVatByQuarter, type VatQuarter } from "@/lib/analytics";
+import { isBusinessBook, useAppStore } from "@/lib/store";
+import { cn, formatEuro } from "@/lib/utils";
 
 function quarterAmountClass(amount: number): string {
   if (amount > 0) return "text-expense";

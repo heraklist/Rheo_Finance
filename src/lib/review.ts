@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { computeNextDue } from "@/lib/recurring";
-import { BOOK_SLUG_BUSINESS } from "@/lib/types";
 import type { TransactionWithRelations } from "@/lib/types";
+import { BOOK_SLUG_BUSINESS } from "@/lib/types";
 
 // === Review Queue Types ===
 

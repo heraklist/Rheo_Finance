@@ -1,11 +1,11 @@
-import {
-  type InstallProgress,
-  type UpdateInfo,
-  checkForUpdateInfo,
-  installUpdate,
-} from "@/lib/update";
 import { Download, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  checkForUpdateInfo,
+  type InstallProgress,
+  installUpdate,
+  type UpdateInfo,
+} from "@/lib/update";
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const DISMISS_KEY_PREFIX = "update-dismissed:";

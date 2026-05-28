@@ -1,3 +1,7 @@
+import { documentDir, join } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MfaSettingsPanel } from "@/components/auth/MfaSettingsPanel";
 import {
   AboutSection,
@@ -16,8 +20,8 @@ import {
   EXPORT_BOOK_OPTIONS,
   PAYMENT_METHODS,
   type PeriodKey,
-  VAT_RATES,
   resolveExportPeriod,
+  VAT_RATES,
 } from "@/components/settings/settingsOptions";
 import { deleteCurrentAccount } from "@/lib/account";
 import {
@@ -28,16 +32,12 @@ import {
   restoreFromBackupPath,
   saveJsonBackupToPath,
 } from "@/lib/backup";
-import { type ExportBookScope, currentQuarterPeriods, saveFinanceExport } from "@/lib/export";
+import { currentQuarterPeriods, type ExportBookScope, saveFinanceExport } from "@/lib/export";
 import { type EditableCategoryType, listCategoryCounts } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { getPendingCount, resetSyncStateForFullPull, syncAll } from "@/lib/sync";
 import { checkForUpdate } from "@/lib/updater";
-import { documentDir, join } from "@tauri-apps/api/path";
-import { open, save } from "@tauri-apps/plugin-dialog";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 function messageFromError(err: unknown): string {
   return err instanceof Error && err.message ? err.message : "Άγνωστο σφάλμα.";

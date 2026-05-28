@@ -1,3 +1,6 @@
+import { AlertCircle, ArrowLeft, Pencil, ReceiptText, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   TransactionForm,
   type TransactionFormValues,
@@ -7,9 +10,6 @@ import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import { deleteTransaction, getTransaction, updateTransaction } from "@/lib/transactions";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
-import { AlertCircle, ArrowLeft, Pencil, ReceiptText, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
 
 type EditableTransactionType = "income" | "expense" | "reserve";
 

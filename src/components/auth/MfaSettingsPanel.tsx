@@ -1,9 +1,9 @@
+import { ShieldCheck, ShieldPlus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useCompanyName } from "@/hooks/useCompanyName";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
-import { ShieldCheck, ShieldPlus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 interface EnrollmentState {
   factorId: string;

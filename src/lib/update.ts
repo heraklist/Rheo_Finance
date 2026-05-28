@@ -2,7 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
-import { type DownloadEvent, check } from "@tauri-apps/plugin-updater";
+import { check, type DownloadEvent } from "@tauri-apps/plugin-updater";
 
 export type UpdateCheckStatus =
   | "current"

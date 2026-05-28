@@ -1,7 +1,16 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   },
   "formatter": {
     "enabled": true,
@@ -15,22 +24,26 @@
       "recommended": true,
       "a11y": {
         "noAutofocus": "off"
+      },
+      "suspicious": {
+        "noUnknownAtRules": "off"
       }
     }
   },
   "files": {
-    "ignore": [
-      "node_modules",
-      "dist",
-      "build",
-      "landing",
-      "docs",
-      "supabase/.temp",
-      "src-tauri/target",
-      "src-tauri/gen",
-      "*.tsbuildinfo",
-      "e2e",
-      "playwright-report"
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/build",
+      "!**/landing",
+      "!**/docs",
+      "!**/supabase/.temp",
+      "!**/src-tauri/target",
+      "!**/src-tauri/gen",
+      "!**/*.tsbuildinfo",
+      "!**/e2e",
+      "!**/playwright-report"
     ]
   }
 }

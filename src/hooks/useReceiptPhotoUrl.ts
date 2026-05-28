@@ -1,5 +1,5 @@
-import { getReceiptPhotoObjectUrl } from "@/lib/receipts";
 import { useEffect, useState } from "react";
+import { getReceiptPhotoObjectUrl } from "@/lib/receipts";
 
 export function useReceiptPhotoUrl(
   path: string | null | undefined,

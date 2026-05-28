@@ -1,3 +1,6 @@
+import { AlertCircle, Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PlanCard } from "@/components/plans/PlanCard";
 import { PlanKpiGrid } from "@/components/plans/PlanKpiGrid";
 import { PlanTemplates } from "@/components/plans/PlanTemplates";
@@ -6,9 +9,6 @@ import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
 import type { PlanType, PlanWithTotals } from "@/lib/types";
 import { formatLocalIsoDate } from "@/lib/utils";
-import { AlertCircle, Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 function defaultTargetDate(monthsAhead = 3): string {
   const date = new Date();

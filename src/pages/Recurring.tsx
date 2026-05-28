@@ -1,3 +1,5 @@
+import { AlertCircle, ArrowLeft, Pause, Pencil, Plus, Repeat2, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { RecurringForm, type RecurringFormValues } from "@/components/recurring/RecurringForm";
 import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import {
@@ -12,8 +14,6 @@ import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
 import type { CategoryType, Frequency, RecurringTemplateWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
-import { AlertCircle, ArrowLeft, Pause, Pencil, Plus, Repeat2, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
 
 type Mode = "list" | "create" | "edit";
 type RecurringType = Extract<CategoryType, "income" | "expense" | "reserve">;

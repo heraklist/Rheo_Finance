@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  type GatedFeature,
-  type SubscriptionTier,
   featureUpgradeMessage,
+  type GatedFeature,
   getTierLimits,
   isFeatureAvailable,
+  type SubscriptionTier,
   tierDisplayName,
 } from "./subscription";
 

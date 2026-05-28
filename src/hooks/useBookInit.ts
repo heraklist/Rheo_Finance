@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { listBooks } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
-import { useEffect, useState } from "react";
 
 /**
  * On mount, loads book list into store and resolves currentBookId

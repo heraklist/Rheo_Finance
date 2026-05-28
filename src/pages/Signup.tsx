@@ -52,7 +52,7 @@ export function Signup() {
 
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+    if (!trimmedEmail?.includes("@")) {
       setError("Δώσε έγκυρο email.");
       return;
     }
