@@ -1,9 +1,9 @@
 Already up to date
-Done in 605ms using pnpm v11.0.9
+Done in 395ms using pnpm v11.0.9
 $ tsc -b && vite build
 [36mvite v8.0.14 [32mbuilding client environment for production...[36m[39m
 [2Ktransforming...✓ 1964 modules transformed.
-[31m✗[39m Build failed in 1.47s
+[31m✗[39m Build failed in 1.32s
 [31merror during build:
 [31mBuild failed with 1 error:
 
