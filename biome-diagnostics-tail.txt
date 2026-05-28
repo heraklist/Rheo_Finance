@@ -1,0 +1,107 @@
+Already up to date
+Done in 388ms using pnpm v11.0.9
+src/pages/Signup.tsx:55:9 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Change to an optional chain.
+  
+    53 │     const trimmedEmail = email.trim();
+    54 │ 
+  > 55 │     if (!trimmedEmail || !trimmedEmail.includes("@")) {
+       │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    56 │       setError("Δώσε έγκυρο email.");
+    57 │       return;
+  
+  i Unsafe fix: Change to an optional chain.
+  
+     53  53 │       const trimmedEmail = email.trim();
+     54  54 │   
+     55     │ - ····if·(!trimmedEmail·||·!trimmedEmail.includes("@"))·{
+         55 │ + ····if·(!trimmedEmail?.includes("@"))·{
+     56  56 │         setError("Δώσε έγκυρο email.");
+     57  57 │         return;
+  
+
+src/components/settings/SubscriptionSection.tsx:226:41 lint/suspicious/noArrayIndexKey ━━━━━━━━━━━━━
+
+  × Avoid using the index of an array as key property in an element.
+  
+    224 │               <tr key={row[0]} className="border-t border-border-light">
+    225 │                 {row.map((cell, i) => (
+  > 226 │                   <td key={`${row[0]}-${i}`} className="p-3 text-text-primary">
+        │                                         ^
+    227 │                     {cell}
+    228 │                   </td>
+  
+  i This is the source of the key value.
+  
+    223 │             {COMPARISON_ROWS.map((row) => (
+    224 │               <tr key={row[0]} className="border-t border-border-light">
+  > 225 │                 {row.map((cell, i) => (
+        │                                 ^
+    226 │                   <td key={`${row[0]}-${i}`} className="p-3 text-text-primary">
+    227 │                     {cell}
+  
+  i The order of the items may change, and this also affects performances and component state.
+  
+  i Check the React documentation. 
+  
+
+src/index.css:1:2 lint/suspicious/noUnknownAtRules ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Unexpected unknown at-rule: tailwind 
+  
+  > 1 │ @tailwind base;
+      │  ^^^^^^^^
+    2 │ @tailwind components;
+    3 │ @tailwind utilities;
+  
+  i tailwind is not a standard CSS at-rule, which may lead to unexpected styling results or failure to interpret the styles as intended.
+  
+  i See MDN web docs for a known list of at-rules.
+  
+  i To fix this issue, consider removing the unknown at-rule.
+  
+
+src/index.css:2:2 lint/suspicious/noUnknownAtRules ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Unexpected unknown at-rule: tailwind 
+  
+    1 │ @tailwind base;
+  > 2 │ @tailwind components;
+      │  ^^^^^^^^
+    3 │ @tailwind utilities;
+    4 │ 
+  
+  i tailwind is not a standard CSS at-rule, which may lead to unexpected styling results or failure to interpret the styles as intended.
+  
+  i See MDN web docs for a known list of at-rules.
+  
+  i To fix this issue, consider removing the unknown at-rule.
+  
+
+src/index.css:3:2 lint/suspicious/noUnknownAtRules ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Unexpected unknown at-rule: tailwind 
+  
+    1 │ @tailwind base;
+    2 │ @tailwind components;
+  > 3 │ @tailwind utilities;
+      │  ^^^^^^^^
+    4 │ 
+    5 │ /* === Design tokens as CSS variables (Claude Design output, ported) === */
+  
+  i tailwind is not a standard CSS at-rule, which may lead to unexpected styling results or failure to interpret the styles as intended.
+  
+  i See MDN web docs for a known list of at-rules.
+  
+  i To fix this issue, consider removing the unknown at-rule.
+  
+
+Checked 117 files in 359ms. No fixes applied.
+Found 4 errors.
+Found 1 warning.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
