@@ -59,22 +59,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Stream the binary through the proxy instead of redirecting.
+    // Tauri v2 updater does not reliably follow 302 → S3 redirects.
     const assetRes = await fetch(asset.url, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: "application/octet-stream",
       },
-      redirect: "manual",
+      // follow the GitHub → S3 redirect server-side
     });
 
-    const downloadUrl = assetRes.headers.get("location");
-
-    if (!downloadUrl) {
-      return res.status(502).json({ error: "Failed to get download URL" });
+    if (!assetRes.ok || !assetRes.body) {
+      return res.status(502).json({ error: "Failed to download asset from origin" });
     }
 
+    const contentLength = assetRes.headers.get("content-length");
+    res.setHeader("Content-Type", "application/octet-stream");
+    if (contentLength) res.setHeader("Content-Length", contentLength);
     res.setHeader("Content-Disposition", `attachment; filename="${asset.name}"`);
-    return res.redirect(302, downloadUrl);
+    res.setHeader("Cache-Control", "no-store");
+
+    const buffer = Buffer.from(await assetRes.arrayBuffer());
+    return res.send(buffer);
   } catch (err) {
     console.error("Download proxy error:", err);
     const message = err instanceof Error ? err.message : "Unknown download proxy error";

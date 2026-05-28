@@ -137,6 +137,119 @@ and currently test against the browser (not Tauri). Enable later by adding:
 
 `.github/dependabot.yml` checks npm dependencies weekly and opens PRs.
 
+## Supabase Local Testing (Database QA)
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) running locally
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed (`npm i -g supabase`)
+- Node.js 22+
+
+### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `pnpm supabase:start` | Start local Supabase (Docker) |
+| `pnpm supabase:stop` | Stop local Supabase |
+| `pnpm supabase:reset` | Reset DB: runs all migrations from scratch |
+| `pnpm supabase:test` | Run pgTAP database tests |
+| `pnpm supabase:lint` | Lint migrations for issues |
+| `pnpm supabase:types` | Regenerate TypeScript types from local DB |
+| `pnpm db:check` | Full pipeline: reset + lint + test + types |
+
+### Quick Start
+
+```bash
+# Start local Supabase (first time takes a few minutes to pull Docker images)
+pnpm supabase:start
+
+# Run the full database QA pipeline
+pnpm db:check
+
+# Stop when done
+pnpm supabase:stop
+```
+
+### Database Tests
+
+Test files: `supabase/tests/database/*.test.sql`
+
+Current coverage:
+
+| Test file | What it covers |
+|-----------|---------------|
+| `00_extensions.test.sql` | pgTAP setup verification |
+| `00_schema_integrity.test.sql` | Tables, columns, constraints, indexes, triggers |
+| `01_rls_enabled.test.sql` | RLS policies on all 12 user tables + 3 admin tables, anon denial |
+| `02_workspace_isolation.test.sql` | User A cannot see/modify User B data, cross-user CRUD blocked |
+| `03_subscription_billing.test.sql` | Tier/status/source constraints, uniqueness, read-only for users |
+| `04_admin_tables.test.sql` | Admin tables deny authenticated access, service_role-only |
+| `05_data_constraints.test.sql` | Check constraints on all enums, generated VAT columns, FK integrity |
+
+### Running Individual Tests
+
+```bash
+# Run all database tests
+pnpm supabase:test
+
+# The test runner (pg_prove) runs files in alphabetical order.
+# All tests use BEGIN/ROLLBACK so they don't leave data behind.
+```
+
+### Regenerating TypeScript Types
+
+After any migration change:
+
+```bash
+pnpm supabase:start          # if not running
+pnpm supabase:reset           # apply latest migrations
+pnpm supabase:types           # generates src/lib/database.types.ts
+```
+
+### What Runs Locally vs CI
+
+| Check | Local | CI |
+|-------|-------|----|
+| Migration reset | Docker required | Not yet (needs Supabase CLI in CI) |
+| Database lint | Docker required | Not yet |
+| pgTAP tests | Docker required | Not yet |
+| TypeScript types | Docker required | Not yet |
+| Unit tests (Vitest) | Always | Always |
+| Lint + typecheck | Always | Always |
+
+To enable Supabase in CI later, add Supabase CLI + Docker to the CI workflow:
+
+```yaml
+- name: Setup Supabase CLI
+  uses: supabase/setup-cli@v2
+- name: Start Supabase
+  run: supabase start
+- name: Database QA
+  run: pnpm db:check
+```
+
+### Edge Functions
+
+No Edge Functions exist yet. When added:
+- Files go in `supabase/functions/`
+- Tests go in `supabase/functions/tests/`
+- Add scripts: `supabase:functions`, `supabase:functions:test`
+- Requires Deno runtime locally
+
+### What Is NOT Tested (Blocked)
+
+| Feature | Blocked by |
+|---------|-----------|
+| Stripe webhook → subscription update | Stripe integration not implemented |
+| Grace period on failed payment | Stripe webhooks not implemented |
+| Billing portal redirect | Stripe Customer Portal not configured |
+| Storage signed URL access | Manual testing only (depends on Supabase Storage config) |
+| Cross-user E2E isolation | Requires real Supabase Auth test accounts in CI |
+
+See [saas-test-contracts.md](./saas-test-contracts.md) for detailed per-feature breakdown.
+
+---
+
 ## SaaS Test Contracts
 
 See [saas-test-contracts.md](./saas-test-contracts.md) for detailed breakdown of:
@@ -157,4 +270,4 @@ See [saas-test-contracts.md](./saas-test-contracts.md) for detailed breakdown of
 | Failed payment | N/A | N/A | Stripe webhooks |
 | Billing portal | N/A | N/A | Stripe portal |
 | Mobile dashboard | N/A | Smoke | Auth bypass for e2e |
-| Workspace isolation | N/A | N/A | Multi-user test setup |
+| Workspace isolation | **pgTAP** | N/A | E2E needs CI auth accounts |
