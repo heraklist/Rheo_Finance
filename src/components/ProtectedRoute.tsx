@@ -1,7 +1,7 @@
-import { MfaChallenge } from "@/components/auth/MfaChallenge";
-import { useAppStore } from "@/lib/store";
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+import { MfaChallenge } from "@/components/auth/MfaChallenge";
+import { useAppStore } from "@/lib/store";
 
 interface ProtectedRouteProps {
   children: ReactNode;

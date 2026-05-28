@@ -1,3 +1,6 @@
+import { AlertCircle, Archive, ArrowLeft, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,10 +12,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  type EditableCategoryType,
   archiveCategory,
   createCategory,
   deleteCategory,
+  type EditableCategoryType,
   getCategoryUsage,
   listCategories,
   restoreCategory,
@@ -21,9 +24,6 @@ import {
 import { useAppStore } from "@/lib/store";
 import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Archive, ArrowLeft, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
 
 type SheetMode = "create" | "edit";
 

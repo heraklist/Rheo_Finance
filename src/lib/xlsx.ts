@@ -51,7 +51,7 @@ function columnName(index: number): string {
 }
 
 function sanitizeSheetName(name: string): string {
-  const clean = name.replace(/[\[\]*?/\\:]/g, " ").trim();
+  const clean = name.replace(/[[\]*?/\\:]/g, " ").trim();
   return (clean || "Sheet").slice(0, 31);
 }
 

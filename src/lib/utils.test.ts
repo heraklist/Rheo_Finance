@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  MONTHS_SHORT_EL,
   computeVat,
   formatDateShort,
   formatEuro,
   formatLocalIsoDate,
+  MONTHS_SHORT_EL,
   round2,
 } from "./utils";
 

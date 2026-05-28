@@ -1,3 +1,5 @@
+import { AlertCircle, Plus } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CoverageChart } from "@/components/coverage/CoverageChart";
 import { CoverageRow } from "@/components/coverage/CoverageRow";
 import { CoverageSummaryCard } from "@/components/coverage/CoverageSummaryCard";
@@ -19,8 +21,6 @@ import { parseGreekAmount } from "@/lib/money";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount } from "@/lib/sync";
 import type { CoverageExpense, CoverageIncome, CoverageSummary } from "@/lib/types";
-import { AlertCircle, Plus } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 function inputClassName(): string {
   return "h-10 rounded-md border border-border-light bg-cream px-3 text-sm text-text-primary outline-none focus:border-gold";

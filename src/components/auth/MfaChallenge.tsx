@@ -1,9 +1,9 @@
+import { ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
-import { ShieldCheck } from "lucide-react";
-import { useState } from "react";
 
 function mfaErrorMessage(message: string): string {
   if (message.includes("verification")) {

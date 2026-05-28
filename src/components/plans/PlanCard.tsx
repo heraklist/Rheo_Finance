@@ -1,8 +1,8 @@
+import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { calculateBudgetPressure, monthsUntilTarget } from "@/lib/plans";
 import type { PlanStatus, PlanType, PlanWithTotals } from "@/lib/types";
 import { cn, formatDateShort, formatEuro } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const TYPE_LABELS: Record<PlanType, string> = {
   purchase: "Αγορά",

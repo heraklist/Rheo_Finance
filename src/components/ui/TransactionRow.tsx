@@ -1,8 +1,8 @@
+import { Receipt, Repeat2 } from "lucide-react";
 import { useDisplayAccountName } from "@/hooks/useDisplayAccountName";
 import { useReceiptPhotoUrl } from "@/hooks/useReceiptPhotoUrl";
 import type { TransactionWithRelations } from "@/lib/types";
 import { cn, formatDateRelative, formatEuro } from "@/lib/utils";
-import { Receipt, Repeat2 } from "lucide-react";
 
 interface TransactionRowProps {
   tx: TransactionWithRelations;

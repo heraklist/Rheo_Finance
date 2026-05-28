@@ -1,6 +1,6 @@
-import type { EditableCategoryType } from "@/lib/reference";
 import { Building2, ChevronRight, FolderTree, LogOut, Save, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { EditableCategoryType } from "@/lib/reference";
 
 function sectionClassName(extra = ""): string {
   return `bg-cream border border-border-light rounded-md p-4 ${extra}`;

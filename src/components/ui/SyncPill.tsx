@@ -1,6 +1,6 @@
+import { AlertTriangle, Check, RotateCw, Wifi } from "lucide-react";
 import type { SyncState } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Check, RotateCw, Wifi } from "lucide-react";
 
 interface SyncPillProps {
   status?: SyncState;

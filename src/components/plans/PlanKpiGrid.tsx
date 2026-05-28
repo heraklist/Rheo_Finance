@@ -1,6 +1,6 @@
+import { Banknote, Target, TrendingDown, TrendingUp } from "lucide-react";
 import type { PlanWithTotals } from "@/lib/types";
 import { formatEuro } from "@/lib/utils";
-import { Banknote, Target, TrendingDown, TrendingUp } from "lucide-react";
 
 interface PlanKpiGridProps {
   plans: PlanWithTotals[];

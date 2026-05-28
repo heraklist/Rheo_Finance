@@ -1,9 +1,3 @@
-import { QuickAddDrawer } from "@/components/layout/QuickAddDrawer";
-import { BrandMark } from "@/components/ui/BrandMark";
-import { SyncPill } from "@/components/ui/SyncPill";
-import { UpdateBanner } from "@/components/ui/UpdateBanner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { isBusinessBook, useAppStore } from "@/lib/store";
 import {
   Calculator,
   CalendarDays,
@@ -17,6 +11,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { QuickAddDrawer } from "@/components/layout/QuickAddDrawer";
+import { BrandMark } from "@/components/ui/BrandMark";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SyncPill } from "@/components/ui/SyncPill";
+import { UpdateBanner } from "@/components/ui/UpdateBanner";
+import { isBusinessBook, useAppStore } from "@/lib/store";
 
 export function AppLayout() {
   const location = useLocation();

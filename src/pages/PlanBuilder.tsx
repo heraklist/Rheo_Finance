@@ -1,3 +1,6 @@
+import { AlertCircle, ArrowLeft, Check, Plus, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { getAverageMonthlyNet } from "@/lib/analytics";
 import { parseGreekAmount } from "@/lib/money";
 import {
@@ -28,9 +31,6 @@ import type {
   Priority,
 } from "@/lib/types";
 import { cn, formatEuro } from "@/lib/utils";
-import { AlertCircle, ArrowLeft, Check, Plus, Save, ShieldCheck, Trash2 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 
 const PLAN_TYPES: Array<{ value: PlanType; label: string }> = [
   { value: "purchase", label: "Αγορά" },
@@ -92,7 +92,11 @@ function MiniStat({
   label,
   value,
   className,
-}: { label: string; value: string; className?: string }) {
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
     <div className="rounded-md border border-border-light bg-cream p-3">
       <p className="text-[10px] uppercase text-text-muted">{label}</p>

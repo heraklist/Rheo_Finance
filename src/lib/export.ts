@@ -5,7 +5,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import { getDb } from "@/lib/db";
 import type { CategoryType } from "@/lib/types";
 import { MONTHS_SHORT_EL, round2 } from "@/lib/utils";
-import { type WorkbookSheet, createXlsxWorkbook } from "@/lib/xlsx";
+import { createXlsxWorkbook, type WorkbookSheet } from "@/lib/xlsx";
 
 export type ExportBookScope = "business" | "personal" | "both";
 

@@ -1,5 +1,5 @@
+import { lazy, Suspense } from "react";
 import type { MonthlyDataPoint } from "@/components/charts/IncomeExpenseChart";
-import { Suspense, lazy } from "react";
 
 const LazyIncomeExpenseChart = lazy(async () => {
   const module = await import("@/components/charts/IncomeExpenseChart");

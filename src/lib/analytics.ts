@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { computeNextDue, listRecurringTemplates } from "@/lib/recurring";
-import { BOOK_SLUG_BUSINESS, BOOK_SLUG_PERSONAL } from "@/lib/types";
 import type { CategoryType, RecurringTemplateWithRelations } from "@/lib/types";
+import { BOOK_SLUG_BUSINESS, BOOK_SLUG_PERSONAL } from "@/lib/types";
 import { MONTHS_SHORT_EL } from "@/lib/utils";
 
 export interface VatQuarter {

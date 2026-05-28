@@ -1,6 +1,6 @@
+import { Briefcase, CreditCard, Plane, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { PLAN_TEMPLATES } from "@/lib/plans";
 import type { PlanType } from "@/lib/types";
-import { Briefcase, CreditCard, Plane, Plus, ShieldCheck, Wallet } from "lucide-react";
 
 const ICONS = {
   purchase: Wallet,

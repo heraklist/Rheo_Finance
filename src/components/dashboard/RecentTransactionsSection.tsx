@@ -1,7 +1,7 @@
-import { TransactionRow, TransactionRowSkeleton } from "@/components/ui/TransactionRow";
-import type { TransactionWithRelations } from "@/lib/types";
 import { ReceiptText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { TransactionRow, TransactionRowSkeleton } from "@/components/ui/TransactionRow";
+import type { TransactionWithRelations } from "@/lib/types";
 
 interface RecentTransactionsSectionProps {
   empty: boolean;

@@ -1,6 +1,6 @@
-import { supabase } from "@/lib/supabase";
 import { open } from "@tauri-apps/plugin-dialog";
 import { BaseDirectory, exists, mkdir, readFile, remove, writeFile } from "@tauri-apps/plugin-fs";
+import { supabase } from "@/lib/supabase";
 
 const RECEIPTS_DIR = "receipts";
 const RECEIPT_BUCKET = "receipts";

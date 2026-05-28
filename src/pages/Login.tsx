@@ -1,10 +1,10 @@
+import { LockKeyhole, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { APP_VERSION } from "@/components/settings/settingsOptions";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { LockKeyhole, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 
 function authErrorMessage(message: string): string {
   if (message.includes("Invalid login credentials")) {

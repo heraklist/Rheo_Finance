@@ -1,10 +1,10 @@
+import { CreditCard, RefreshCcw, Star } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTier } from "@/hooks/useTier";
-import { type UsageCounts, getUsageCounts } from "@/lib/analytics";
+import { getUsageCounts, type UsageCounts } from "@/lib/analytics";
 import type { SubscriptionTier } from "@/lib/subscription";
 import { openBillingPortal, openUpgradeUrl } from "@/lib/upgrade";
 import { cn, formatDateRelative } from "@/lib/utils";
-import { CreditCard, RefreshCcw, Star } from "lucide-react";
-import { useEffect, useState } from "react";
 
 // === Tier data ===
 

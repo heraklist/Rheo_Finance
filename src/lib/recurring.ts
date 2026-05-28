@@ -1,3 +1,4 @@
+import type Database from "@tauri-apps/plugin-sql";
 import { getDb, now, runInTransaction, uuid } from "@/lib/db";
 import { createTransaction } from "@/lib/transactions";
 import type {
@@ -7,7 +8,6 @@ import type {
   RecurringTemplateWithRelations,
   Transaction,
 } from "@/lib/types";
-import type Database from "@tauri-apps/plugin-sql";
 
 type RecurringDbRow = Omit<RecurringTemplateWithRelations, "active" | "next_due"> & {
   active: boolean | number;

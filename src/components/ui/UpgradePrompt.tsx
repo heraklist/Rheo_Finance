@@ -1,4 +1,4 @@
-import { type GatedFeature, featureUpgradeMessage } from "@/lib/subscription";
+import { featureUpgradeMessage, type GatedFeature } from "@/lib/subscription";
 import { openUpgradeUrl } from "@/lib/upgrade";
 import { cn } from "@/lib/utils";
 

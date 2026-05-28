@@ -1,6 +1,8 @@
+import { useEffect } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAutoBackupWorker } from "@/hooks/useAutoBackupWorker";
 import { useBookInit } from "@/hooks/useBookInit";
 import { useRecurringWorker } from "@/hooks/useRecurringWorker";
@@ -22,8 +24,6 @@ import { Signup } from "@/pages/Signup";
 import { TransactionDetail } from "@/pages/TransactionDetail";
 import { TransactionsList } from "@/pages/TransactionsList";
 import { VatSummary } from "@/pages/VatSummary";
-import { useEffect } from "react";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
