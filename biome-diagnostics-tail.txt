@@ -1,0 +1,240 @@
+  
+    70 │   /* KPI tile — signature component with gold accent line */
+    71 │   .kpi-tile {
+  > 72 │     @apply relative flex flex-col gap-2.5 overflow-hidden;
+       │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    73 │     @apply bg-cream border border-border-light rounded-md;
+    74 │     @apply px-4 pt-4 pb-3.5 min-h-[100px];
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:73:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    71 │   .kpi-tile {
+    72 │     @apply relative flex flex-col gap-2.5 overflow-hidden;
+  > 73 │     @apply bg-cream border border-border-light rounded-md;
+       │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    74 │     @apply px-4 pt-4 pb-3.5 min-h-[100px];
+    75 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:74:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    72 │     @apply relative flex flex-col gap-2.5 overflow-hidden;
+    73 │     @apply bg-cream border border-border-light rounded-md;
+  > 74 │     @apply px-4 pt-4 pb-3.5 min-h-[100px];
+       │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    75 │   }
+    76 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:79:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    77 │   .kpi-tile::after {
+    78 │     content: "";
+  > 79 │     @apply absolute left-0 right-0 bottom-0 h-0.5;
+       │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    80 │     background: var(--accent);
+    81 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:84:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    83 │   .kpi-tile.is-sand {
+  > 84 │     @apply bg-sand;
+       │      ^^^^^^^^^^^^^^
+    85 │   }
+    86 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:88:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    87 │   .kpi-value {
+  > 88 │     @apply text-num-xl text-text-primary leading-none;
+       │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    89 │     overflow-wrap: anywhere;
+    90 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:102:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    100 │   /* Sync pill */
+    101 │   .sync-pill {
+  > 102 │     @apply inline-flex items-center gap-1.5 px-2.5 py-1;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    103 │     @apply rounded-full text-[11px] font-semibold tracking-wide;
+    104 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:103:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    101 │   .sync-pill {
+    102 │     @apply inline-flex items-center gap-1.5 px-2.5 py-1;
+  > 103 │     @apply rounded-full text-[11px] font-semibold tracking-wide;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    104 │   }
+    105 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:107:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    106 │   .sync-pill .dot {
+  > 107 │     @apply w-1.5 h-1.5 rounded-full bg-current;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    108 │   }
+    109 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:129:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    127 │   /* Transaction row */
+    128 │   .tx-row {
+  > 129 │     @apply flex items-center gap-3 px-3.5 py-3;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    130 │     @apply border-b border-border-light last:border-b-0;
+    131 │     @apply min-w-0;
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:130:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    128 │   .tx-row {
+    129 │     @apply flex items-center gap-3 px-3.5 py-3;
+  > 130 │     @apply border-b border-border-light last:border-b-0;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    131 │     @apply min-w-0;
+    132 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:131:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    129 │     @apply flex items-center gap-3 px-3.5 py-3;
+    130 │     @apply border-b border-border-light last:border-b-0;
+  > 131 │     @apply min-w-0;
+        │      ^^^^^^^^^^^^^^
+    132 │   }
+    133 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:135:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    134 │   .tx-thumb {
+  > 135 │     @apply w-8 h-8 rounded-full flex items-center justify-center;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    136 │     @apply bg-sand border border-border-light text-text-muted;
+    137 │     @apply flex-shrink-0 overflow-hidden;
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:136:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    134 │   .tx-thumb {
+    135 │     @apply w-8 h-8 rounded-full flex items-center justify-center;
+  > 136 │     @apply bg-sand border border-border-light text-text-muted;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    137 │     @apply flex-shrink-0 overflow-hidden;
+    138 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:137:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    135 │     @apply w-8 h-8 rounded-full flex items-center justify-center;
+    136 │     @apply bg-sand border border-border-light text-text-muted;
+  > 137 │     @apply flex-shrink-0 overflow-hidden;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    138 │   }
+    139 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:141:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    140 │   .tx-amount {
+  > 141 │     @apply max-w-[42%] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-sm font-semibold;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    142 │     font-variant-numeric: tabular-nums;
+    143 │   }
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+src/index.css:156:6 parse ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Tailwind-specific syntax is disabled.
+  
+    154 │     background: linear-gradient(90deg, var(--sand) 0%, var(--border-light) 50%, var(--sand) 100%);
+    155 │     background-size: 200% 100%;
+  > 156 │     @apply animate-shimmer rounded-sm;
+        │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    157 │   }
+    158 │ 
+  
+  i Enable `tailwindDirectives` in the css parser options, or remove this if you are not using Tailwind CSS.
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 20.
+Checked 117 files in 365ms. No fixes applied.
+Found 39 errors.
+Found 1 warning.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
