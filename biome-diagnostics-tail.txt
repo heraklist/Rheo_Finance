@@ -1,5 +1,5 @@
 Already up to date
-Done in 388ms using pnpm v11.0.9
+Done in 450ms using pnpm v11.0.9
 src/pages/Signup.tsx:55:9 lint/complexity/useOptionalChain  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   ! Change to an optional chain.
@@ -97,7 +97,7 @@ src/index.css:3:2 lint/suspicious/noUnknownAtRules ━━━━━━━━━�
   i To fix this issue, consider removing the unknown at-rule.
   
 
-Checked 117 files in 359ms. No fixes applied.
+Checked 117 files in 352ms. No fixes applied.
 Found 4 errors.
 Found 1 warning.
 check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
