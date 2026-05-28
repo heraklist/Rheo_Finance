@@ -1,19 +1,25 @@
-name: Generate landing Node 24 type lockfile
+name: Commit landing Node 24 type lockfile
 
 on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  generate:
+  commit-generated-files:
     if: github.head_ref == 'chore/landing-node24-types'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ github.token }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -29,14 +35,14 @@ jobs:
         working-directory: landing
         run: pnpm add -D @types/node@24.12.4
 
-      - name: Collect generated files
-        run: |
-          mkdir -p generated/landing
-          cp landing/package.json generated/landing/package.json
-          cp landing/pnpm-lock.yaml generated/landing/pnpm-lock.yaml
+      - name: Remove temporary workflow
+        run: rm .github/workflows/generate-landing-node24-types.yml
 
-      - name: Upload generated files
-        uses: actions/upload-artifact@v4
-        with:
-          name: landing-node24-types-generated
-          path: generated
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add landing/package.json landing/pnpm-lock.yaml .github/workflows/generate-landing-node24-types.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: align landing Node types with Node 24"
+          git push
