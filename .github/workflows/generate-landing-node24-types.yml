@@ -1,0 +1,42 @@
+name: Generate landing Node 24 type lockfile
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  generate:
+    if: github.head_ref == 'chore/landing-node24-types'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - name: Generate landing lockfile
+        working-directory: landing
+        run: pnpm add -D @types/node@24.12.4
+
+      - name: Collect generated files
+        run: |
+          mkdir -p generated/landing
+          cp landing/package.json generated/landing/package.json
+          cp landing/pnpm-lock.yaml generated/landing/pnpm-lock.yaml
+
+      - name: Upload generated files
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-node24-types-generated
+          path: generated
