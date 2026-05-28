@@ -35,7 +35,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Apply Biome fixes
-        run: pnpm exec biome check . --write
+        run: |
+          pnpm exec biome check . --write || true
+          git status --short
 
       - name: Remove temporary workflow
         run: rm .github/workflows/apply-biome-v2-fixes.yml
