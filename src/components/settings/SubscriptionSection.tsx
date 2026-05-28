@@ -178,8 +178,7 @@ export function SubscriptionSection(): React.JSX.Element {
       {isPro && subscription.currentPeriodEnd && (
         <div className="mt-4 rounded-md border border-border-light bg-sand/40 p-3">
           <p className="text-sm text-text-secondary">
-            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}: {" "}
-            {formatDateRelative(subscription.currentPeriodEnd)}
+            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}: {formatDateRelative(subscription.currentPeriodEnd)}
           </p>
           {hasWarning && (
             <p className="mt-1 text-sm font-medium text-expense">
