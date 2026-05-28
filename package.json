@@ -4,6 +4,9 @@
   "version": "0.2.25",
   "type": "module",
   "description": "Rheo Finance - local-first finance management for independent professionals",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

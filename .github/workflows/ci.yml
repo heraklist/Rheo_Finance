@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         run: |
@@ -41,12 +41,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         run: |
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -86,29 +86,15 @@ jobs:
           fi
           echo "Found $migration_count Supabase migration files."
 
-      - name: Check migration filename uniqueness and ordering
+      - name: Check migration filename uniqueness
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import sys
-
-          migrations = sorted(Path("supabase/migrations").glob("*.sql"))
-          names = [p.name for p in migrations]
-          prefixes = [name.split("_", 1)[0] for name in names]
-
-          duplicate_prefixes = sorted({p for p in prefixes if prefixes.count(p) > 1})
-          if duplicate_prefixes:
-              print("Duplicate migration prefixes:", ", ".join(duplicate_prefixes))
-              sys.exit(1)
-
-          if names != sorted(names):
-              print("Migration files are not lexicographically ordered.")
-              sys.exit(1)
-
-          print("Supabase migration sanity check passed.")
-          for name in names:
-              print(f"- {name}")
-          PY
+          duplicate_prefixes=$(find supabase/migrations -type f -name '*.sql' -printf '%f\n' | cut -d '_' -f 1 | sort | uniq -d)
+          if [ -n "$duplicate_prefixes" ]; then
+            echo "Duplicate migration prefixes found:"
+            echo "$duplicate_prefixes"
+            exit 1
+          fi
+          echo "Supabase migration filename uniqueness check passed."
 
       - name: Document full local database check
         run: |
