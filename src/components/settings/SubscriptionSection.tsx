@@ -23,6 +23,8 @@ const TIERS: TierInfo[] = [
   { key: "team", name: "Team", monthly: "€29", annual: "€290", note: "Phase 2" },
 ];
 
+const COMPARISON_COLUMNS = ["feature", "free", "solo", "pro", "team"] as const;
+
 const COMPARISON_ROWS: Array<[string, string, string, string, string]> = [
   ["Βασική οργάνωση", "✓", "✓", "✓", "✓"],
   ["Plan Hub", "Περιορισμένο", "✓", "✓", "✓"],
@@ -176,7 +178,7 @@ export function SubscriptionSection(): React.JSX.Element {
       {isPro && subscription.currentPeriodEnd && (
         <div className="mt-4 rounded-md border border-border-light bg-sand/40 p-3">
           <p className="text-sm text-text-secondary">
-            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}:{" "}
+            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}: {" "}
             {formatDateRelative(subscription.currentPeriodEnd)}
           </p>
           {hasWarning && (
@@ -222,8 +224,11 @@ export function SubscriptionSection(): React.JSX.Element {
           <tbody>
             {COMPARISON_ROWS.map((row) => (
               <tr key={row[0]} className="border-t border-border-light">
-                {row.map((cell, i) => (
-                  <td key={`${row[0]}-${i}`} className="p-3 text-text-primary">
+                {row.map((cell, columnIndex) => (
+                  <td
+                    key={`${row[0]}-${COMPARISON_COLUMNS[columnIndex]}`}
+                    className="p-3 text-text-primary"
+                  >
                     {cell}
                   </td>
                 ))}
