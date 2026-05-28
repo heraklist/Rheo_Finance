@@ -10,10 +10,11 @@ permissions:
   contents: write
 
 env:
-  PNPM_VERSION: 11.0.9
-  VITE_SUPABASE_URL: https://jdwetppniotobfsueyzq.supabase.co
-  VITE_SUPABASE_ANON_KEY: sb_publishable_e2pPJyk82VRW_4136JJMjA_xc6sK7b0
-  VITE_LANDING_URL: https://landing-two-dun-95.vercel.app
+  PNPM_VERSION: 11.1.1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+  VITE_LANDING_URL: ${{ vars.VITE_LANDING_URL }}
 
 jobs:
   build-windows:
@@ -43,7 +44,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         shell: pwsh
@@ -115,7 +116,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         run: |
@@ -322,7 +323,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Download Windows artifacts
         uses: actions/download-artifact@v7

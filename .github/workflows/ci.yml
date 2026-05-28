@@ -23,7 +23,7 @@ jobs:
       - name: Setup pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@11.1.1 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -54,11 +54,15 @@ jobs:
       - name: Setup pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@11.1.1 --activate
 
       - name: Install landing dependencies
         working-directory: landing
         run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check landing
+        working-directory: landing
+        run: npx tsc --noEmit
 
       - name: Build landing and Vercel API bundle
         working-directory: landing
@@ -71,7 +75,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v2
         with:
           version: latest
 
