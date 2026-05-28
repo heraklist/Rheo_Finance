@@ -109,7 +109,7 @@ describe("isFeatureAvailable", () => {
 describe("featureUpgradeMessage", () => {
   it("returns Greek upgrade messages", () => {
     const msg = featureUpgradeMessage("sync");
-    expect(msg).toContain("Pro");
+    expect(msg).toContain("Solo");
     expect(typeof msg).toBe("string");
     expect(msg.length).toBeGreaterThan(0);
   });

@@ -147,19 +147,19 @@ export function isFeatureAvailable(tier: SubscriptionTier, feature: GatedFeature
 export function featureUpgradeMessage(feature: GatedFeature): string {
   switch (feature) {
     case "sync":
-      return "Το cloud sync είναι διαθέσιμο στο Pro.";
+      return "Το cloud sync είναι διαθέσιμο στο Solo και άνω.";
     case "receipts":
-      return "Οι αποδείξεις & φωτογραφίες είναι διαθέσιμες στο Pro.";
+      return "Οι αποδείξεις & φωτογραφίες είναι διαθέσιμες στο Solo και άνω.";
     case "excel_export":
-      return "Η εξαγωγή Excel είναι διαθέσιμη στο Pro.";
+      return "Η εξαγωγή Excel είναι διαθέσιμη στο Pro και άνω.";
     case "cloud_backup":
-      return "Το cloud backup είναι διαθέσιμο στο Pro.";
+      return "Το cloud backup είναι διαθέσιμο στο Pro και άνω.";
     case "unlimited_books":
-      return "Απεριόριστα βιβλία στο Pro.";
+      return "Περισσότερα books είναι διαθέσιμα στο Solo και άνω.";
     case "unlimited_entries":
-      return "Απεριόριστες καταχωρήσεις στο Pro.";
+      return "Περισσότερες μηνιαίες καταχωρήσεις είναι διαθέσιμες στο Solo και άνω.";
     default:
-      return "Αναβαθμίστε στο Pro για πρόσβαση.";
+      return "Αναβαθμίστε για πρόσβαση.";
   }
 }
 
@@ -169,15 +169,17 @@ const API_BASE = import.meta.env.VITE_LANDING_URL as string | undefined;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 let cachedSub: SubscriptionInfo | null = null;
+let cachedUserId: string | null = null;
 let cachedAt = 0;
 
 /**
  * Fetch subscription status from the Vercel API.
- * Caches result for 5 minutes to avoid excessive calls.
+ * Caches result per user for 5 minutes to avoid stale cross-user entitlements
+ * on shared devices or after logout/login flows.
  */
 export async function fetchSubscription(userId: string): Promise<SubscriptionInfo> {
   const now = Date.now();
-  if (cachedSub && now - cachedAt < CACHE_TTL_MS) {
+  if (cachedSub && cachedUserId === userId && now - cachedAt < CACHE_TTL_MS) {
     return cachedSub;
   }
 
@@ -191,7 +193,7 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
     } = await supabase.auth.getSession();
 
     const accessToken = session?.access_token;
-    if (!accessToken) {
+    if (!accessToken || session.user.id !== userId) {
       return DEFAULT_SUBSCRIPTION;
     }
 
@@ -201,7 +203,7 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
       },
     });
     if (!res.ok) {
-      return cachedSub ?? DEFAULT_SUBSCRIPTION;
+      return cachedUserId === userId ? (cachedSub ?? DEFAULT_SUBSCRIPTION) : DEFAULT_SUBSCRIPTION;
     }
 
     const data = await res.json();
@@ -215,16 +217,18 @@ export async function fetchSubscription(userId: string): Promise<SubscriptionInf
     };
 
     cachedSub = info;
+    cachedUserId = userId;
     cachedAt = now;
     return info;
   } catch {
-    return cachedSub ?? DEFAULT_SUBSCRIPTION;
+    return cachedUserId === userId ? (cachedSub ?? DEFAULT_SUBSCRIPTION) : DEFAULT_SUBSCRIPTION;
   }
 }
 
-/** Reset cache (e.g., after upgrade or on logout) */
+/** Reset cache (e.g., after upgrade, logout, or account deletion) */
 export function clearSubscriptionCache(): void {
   cachedSub = null;
+  cachedUserId = null;
   cachedAt = 0;
 }
 

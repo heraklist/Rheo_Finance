@@ -36,3 +36,81 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  landing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - name: Install landing dependencies
+        working-directory: landing
+        run: pnpm install --frozen-lockfile
+
+      - name: Build landing and Vercel API bundle
+        working-directory: landing
+        run: pnpm build
+
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify Supabase CLI
+        run: supabase --version
+
+      - name: Verify Supabase config and migration files
+        run: |
+          test -f supabase/config.toml
+          test -d supabase/migrations
+          migration_count=$(find supabase/migrations -type f -name '*.sql' | wc -l | tr -d ' ')
+          if [ "$migration_count" -lt 1 ]; then
+            echo "No Supabase migration files found."
+            exit 1
+          fi
+          echo "Found $migration_count Supabase migration files."
+
+      - name: Check migration filename uniqueness and ordering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+
+          migrations = sorted(Path("supabase/migrations").glob("*.sql"))
+          names = [p.name for p in migrations]
+          prefixes = [name.split("_", 1)[0] for name in names]
+
+          duplicate_prefixes = sorted({p for p in prefixes if prefixes.count(p) > 1})
+          if duplicate_prefixes:
+              print("Duplicate migration prefixes:", ", ".join(duplicate_prefixes))
+              sys.exit(1)
+
+          if names != sorted(names):
+              print("Migration files are not lexicographically ordered.")
+              sys.exit(1)
+
+          print("Supabase migration sanity check passed.")
+          for name in names:
+              print(f"- {name}")
+          PY
+
+      - name: Document full local database check
+        run: |
+          echo "Full Supabase Docker validation is intentionally kept as a local/manual check."
+          echo "Run locally: pnpm supabase:start && pnpm db:check && pnpm supabase:stop"
