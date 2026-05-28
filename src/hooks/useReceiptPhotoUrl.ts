@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getReceiptPhotoObjectUrl } from "@/lib/receipts";
 
 export function useReceiptPhotoUrl(
@@ -6,11 +6,16 @@ export function useReceiptPhotoUrl(
   transactionId?: string,
 ): string | null {
   const [url, setUrl] = useState<string | null>(null);
+  const urlRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    let nextUrl: string | null = null;
 
+    // Revoke previous URL before loading a new one
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
     setUrl(null);
 
     if (!path) {
@@ -22,8 +27,8 @@ export function useReceiptPhotoUrl(
     async function loadPhotoUrl() {
       try {
         const value = await getReceiptPhotoObjectUrl(path, transactionId);
-        nextUrl = value;
         if (active) {
+          urlRef.current = value;
           setUrl(value);
         } else if (value) {
           URL.revokeObjectURL(value);
@@ -37,7 +42,10 @@ export function useReceiptPhotoUrl(
 
     return () => {
       active = false;
-      if (nextUrl) URL.revokeObjectURL(nextUrl);
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current);
+        urlRef.current = null;
+      }
     };
   }, [path, transactionId]);
 

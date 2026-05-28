@@ -12,12 +12,13 @@ export function useSyncWorker() {
   useEffect(() => {
     if (!user || mfaLoading || mfaRequired) {
       setPendingCount(0);
-      setSyncState("synced");
+      setSyncState("offline");
       return;
     }
 
     let cancelled = false;
     let intervalId: number | null = null;
+    let syncInProgress = false;
 
     async function refreshPendingCount() {
       const count = await getPendingCount();
@@ -25,7 +26,7 @@ export function useSyncWorker() {
     }
 
     async function syncOnce() {
-      if (cancelled) return;
+      if (cancelled || syncInProgress) return;
 
       if (!navigator.onLine) {
         setSyncState("offline");
@@ -33,6 +34,7 @@ export function useSyncWorker() {
         return;
       }
 
+      syncInProgress = true;
       setSyncState("syncing");
 
       try {
@@ -49,6 +51,8 @@ export function useSyncWorker() {
         console.error("Sync failed:", err);
         setSyncState("error");
         await refreshPendingCount();
+      } finally {
+        syncInProgress = false;
       }
     }
 

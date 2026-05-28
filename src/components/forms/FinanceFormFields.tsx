@@ -149,7 +149,7 @@ export function DateField({ id, label, value, caption, onChange }: DateFieldProp
         onChange={(event) => onChange(event.target.value)}
         className="w-full bg-cream border border-border-light rounded-md text-sm px-3 py-2.5 focus:outline-none focus:border-charcoal"
       />
-      <p className="text-caption mt-1">{caption ?? formatDateRelative(value)}</p>
+      <p className="text-caption mt-1">{caption ?? (value ? formatDateRelative(value) : "")}</p>
     </div>
   );
 }

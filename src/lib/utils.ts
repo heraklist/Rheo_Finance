@@ -36,8 +36,19 @@ export const MONTHS_SHORT_EL = [
   "Δεκ",
 ];
 
+/**
+ * Parse a date-only string ("YYYY-MM-DD") as local midnight.
+ * `new Date("2025-05-03")` is spec'd as UTC midnight, which shifts a day
+ * back in UTC+ timezones (like Greece). This helper avoids that.
+ */
+function parseLocalDate(iso: string): Date {
+  const parts = iso.slice(0, 10).split("-").map(Number);
+  return new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1);
+}
+
 export function formatDateShort(iso: string): string {
-  const d = new Date(iso);
+  if (!iso) return "";
+  const d = parseLocalDate(iso);
   return `${String(d.getDate()).padStart(2, "0")} ${MONTHS_SHORT_EL[d.getMonth()]}`;
 }
 
@@ -45,12 +56,12 @@ export function formatDateShort(iso: string): string {
  * Returns "Σήμερα", "Χθες", or formatDateShort.
  */
 export function formatDateRelative(iso: string): string {
-  const d = new Date(iso);
+  if (!iso) return "";
+  const d = parseLocalDate(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(d);
-  target.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((today.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 0) return "Σήμερα";
   if (diffDays === 1) return "Χθες";
   return formatDateShort(iso);

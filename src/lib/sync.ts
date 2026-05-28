@@ -382,6 +382,8 @@ const PUSH_REFERENCE_ORDER: SyncEntityType[] = [
   "plan",
   "plan_expense_item",
   "plan_income_item",
+  "coverage_expense",
+  "coverage_income",
 ];
 
 const PULL_ORDER: SyncEntityType[] = [

@@ -3,8 +3,6 @@ import type { VercelRequest } from "@vercel/node";
 import { verifySupabaseUser } from "../_auth.js";
 import { cleanEnv } from "../_env.js";
 
-const DEFAULT_ADMIN_EMAILS = ["heraklis@evochia.gr"];
-
 export type AdminRole = "admin" | "viewer";
 
 export interface AdminIdentity {
@@ -15,9 +13,13 @@ export interface AdminIdentity {
 
 function configuredAdminEmails(): Set<string> {
   const raw = cleanEnv(process.env.ADMIN_EMAILS);
-  const emails = raw
-    ? raw.split(",").map((email) => email.trim().toLowerCase()).filter(Boolean)
-    : DEFAULT_ADMIN_EMAILS;
+  if (!raw) {
+    throw new Error("ADMIN_EMAILS environment variable is not configured");
+  }
+  const emails = raw.split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+  if (emails.length === 0) {
+    throw new Error("ADMIN_EMAILS environment variable is empty");
+  }
   return new Set(emails);
 }
 

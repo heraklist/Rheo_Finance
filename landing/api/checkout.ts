@@ -101,10 +101,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-function getBaseUrl(req: VercelRequest): string {
-  const proto = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
-  return `${proto}://${host}`;
+function getBaseUrl(_req: VercelRequest): string {
+  return process.env.LANDING_URL || "https://landing-two-dun-95.vercel.app";
 }
 
 function isCheckoutTier(value: unknown): value is CheckoutTier {

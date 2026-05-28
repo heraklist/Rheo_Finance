@@ -258,7 +258,7 @@ export async function getUsageCounts(): Promise<UsageCounts> {
 
   const [planRows, bookRows] = await Promise.all([
     db.select<Array<{ count: number }>>(
-      "SELECT COUNT(*) AS count FROM plans WHERE status = 'active'",
+      "SELECT COUNT(*) AS count FROM plan WHERE status = 'active'",
     ),
     db.select<Array<{ count: number }>>("SELECT COUNT(*) AS count FROM books"),
   ]);
@@ -365,9 +365,10 @@ async function getMonthlyAverage(opts: {
     if (row.category_type === "expense") expense += row.amount_gross;
   }
 
+  const effectiveMonths = Math.min(monthsWithData.size, opts.basePeriodMonths) || 1;
   return {
-    income: income / opts.basePeriodMonths,
-    expense: expense / opts.basePeriodMonths,
+    income: income / effectiveMonths,
+    expense: expense / effectiveMonths,
     monthsWithData: monthsWithData.size,
   };
 }
