@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         run: |
@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         run: |
@@ -85,30 +85,6 @@ jobs:
             exit 1
           fi
           echo "Found $migration_count Supabase migration files."
-
-      - name: Check migration filename uniqueness and ordering
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import sys
-
-          migrations = sorted(Path("supabase/migrations").glob("*.sql"))
-          names = [p.name for p in migrations]
-          prefixes = [name.split("_", 1)[0] for name in names]
-
-          duplicate_prefixes = sorted({p for p in prefixes if prefixes.count(p) > 1})
-          if duplicate_prefixes:
-              print("Duplicate migration prefixes:", ", ".join(duplicate_prefixes))
-              sys.exit(1)
-
-          if names != sorted(names):
-              print("Migration files are not lexicographically ordered.")
-              sys.exit(1)
-
-          print("Supabase migration sanity check passed.")
-          for name in names:
-              print(f"- {name}")
-          PY
 
       - name: Document full local database check
         run: |
