@@ -5,6 +5,8 @@ allowBuilds:
   esbuild: true
   sharp: true
 
+# Keep these overrides local to the landing app to address Dependabot
+# transitive dependency alerts without changing the main application stack.
 overrides:
   minimatch: 10.2.3
   path-to-regexp: 8.3.0
