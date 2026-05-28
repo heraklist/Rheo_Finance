@@ -86,6 +86,16 @@ jobs:
           fi
           echo "Found $migration_count Supabase migration files."
 
+      - name: Check migration filename uniqueness
+        run: |
+          duplicate_prefixes=$(find supabase/migrations -type f -name '*.sql' -printf '%f\n' | cut -d '_' -f 1 | sort | uniq -d)
+          if [ -n "$duplicate_prefixes" ]; then
+            echo "Duplicate migration prefixes found:"
+            echo "$duplicate_prefixes"
+            exit 1
+          fi
+          echo "Supabase migration filename uniqueness check passed."
+
       - name: Document full local database check
         run: |
           echo "Full Supabase Docker validation is intentionally kept as a local/manual check."
