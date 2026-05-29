@@ -299,7 +299,10 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
 
   const result = await runInTransaction(async (txDb) => {
     const existing = await txDb.select<Tag[]>(
-      "SELECT * FROM tags WHERE name = ? COLLATE NOCASE LIMIT 1",
+      `SELECT * FROM tags
+       WHERE name = ? COLLATE NOCASE
+       ORDER BY is_archived ASC, local_updated_at DESC
+       LIMIT 1`,
       [trimmedName],
     );
 
@@ -309,6 +312,7 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
 
       const restoredTag: Tag = {
         ...existingTag,
+        name: trimmedName,
         is_archived: false,
         sync_status: "pending",
         local_updated_at: ts,
@@ -317,12 +321,19 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
 
       await txDb.execute(
         `UPDATE tags
-         SET is_archived = 0,
+         SET name = ?,
+             is_archived = 0,
              sync_status = ?,
              local_updated_at = ?,
              server_updated_at = ?
          WHERE id = ?`,
-        [restoredTag.sync_status, restoredTag.local_updated_at, restoredTag.server_updated_at, restoredTag.id],
+        [
+          restoredTag.name,
+          restoredTag.sync_status,
+          restoredTag.local_updated_at,
+          restoredTag.server_updated_at,
+          restoredTag.id,
+        ],
       );
 
       await enqueueOutbox(txDb, "tag", restoredTag.id, "update", restoredTag, ts);
