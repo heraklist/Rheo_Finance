@@ -58,6 +58,12 @@ pub fn run() {
             sql: include_str!("../migrations/0007_coverage_user_scope.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "tags_name_nocase",
+            sql: include_str!("../migrations/0008_tags_name_nocase.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     let builder = tauri::Builder::default()
