@@ -1,15 +1,3 @@
 allowBuilds:
   '@biomejs/biome': true
   esbuild: true
-
-auditConfig:
-  # Temporary risk acceptance for landing/@vercel/node transitive advisories.
-  # The vulnerable packages are not imported directly by Rheo code.
-  # Remove these ignores after @vercel/node resolves to patched transitive versions:
-  # - path-to-regexp >=8.4.0
-  # - undici >=7.24.0
-  ignoreGhsas:
-    - GHSA-j3q9-mxjg-w52f
-    - GHSA-f269-vfmq-vjvj
-    - GHSA-vrm6-8vpv-qv8q
-    - GHSA-v9p9-hfj2-hcw8
