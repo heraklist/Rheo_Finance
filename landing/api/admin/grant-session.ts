@@ -26,7 +26,7 @@ async function resolveAdmin(req: VercelRequest): Promise<AdminInfo> {
 
   const configuredToken = cleanEnv(process.env.ADMIN_GRANT_TOKEN);
   const token = extractBearerToken(req);
-  if (configuredToken && token === configuredToken) {
+  if (configuredToken && configuredToken.length >= 32 && token === configuredToken) {
     return { id: "token-auth", email: "cli" };
   }
 

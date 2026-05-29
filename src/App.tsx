@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,21 +11,44 @@ import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { showToast } from "@/lib/toast";
+// Critical path — eagerly loaded
 import { AddTransaction } from "@/pages/AddTransaction";
-import { CategorySettings } from "@/pages/CategorySettings";
 import { Dashboard } from "@/pages/Dashboard";
-import { Forecast } from "@/pages/Forecast";
 import { Login } from "@/pages/Login";
-import { MonthlyCoverage } from "@/pages/MonthlyCoverage";
-import { PlanBuilder } from "@/pages/PlanBuilder";
-import { PlanHub } from "@/pages/PlanHub";
-import { Recurring } from "@/pages/Recurring";
-import { ReviewQueue } from "@/pages/ReviewQueue";
-import { Settings } from "@/pages/Settings";
 import { Signup } from "@/pages/Signup";
-import { TransactionDetail } from "@/pages/TransactionDetail";
 import { TransactionsList } from "@/pages/TransactionsList";
-import { VatSummary } from "@/pages/VatSummary";
+
+// Lazy-loaded routes
+const CategorySettings = lazy(() =>
+  import("@/pages/CategorySettings").then((m) => ({ default: m.CategorySettings })),
+);
+const Forecast = lazy(() => import("@/pages/Forecast").then((m) => ({ default: m.Forecast })));
+const MonthlyCoverage = lazy(() =>
+  import("@/pages/MonthlyCoverage").then((m) => ({ default: m.MonthlyCoverage })),
+);
+const PlanBuilder = lazy(() =>
+  import("@/pages/PlanBuilder").then((m) => ({ default: m.PlanBuilder })),
+);
+const PlanHub = lazy(() => import("@/pages/PlanHub").then((m) => ({ default: m.PlanHub })));
+const Recurring = lazy(() => import("@/pages/Recurring").then((m) => ({ default: m.Recurring })));
+const ReviewQueue = lazy(() =>
+  import("@/pages/ReviewQueue").then((m) => ({ default: m.ReviewQueue })),
+);
+const Settings = lazy(() => import("@/pages/Settings").then((m) => ({ default: m.Settings })));
+const TransactionDetail = lazy(() =>
+  import("@/pages/TransactionDetail").then((m) => ({ default: m.TransactionDetail })),
+);
+const VatSummary = lazy(() =>
+  import("@/pages/VatSummary").then((m) => ({ default: m.VatSummary })),
+);
+
+function LazyFallback() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <div className="h-8 w-24 animate-shimmer rounded bg-sand" />
+    </div>
+  );
+}
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
@@ -41,16 +64,86 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "add", element: <AddTransaction /> },
       { path: "transactions", element: <TransactionsList /> },
-      { path: "transactions/:id", element: <TransactionDetail /> },
-      { path: "recurring", element: <Recurring /> },
-      { path: "vat", element: <VatSummary /> },
-      { path: "forecast", element: <Forecast /> },
-      { path: "plans", element: <PlanHub /> },
-      { path: "plans/:id", element: <PlanBuilder /> },
-      { path: "coverage", element: <MonthlyCoverage /> },
-      { path: "review", element: <ReviewQueue /> },
-      { path: "settings", element: <Settings /> },
-      { path: "settings/categories/:type", element: <CategorySettings /> },
+      {
+        path: "transactions/:id",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <TransactionDetail />
+          </Suspense>
+        ),
+      },
+      {
+        path: "recurring",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <Recurring />
+          </Suspense>
+        ),
+      },
+      {
+        path: "vat",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <VatSummary />
+          </Suspense>
+        ),
+      },
+      {
+        path: "forecast",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <Forecast />
+          </Suspense>
+        ),
+      },
+      {
+        path: "plans",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <PlanHub />
+          </Suspense>
+        ),
+      },
+      {
+        path: "plans/:id",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <PlanBuilder />
+          </Suspense>
+        ),
+      },
+      {
+        path: "coverage",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <MonthlyCoverage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "review",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <ReviewQueue />
+          </Suspense>
+        ),
+      },
+      {
+        path: "settings",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <Settings />
+          </Suspense>
+        ),
+      },
+      {
+        path: "settings/categories/:type",
+        element: (
+          <Suspense fallback={<LazyFallback />}>
+            <CategorySettings />
+          </Suspense>
+        ),
+      },
     ],
   },
 ]);
