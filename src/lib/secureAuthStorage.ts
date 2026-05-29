@@ -44,6 +44,14 @@ function localRemoveItem(key: string): void {
   window.localStorage.removeItem(key);
 }
 
+function canUsePlainStorage(): boolean {
+  return !isTauri() || import.meta.env.VITE_ALLOW_INSECURE_AUTH_STORAGE === "true";
+}
+
+function nativeStorageIsRequired(): boolean {
+  return isTauri() && import.meta.env.PROD;
+}
+
 function strongholdKey(key: string): string {
   return `${STORAGE_KEY_PREFIX}${key}`;
 }
@@ -204,10 +212,11 @@ export const secureAuthStorage: AuthStorage = {
             } catch (error) {
               logNativeSecureStorageFailure("legacy Stronghold cleanup", error);
             }
+            return legacyValue;
           } catch (error) {
             logNativeSecureStorageFailure("local migration", error);
+            if (nativeStorageIsRequired()) return null;
           }
-          return legacyValue;
         }
 
         if (localGetItem(STRONGHOLD_PASSPHRASE_KEY)) {
@@ -228,9 +237,11 @@ export const secureAuthStorage: AuthStorage = {
         }
       } catch (error) {
         logNativeSecureStorageFailure("read", error);
+        if (nativeStorageIsRequired()) return null;
       }
     }
 
+    if (!canUsePlainStorage()) return null;
     return localGetItem(key);
   },
   async setItem(key, value) {
@@ -240,20 +251,36 @@ export const secureAuthStorage: AuthStorage = {
         return;
       } catch (error) {
         logNativeSecureStorageFailure("write", error);
+        if (nativeStorageIsRequired()) {
+          throw new Error("Native auth storage write failed.");
+        }
       }
+    }
+
+    if (!canUsePlainStorage()) {
+      throw new Error("Plain auth storage is disabled.");
     }
 
     localSetItem(key, value);
   },
   async removeItem(key) {
+    let nativeRemoveFailed = false;
+
     if (await canUseNativeSecureStorage()) {
       try {
         await removeNativeSecureItem(key);
       } catch (error) {
+        nativeRemoveFailed = true;
         logNativeSecureStorageFailure("remove", error);
       }
     }
 
-    localRemoveItem(key);
+    if (canUsePlainStorage()) {
+      localRemoveItem(key);
+    }
+
+    if (nativeRemoveFailed && nativeStorageIsRequired()) {
+      throw new Error("Native auth storage remove failed.");
+    }
   },
 };
