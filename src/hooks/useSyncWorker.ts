@@ -8,6 +8,11 @@ import { showToast } from "@/lib/toast";
 
 const LOCAL_CHANGE_SYNC_DEBOUNCE_MS = 750;
 
+function isRowLevelSyncFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.startsWith("Δεν συγχρονίστηκαν ");
+}
+
 export function useSyncWorker() {
   const {
     user,
@@ -32,9 +37,10 @@ export function useSyncWorker() {
     let syncInProgress = false;
     let debounceTimer: number | null = null;
 
-    async function refreshPendingCount() {
+    async function refreshPendingCount(): Promise<number> {
       const count = await getPendingCount();
       if (!cancelled) setPendingCount(count);
+      return count;
     }
 
     async function refreshBooks() {
@@ -53,6 +59,16 @@ export function useSyncWorker() {
       if (books.some((book) => book.id === currentBookId)) return;
 
       setCurrentBookId(fallbackBook.id);
+    }
+
+    async function markSyncSuccess() {
+      await generateDueRecurringTransactions();
+      await refreshBooks();
+      if (cancelled) return;
+
+      setSyncState("synced");
+      setLastSyncedAt(new Date().toISOString());
+      await refreshPendingCount();
     }
 
     async function syncOnce() {
@@ -75,17 +91,24 @@ export function useSyncWorker() {
 
       try {
         await syncAll();
-        await generateDueRecurringTransactions();
-        await refreshBooks();
-        if (cancelled) return;
-
-        setSyncState("synced");
-        setLastSyncedAt(new Date().toISOString());
-        await refreshPendingCount();
+        await markSyncSuccess();
       } catch (err) {
         if (cancelled) return;
 
         console.error("Sync failed:", err);
+
+        if (isRowLevelSyncFailure(err)) {
+          await markSyncSuccess();
+          const pendingCount = await refreshPendingCount();
+          if (pendingCount > 0) {
+            showToast(
+              `Ο συγχρονισμός ολοκληρώθηκε με ${pendingCount} εκκρεμότητες για επανάληψη.`,
+              "warning",
+            );
+          }
+          return;
+        }
+
         setSyncState("error");
         showToast("Αποτυχία συγχρονισμού. Θα δοκιμαστεί ξανά μετά την επόμενη αλλαγή.", "error");
         await refreshPendingCount();
