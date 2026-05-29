@@ -299,11 +299,46 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
 
   const result = await runInTransaction(async (txDb) => {
     const existing = await txDb.select<Tag[]>(
-      "SELECT * FROM tags WHERE LOWER(name) = LOWER(?) AND is_archived = 0 LIMIT 1",
+      `SELECT * FROM tags
+       WHERE name = ? COLLATE NOCASE
+       ORDER BY is_archived ASC, local_updated_at DESC
+       LIMIT 1`,
       [trimmedName],
     );
 
-    if (existing[0]) return existing[0];
+    const existingTag = existing[0];
+    if (existingTag) {
+      if (!existingTag.is_archived) return existingTag;
+
+      const restoredTag: Tag = {
+        ...existingTag,
+        name: trimmedName,
+        is_archived: false,
+        sync_status: "pending",
+        local_updated_at: ts,
+        server_updated_at: null,
+      };
+
+      await txDb.execute(
+        `UPDATE tags
+         SET name = ?,
+             is_archived = 0,
+             sync_status = ?,
+             local_updated_at = ?,
+             server_updated_at = ?
+         WHERE id = ?`,
+        [
+          restoredTag.name,
+          restoredTag.sync_status,
+          restoredTag.local_updated_at,
+          restoredTag.server_updated_at,
+          restoredTag.id,
+        ],
+      );
+
+      await enqueueOutbox(txDb, "tag", restoredTag.id, "update", restoredTag, ts);
+      return restoredTag;
+    }
 
     await txDb.execute(
       `INSERT INTO tags
