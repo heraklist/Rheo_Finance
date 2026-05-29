@@ -204,11 +204,10 @@ export const secureAuthStorage: AuthStorage = {
             } catch (error) {
               logNativeSecureStorageFailure("legacy Stronghold cleanup", error);
             }
-            return legacyValue;
           } catch (error) {
             logNativeSecureStorageFailure("local migration", error);
-            return null;
           }
+          return legacyValue;
         }
 
         if (localGetItem(STRONGHOLD_PASSPHRASE_KEY)) {
@@ -227,16 +226,9 @@ export const secureAuthStorage: AuthStorage = {
             logNativeSecureStorageFailure("Stronghold read", error);
           }
         }
-
-        return null;
       } catch (error) {
         logNativeSecureStorageFailure("read", error);
-        return null;
       }
-    }
-
-    if (isTauri()) {
-      return null;
     }
 
     return localGetItem(key);
@@ -245,15 +237,10 @@ export const secureAuthStorage: AuthStorage = {
     if (await canUseNativeSecureStorage()) {
       try {
         await writeNativeSecureItem(key, value);
+        return;
       } catch (error) {
         logNativeSecureStorageFailure("write", error);
-        throw error;
       }
-      return;
-    }
-
-    if (isTauri()) {
-      throw new Error("Secure auth storage is unavailable on this platform.");
     }
 
     localSetItem(key, value);
@@ -264,9 +251,7 @@ export const secureAuthStorage: AuthStorage = {
         await removeNativeSecureItem(key);
       } catch (error) {
         logNativeSecureStorageFailure("remove", error);
-        localRemoveItem(key);
       }
-      return;
     }
 
     localRemoveItem(key);
