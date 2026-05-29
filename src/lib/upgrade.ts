@@ -15,11 +15,17 @@ import { supabase } from "@/lib/supabase";
 
 const API_BASE = import.meta.env.VITE_LANDING_URL as string | undefined;
 
+export type CheckoutTier = "solo" | "pro" | "team";
+export type CheckoutInterval = "monthly" | "annual";
+
 /**
  * Opens the Stripe checkout page in the system browser.
  * Called from UpgradePrompt and Settings subscription section.
  */
-export async function openUpgradeUrl(plan: "monthly" | "annual" = "monthly"): Promise<void> {
+export async function openUpgradeUrl(
+  tier: CheckoutTier = "pro",
+  interval: CheckoutInterval = "monthly",
+): Promise<void> {
   const { user } = useAppStore.getState();
 
   if (!user?.email || !user?.id) {
@@ -43,7 +49,8 @@ export async function openUpgradeUrl(plan: "monthly" | "annual" = "monthly"): Pr
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        plan,
+        tier,
+        interval,
       }),
     });
 
