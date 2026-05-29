@@ -42,11 +42,12 @@ describe("openUpgradeUrl", () => {
   it("sends the selected checkout tier and interval", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ url: "https://checkout.example/session" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ url: "https://checkout.example/session" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
       ),
     );
 
@@ -70,11 +71,12 @@ describe("openUpgradeUrl", () => {
   it("does not open a browser window when checkout fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ error: "tier must be valid" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: "tier must be valid" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }),
       ),
     );
 
