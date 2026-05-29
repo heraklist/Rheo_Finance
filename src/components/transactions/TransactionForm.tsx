@@ -129,6 +129,11 @@ export function TransactionForm({
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
 
   useEffect(() => {
+    if (bookId || !preferredBookId) return;
+    setBookId(preferredBookId);
+  }, [bookId, preferredBookId]);
+
+  useEffect(() => {
     let cancelled = false;
 
     void (async () => {
@@ -198,6 +203,39 @@ export function TransactionForm({
     setReceiptRemoved(true);
   }
 
+  async function resolveValidReferences(): Promise<{
+    accountId: string;
+    categoryId: string;
+    categories: Category[];
+  } | null> {
+    const [freshAccounts, freshCategories] = await Promise.all([
+      listAccounts(bookId),
+      listCategories({ bookId, type }),
+    ]);
+
+    setAccounts(freshAccounts);
+    setCategories(freshCategories);
+
+    const validAccountId = freshAccounts.some((account) => account.id === accountId)
+      ? accountId
+      : (freshAccounts[0]?.id ?? "");
+    const validCategoryId = freshCategories.some((category) => category.id === categoryId)
+      ? categoryId
+      : "";
+
+    if (validAccountId !== accountId) setAccountId(validAccountId);
+    if (validCategoryId !== categoryId) setCategoryId(validCategoryId);
+
+    if (!validAccountId || !validCategoryId) {
+      setFormError(
+        "Δεν βρέθηκε έγκυρη κατηγορία ή λογαριασμός για αυτό το βιβλίο. Δοκίμασε ξανά μετά τον συγχρονισμό.",
+      );
+      return null;
+    }
+
+    return { accountId: validAccountId, categoryId: validCategoryId, categories: freshCategories };
+  }
+
   async function handleSubmit() {
     if (submitting) return;
     setFormError("");
@@ -209,6 +247,11 @@ export function TransactionForm({
       return;
     }
 
+    if (!bookId) {
+      setFormError("Δεν έχει φορτωθεί ενεργό βιβλίο. Δοκίμασε ξανά σε λίγο.");
+      return;
+    }
+
     if (!accountId || !categoryId) {
       setFormError("Συμπλήρωσε κατηγορία και λογαριασμό.");
       return;
@@ -216,15 +259,18 @@ export function TransactionForm({
 
     setSubmitting(true);
     try {
+      const refs = await resolveValidReferences();
+      if (!refs) return;
+
       const tag = await findOrCreateTag(tagName);
       const fallbackDescription =
-        categories.find((category) => category.id === categoryId)?.name ?? "Χωρίς περιγραφή";
+        refs.categories.find((category) => category.id === refs.categoryId)?.name ?? "Χωρίς περιγραφή";
       await onSubmit({
         date,
         description: description.trim() || fallbackDescription,
         book_id: bookId,
-        account_id: accountId,
-        category_id: categoryId,
+        account_id: refs.accountId,
+        category_id: refs.categoryId,
         tag_id: tag?.id ?? null,
         payment_method: paymentMethod,
         amount_gross: grossNum,
