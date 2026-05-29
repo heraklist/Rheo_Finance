@@ -31,7 +31,6 @@ jobs:
         with:
           scan-args: |-
             --recursive
-            --skip-git
             .
 
   pnpm-audit:
@@ -57,12 +56,16 @@ jobs:
       - name: Audit root dependencies
         id: root_audit
         continue-on-error: true
-        run: pnpm audit --audit-level high --json | tee audit-reports/root-pnpm-audit.json
+        run: |
+          set -o pipefail
+          pnpm audit --audit-level high --json | tee audit-reports/root-pnpm-audit.json
 
       - name: Audit landing dependencies
         id: landing_audit
         continue-on-error: true
-        run: pnpm --dir landing audit --audit-level high --json | tee audit-reports/landing-pnpm-audit.json
+        run: |
+          set -o pipefail
+          pnpm --dir landing audit --audit-level high --json | tee audit-reports/landing-pnpm-audit.json
 
       - name: Build pnpm audit summary
         if: always()
@@ -72,7 +75,6 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-          const path = require('path');
 
           function readJson(file) {
             if (!fs.existsSync(file)) return { missing: true };
@@ -87,14 +89,38 @@ jobs:
             if (data.missing) return lines.concat(['Report file was not created.', '']);
             if (data.raw) return lines.concat(['Audit output was not valid JSON:', '', '```', data.raw, '```', '']);
 
+            const counts = data.metadata?.vulnerabilities;
+            if (counts) lines.push(`Counts: \`${JSON.stringify(counts)}\``, '');
+
+            const advisories = Object.values(data.advisories || {})
+              .filter((advisory) => ['high', 'critical'].includes(String(advisory.severity || '').toLowerCase()))
+              .sort((a, b) => String(a.module_name || '').localeCompare(String(b.module_name || '')))
+              .slice(0, 30);
+
+            if (advisories.length > 0) {
+              for (const advisory of advisories) {
+                lines.push(`- **${advisory.module_name || 'unknown'}** — \`${advisory.severity || 'unknown'}\` — ${advisory.title || 'No title'}`);
+                if (advisory.github_advisory_id) lines.push(`  - Advisory: \`${advisory.github_advisory_id}\``);
+                if (advisory.vulnerable_versions) lines.push(`  - Vulnerable: \`${advisory.vulnerable_versions}\``);
+                if (advisory.patched_versions) lines.push(`  - Patched: \`${advisory.patched_versions}\``);
+                if (advisory.url) lines.push(`  - URL: ${advisory.url}`);
+                const findings = Array.isArray(advisory.findings) ? advisory.findings : [];
+                for (const finding of findings.slice(0, 3)) {
+                  lines.push(`  - Installed: \`${finding.version || 'unknown'}\``);
+                  for (const path of (finding.paths || []).slice(0, 3)) lines.push(`  - Path: \`${path}\``);
+                }
+              }
+              lines.push('');
+              return lines;
+            }
+
             const vulnerabilities = data.vulnerabilities || {};
             const findings = Object.entries(vulnerabilities)
               .filter(([, vuln]) => ['high', 'critical'].includes(String(vuln.severity || '').toLowerCase()))
               .slice(0, 20);
 
             if (findings.length === 0) {
-              const meta = data.metadata?.vulnerabilities;
-              lines.push(meta ? `Counts: \`${JSON.stringify(meta)}\`` : 'No high/critical advisories parsed.');
+              lines.push('No high/critical advisories parsed.');
               lines.push('');
               return lines;
             }
@@ -174,7 +200,9 @@ jobs:
         id: rust_audit
         continue-on-error: true
         working-directory: src-tauri
-        run: cargo audit --json | tee ../audit-reports/cargo-audit.json
+        run: |
+          set -o pipefail
+          cargo audit --json | tee ../audit-reports/cargo-audit.json
 
       - name: Build cargo audit summary
         if: always()
