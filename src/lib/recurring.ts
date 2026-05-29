@@ -1,6 +1,6 @@
 import type Database from "@tauri-apps/plugin-sql";
-import { getDb, now, runInTransaction, uuid } from "@/lib/db";
-import { createTransaction } from "@/lib/transactions";
+import { enqueueOutbox, getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { insertTransactionRow } from "@/lib/transactions";
 import type {
   Frequency,
   PaymentMethod,
@@ -8,6 +8,7 @@ import type {
   RecurringTemplateWithRelations,
   Transaction,
 } from "@/lib/types";
+import { computeVat } from "@/lib/utils";
 
 type RecurringDbRow = Omit<RecurringTemplateWithRelations, "active" | "next_due"> & {
   active: boolean | number;
@@ -265,10 +266,13 @@ export async function createRecurringTemplate(
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["recurring_template", template.id, "create", JSON.stringify(outboxPayload(template)), ts],
+    await enqueueOutbox(
+      db,
+      "recurring_template",
+      template.id,
+      "create",
+      outboxPayload(template),
+      ts,
     );
   });
 
@@ -342,10 +346,13 @@ export async function updateRecurringTemplate(
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["recurring_template", template.id, "update", JSON.stringify(outboxPayload(template)), ts],
+    await enqueueOutbox(
+      db,
+      "recurring_template",
+      template.id,
+      "update",
+      outboxPayload(template),
+      ts,
     );
   });
 
@@ -376,11 +383,7 @@ async function queueTransactionRecurringDetach(
     server_updated_at: null,
   };
 
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ["transaction", tx.id, "update", JSON.stringify(payload), ts],
-  );
+  await enqueueOutbox(db, "transaction", tx.id, "update", payload, ts);
 }
 
 export async function deleteRecurringTemplate(id: string): Promise<void> {
@@ -412,26 +415,26 @@ export async function deleteRecurringTemplate(id: string): Promise<void> {
 
     await txDb.execute("DELETE FROM recurring_templates WHERE id = ?", [id]);
 
-    await txDb.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        "recurring_template",
-        id,
-        "delete",
-        JSON.stringify({
-          ...outboxPayload(existing),
-          deleted_at: deleteTs,
-        }),
-        deleteTs,
-      ],
+    await enqueueOutbox(
+      txDb,
+      "recurring_template",
+      id,
+      "delete",
+      { ...outboxPayload(existing), deleted_at: deleteTs },
+      deleteTs,
     );
   });
 }
 
+/**
+ * Mark a recurring template as generated for a given date.
+ * When `db` is provided, runs inside an existing transaction (no new lock).
+ * When omitted, wraps in its own transaction.
+ */
 async function markRecurringGenerated(
   template: RecurringTemplateWithRelations,
   generatedDate: string,
+  existingDb?: Awaited<ReturnType<typeof getDb>>,
 ): Promise<void> {
   const ts = now();
   const nextTemplate: RecurringTemplate = {
@@ -442,7 +445,7 @@ async function markRecurringGenerated(
     server_updated_at: null,
   };
 
-  await runInTransaction(async (db) => {
+  const exec = async (db: Awaited<ReturnType<typeof getDb>>) => {
     await db.execute(
       `UPDATE recurring_templates
        SET last_generated = ?,
@@ -453,18 +456,21 @@ async function markRecurringGenerated(
       [generatedDate, ts, template.id],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        "recurring_template",
-        template.id,
-        "update",
-        JSON.stringify(outboxPayload(nextTemplate)),
-        ts,
-      ],
+    await enqueueOutbox(
+      db,
+      "recurring_template",
+      template.id,
+      "update",
+      outboxPayload(nextTemplate),
+      ts,
     );
-  });
+  };
+
+  if (existingDb) {
+    await exec(existingDb);
+  } else {
+    await runInTransaction(exec);
+  }
 }
 
 async function generatedTransactionExists(templateId: string, date: string): Promise<boolean> {
@@ -502,32 +508,55 @@ async function generateDueRecurringTransactionsOnce(
     let safety = 0;
 
     while (nextDue && compareDates(nextDue, today) <= 0 && safety < MAX_GENERATIONS_PER_RUN) {
-      if (currentTemplate.end_date && compareDates(nextDue, currentTemplate.end_date) > 0) break;
+      const dueDate: string = nextDue;
+      if (currentTemplate.end_date && compareDates(dueDate, currentTemplate.end_date) > 0) break;
 
-      if (await generatedTransactionExists(currentTemplate.id, nextDue)) {
-        await markRecurringGenerated(currentTemplate, nextDue);
+      if (await generatedTransactionExists(currentTemplate.id, dueDate)) {
+        await markRecurringGenerated(currentTemplate, dueDate);
         skipped++;
       } else {
-        await createTransaction({
-          date: nextDue,
-          description: currentTemplate.description,
-          book_id: currentTemplate.book_id,
-          account_id: currentTemplate.account_id,
-          category_id: currentTemplate.category_id,
-          tag_id: currentTemplate.tag_id,
-          payment_method: GENERATED_PAYMENT_METHOD,
-          amount_gross: currentTemplate.amount_gross,
-          vat_rate: currentTemplate.vat_rate,
-          recurring_template_id: currentTemplate.id,
-          notes: null,
+        // Atomic: create transaction + mark template as generated in one transaction
+        await runInTransaction(async (db) => {
+          const txId = uuid();
+          const ts = now();
+          const { vat: amount_vat, net: amount_net } = computeVat(
+            currentTemplate.amount_gross,
+            currentTemplate.vat_rate,
+          );
+          await insertTransactionRow(
+            db,
+            {
+              id: txId,
+              date: dueDate,
+              description: currentTemplate.description,
+              book_id: currentTemplate.book_id,
+              account_id: currentTemplate.account_id,
+              category_id: currentTemplate.category_id,
+              tag_id: currentTemplate.tag_id ?? null,
+              payment_method: GENERATED_PAYMENT_METHOD,
+              amount_gross: currentTemplate.amount_gross,
+              vat_rate: currentTemplate.vat_rate,
+              amount_vat,
+              amount_net,
+              receipt_photo_path: null,
+              recurring_template_id: currentTemplate.id,
+              notes: null,
+              created_at: ts,
+              updated_at: ts,
+              sync_status: "pending",
+              local_updated_at: ts,
+              server_updated_at: null,
+            },
+            ts,
+          );
+          await markRecurringGenerated(currentTemplate, dueDate, db);
         });
-        await markRecurringGenerated(currentTemplate, nextDue);
         generated++;
       }
 
       currentTemplate = {
         ...currentTemplate,
-        last_generated: nextDue,
+        last_generated: dueDate,
       };
       nextDue = computeNextDue(currentTemplate);
       safety++;

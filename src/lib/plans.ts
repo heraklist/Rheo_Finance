@@ -1,4 +1,4 @@
-import { getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { enqueueOutbox, getDb, now, runInTransaction, uuid } from "@/lib/db";
 import { useAppStore } from "@/lib/store";
 import type {
   Confidence,
@@ -190,21 +190,6 @@ function planPayload(plan: Plan): Plan {
     local_updated_at: plan.local_updated_at,
     server_updated_at: plan.server_updated_at,
   };
-}
-
-async function enqueueOutbox(
-  db: Awaited<ReturnType<typeof getDb>>,
-  entityType: string,
-  entityId: string,
-  operation: "create" | "update" | "delete",
-  payload: unknown,
-  ts: string,
-): Promise<void> {
-  await db.execute(
-    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [entityType, entityId, operation, JSON.stringify(payload), ts],
-  );
 }
 
 const PLAN_TOTALS_SQL = `SELECT

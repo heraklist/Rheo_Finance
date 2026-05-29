@@ -1,4 +1,4 @@
-import { getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { enqueueOutbox, getDb, now, runInTransaction, uuid } from "@/lib/db";
 import type { Account, Book, Category, CategoryType, Tag } from "@/lib/types";
 
 export type EditableCategoryType = Extract<CategoryType, "income" | "expense">;
@@ -142,11 +142,7 @@ export async function createCategory(input: {
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["category", nextCategory.id, "create", JSON.stringify(nextCategory), ts],
-    );
+    await enqueueOutbox(db, "category", nextCategory.id, "create", nextCategory, ts);
 
     return nextCategory;
   });
@@ -184,11 +180,7 @@ export async function updateCategoryName(id: string, name: string): Promise<Cate
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["category", category.id, "update", JSON.stringify(category), ts],
-    );
+    await enqueueOutbox(db, "category", category.id, "update", category, ts);
   });
 
   return category;
@@ -224,11 +216,7 @@ async function setCategoryArchived(id: string, archived: boolean): Promise<Categ
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["category", category.id, "update", JSON.stringify(category), ts],
-    );
+    await enqueueOutbox(db, "category", category.id, "update", category, ts);
   });
 
   return category;
@@ -277,20 +265,13 @@ export async function deleteCategory(id: string): Promise<void> {
 
   await runInTransaction(async (txDb) => {
     await txDb.execute("DELETE FROM categories WHERE id = ?", [id]);
-    await txDb.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        "category",
-        id,
-        "delete",
-        JSON.stringify({
-          ...existing,
-          deleted_at: ts,
-          local_updated_at: ts,
-        }),
-        ts,
-      ],
+    await enqueueOutbox(
+      txDb,
+      "category",
+      id,
+      "delete",
+      { ...existing, deleted_at: ts, local_updated_at: ts },
+      ts,
     );
   });
 }
@@ -340,11 +321,7 @@ export async function findOrCreateTag(name: string): Promise<Tag | null> {
       ],
     );
 
-    await txDb.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["tag", tag.id, "create", JSON.stringify(tag), ts],
-    );
+    await enqueueOutbox(txDb, "tag", tag.id, "create", tag, ts);
 
     return tag;
   });

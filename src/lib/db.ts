@@ -92,3 +92,35 @@ export function uuid(): string {
 export function now(): string {
   return new Date().toISOString();
 }
+
+/**
+ * Enqueue a sync outbox entry with deduplication.
+ *
+ * For "create" and "update" operations, removes any prior outbox entries for
+ * the same entity so that only the latest mutation is pushed during sync.
+ * For "delete" operations, removes prior "create"/"update" entries (the delete
+ * supersedes them all).
+ *
+ * Must be called inside a `runInTransaction` block so the DELETE + INSERT
+ * are atomic with the entity mutation.
+ */
+export async function enqueueOutbox(
+  db: Database,
+  entityType: string,
+  entityId: string,
+  operation: "create" | "update" | "delete",
+  payload: unknown,
+  ts: string,
+): Promise<void> {
+  // Remove stale outbox entries for this entity
+  await db.execute(
+    "DELETE FROM sync_outbox WHERE entity_type = ? AND entity_id = ? AND operation IN ('create', 'update')",
+    [entityType, entityId],
+  );
+
+  await db.execute(
+    `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [entityType, entityId, operation, JSON.stringify(payload), ts],
+  );
+}

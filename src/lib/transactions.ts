@@ -1,4 +1,4 @@
-import { getDb, now, runInTransaction, uuid } from "@/lib/db";
+import { enqueueOutbox, getDb, now, runInTransaction, uuid } from "@/lib/db";
 import { deleteLocalReceiptPhoto, saveReceiptPhotoForTransaction } from "@/lib/receipts";
 import type { PaymentMethod, Transaction, TransactionWithRelations } from "@/lib/types";
 import { computeVat } from "@/lib/utils";
@@ -175,18 +175,16 @@ export interface UpdateTransactionInput extends NewTransactionInput {
 }
 
 /**
- * Create a new transaction. Computes VAT amount + net automatically.
- * Adds outbox entry for sync (when sync layer is wired up).
+ * Build a Transaction object from input + compute VAT.
  */
-export async function createTransaction(input: NewTransactionInput): Promise<Transaction> {
-  const id = uuid();
-  const ts = now();
+function buildTransaction(
+  input: NewTransactionInput,
+  id: string,
+  ts: string,
+  receiptPhotoPath: string | null,
+): Transaction {
   const { vat: amount_vat, net: amount_net } = computeVat(input.amount_gross, input.vat_rate);
-  const receiptPhotoPath = input.receipt_photo_bytes
-    ? await saveReceiptPhotoForTransaction(id, input.receipt_photo_bytes)
-    : (input.receipt_photo_path ?? null);
-
-  const tx: Transaction = {
+  return {
     id,
     date: input.date,
     description: input.description,
@@ -208,44 +206,65 @@ export async function createTransaction(input: NewTransactionInput): Promise<Tra
     local_updated_at: ts,
     server_updated_at: null,
   };
+}
+
+/**
+ * Insert a transaction row + outbox entry using an existing db handle.
+ * Caller is responsible for wrapping in a transaction.
+ */
+export async function insertTransactionRow(
+  db: Awaited<ReturnType<typeof getDb>>,
+  tx: Transaction,
+  ts: string,
+): Promise<void> {
+  await db.execute(
+    `INSERT INTO transactions
+       (id, date, description, book_id, account_id, category_id, tag_id,
+        payment_method, amount_gross, vat_rate, amount_vat, amount_net,
+        receipt_photo_path, recurring_template_id, notes,
+        created_at, updated_at, sync_status, local_updated_at, server_updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      tx.id,
+      tx.date,
+      tx.description,
+      tx.book_id,
+      tx.account_id,
+      tx.category_id,
+      tx.tag_id,
+      tx.payment_method,
+      tx.amount_gross,
+      tx.vat_rate,
+      tx.amount_vat,
+      tx.amount_net,
+      tx.receipt_photo_path,
+      tx.recurring_template_id,
+      tx.notes,
+      tx.created_at,
+      tx.updated_at,
+      tx.sync_status,
+      tx.local_updated_at,
+      tx.server_updated_at,
+    ],
+  );
+  await enqueueOutbox(db, "transaction", tx.id, "create", tx, ts);
+}
+
+/**
+ * Create a new transaction. Computes VAT amount + net automatically.
+ * Adds outbox entry for sync.
+ */
+export async function createTransaction(input: NewTransactionInput): Promise<Transaction> {
+  const id = uuid();
+  const ts = now();
+  const receiptPhotoPath = input.receipt_photo_bytes
+    ? await saveReceiptPhotoForTransaction(id, input.receipt_photo_bytes)
+    : (input.receipt_photo_path ?? null);
+
+  const tx = buildTransaction(input, id, ts, receiptPhotoPath);
 
   await runInTransaction(async (db) => {
-    await db.execute(
-      `INSERT INTO transactions
-         (id, date, description, book_id, account_id, category_id, tag_id,
-          payment_method, amount_gross, vat_rate, amount_vat, amount_net,
-          receipt_photo_path, recurring_template_id, notes,
-          created_at, updated_at, sync_status, local_updated_at, server_updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        tx.id,
-        tx.date,
-        tx.description,
-        tx.book_id,
-        tx.account_id,
-        tx.category_id,
-        tx.tag_id,
-        tx.payment_method,
-        tx.amount_gross,
-        tx.vat_rate,
-        tx.amount_vat,
-        tx.amount_net,
-        tx.receipt_photo_path,
-        tx.recurring_template_id,
-        tx.notes,
-        tx.created_at,
-        tx.updated_at,
-        tx.sync_status,
-        tx.local_updated_at,
-        tx.server_updated_at,
-      ],
-    );
-
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["transaction", tx.id, "create", JSON.stringify(tx), ts],
-    );
+    await insertTransactionRow(db, tx, ts);
   });
 
   return tx;
@@ -340,11 +359,7 @@ export async function updateTransaction(input: UpdateTransactionInput): Promise<
       ],
     );
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      ["transaction", tx.id, "update", JSON.stringify(tx), ts],
-    );
+    await enqueueOutbox(db, "transaction", tx.id, "update", tx, ts);
   });
 
   return tx;
@@ -376,20 +391,7 @@ export async function deleteTransaction(id: string): Promise<void> {
 
     await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 
-    await db.execute(
-      `INSERT INTO sync_outbox (entity_type, entity_id, operation, payload, created_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        "transaction",
-        id,
-        "delete",
-        JSON.stringify({
-          ...existing,
-          deleted_at: ts,
-        }),
-        ts,
-      ],
-    );
+    await enqueueOutbox(db, "transaction", id, "delete", { ...existing, deleted_at: ts }, ts);
   });
 
   try {
