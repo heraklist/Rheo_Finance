@@ -4,6 +4,18 @@ All notable changes to Rheo Finance will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows semantic versioning while it is in active pre-1.0 development.
 
+## v0.2.26 - 2026-05-29
+
+### Fixed
+
+- Settings update checks now trigger the existing desktop install flow when a Tauri update is available.
+- Vercel landing production deployment now builds from the `landing` project root so updater download manifests are available again.
+
+### Changed
+
+- Expanded dependency governance to include Cargo/Rust and GitHub Actions Dependabot updates.
+- Pinned pnpm through `packageManager` metadata for root and landing packages.
+
 ## v0.2.24 - 2026-05-27
 
 ### Fixed
