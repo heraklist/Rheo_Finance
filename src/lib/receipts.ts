@@ -92,11 +92,63 @@ async function compressImage(bytes: Uint8Array): Promise<Uint8Array> {
   }
 }
 
+async function pickReceiptPhotoWithBrowserInput(): Promise<ReceiptPhotoDraft | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    input.style.opacity = "0";
+
+    let settled = false;
+    const finish = (value: ReceiptPhotoDraft | null) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      resolve(value);
+    };
+
+    input.addEventListener("cancel", () => finish(null));
+    input.addEventListener("change", () => {
+      void (async () => {
+        try {
+          const file = input.files?.[0];
+          if (!file) {
+            finish(null);
+            return;
+          }
+
+          const originalBytes = await blobToBytes(file);
+          const bytes = await compressImage(originalBytes);
+          finish({
+            bytes,
+            previewUrl: createObjectUrl(bytes),
+            sourcePath: file.name,
+          });
+        } catch (err) {
+          input.remove();
+          reject(err);
+        }
+      })();
+    });
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
 async function ensureReceiptsDir(): Promise<void> {
   await mkdir(RECEIPTS_DIR, { baseDir: BaseDirectory.AppData, recursive: true });
 }
 
 export async function pickReceiptPhoto(): Promise<ReceiptPhotoDraft | null> {
+  try {
+    return await pickReceiptPhotoWithBrowserInput();
+  } catch (browserError) {
+    console.error("Browser receipt picker failed; falling back to Tauri dialog:", browserError);
+  }
+
   const selected = await open({
     multiple: false,
     directory: false,
