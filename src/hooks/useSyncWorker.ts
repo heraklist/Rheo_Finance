@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { generateDueRecurringTransactions } from "@/lib/recurring";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount, syncAll } from "@/lib/sync";
+import { showToast } from "@/lib/toast";
 
 const SYNC_INTERVAL_MS = 30_000;
 
@@ -50,6 +51,7 @@ export function useSyncWorker() {
 
         console.error("Sync failed:", err);
         setSyncState("error");
+        showToast("Αποτυχία συγχρονισμού. Θα δοκιμαστεί ξανά σύντομα.", "error");
         await refreshPendingCount();
       } finally {
         syncInProgress = false;

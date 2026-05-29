@@ -3,12 +3,14 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ToastContainer } from "@/components/ui/ToastContainer";
 import { useAutoBackupWorker } from "@/hooks/useAutoBackupWorker";
 import { useBookInit } from "@/hooks/useBookInit";
 import { useRecurringWorker } from "@/hooks/useRecurringWorker";
 import { useSyncWorker } from "@/hooks/useSyncWorker";
 import { useAppStore } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { showToast } from "@/lib/toast";
 import { AddTransaction } from "@/pages/AddTransaction";
 import { CategorySettings } from "@/pages/CategorySettings";
 import { Dashboard } from "@/pages/Dashboard";
@@ -163,6 +165,9 @@ export function App() {
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") return;
       if (!initialized) return;
+      if (!session && event !== "SIGNED_OUT") {
+        showToast("Η συνεδρία σας έληξε. Συνδεθείτε ξανά.", "warning", 8000);
+      }
       void applySession(session);
     });
 
@@ -183,6 +188,7 @@ export function App() {
   return (
     <ErrorBoundary>
       <RouterProvider router={router} />
+      <ToastContainer />
     </ErrorBoundary>
   );
 }
