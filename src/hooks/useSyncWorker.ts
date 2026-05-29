@@ -43,7 +43,8 @@ export function useSyncWorker() {
 
       setBooks(books);
 
-      if (books.length === 0) {
+      const fallbackBook = books.find((book) => book.slug === "business") ?? books[0];
+      if (!fallbackBook) {
         setCurrentBookId("");
         return;
       }
@@ -51,8 +52,7 @@ export function useSyncWorker() {
       const currentBookId = useAppStore.getState().currentBookId;
       if (books.some((book) => book.id === currentBookId)) return;
 
-      const business = books.find((book) => book.slug === "business");
-      setCurrentBookId((business ?? books[0]).id);
+      setCurrentBookId(fallbackBook.id);
     }
 
     async function syncOnce() {
