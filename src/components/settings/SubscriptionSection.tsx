@@ -157,9 +157,7 @@ export function SubscriptionSection(): React.JSX.Element {
               {!isCurrent && t.key !== "team" && t.key !== "free" && (
                 <button
                   type="button"
-                  onClick={() =>
-                    void openUpgradeUrl(billingCycle === "monthly" ? "monthly" : "annual")
-                  }
+                  onClick={() => void openUpgradeUrl(t.key, billingCycle)}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-charcoal px-3 py-1.5 text-xs font-semibold text-cream"
                 >
                   <Star className="h-3.5 w-3.5" strokeWidth={1.7} />
@@ -178,7 +176,7 @@ export function SubscriptionSection(): React.JSX.Element {
       {isPro && subscription.currentPeriodEnd && (
         <div className="mt-4 rounded-md border border-border-light bg-sand/40 p-3">
           <p className="text-sm text-text-secondary">
-            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}:{" "}
+            {subscription.cancelAtPeriodEnd ? "Λήγει" : "Ανανεώνεται"}: {" "}
             {formatDateRelative(subscription.currentPeriodEnd)}
           </p>
           {hasWarning && (
