@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.2.25",
   "type": "module",
+  "packageManager": "pnpm@11.1.1",
   "description": "Rheo Finance - local-first finance management for independent professionals",
   "engines": {
     "node": "24.x"
