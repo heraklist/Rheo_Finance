@@ -130,6 +130,7 @@ export function SubscriptionSection(): React.JSX.Element {
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         {TIERS.map((t) => {
           const isCurrent = t.key === tier;
+          const checkoutTier = t.key === "solo" || t.key === "pro" ? t.key : null;
           return (
             <div
               key={t.key}
@@ -154,12 +155,10 @@ export function SubscriptionSection(): React.JSX.Element {
                 </span>
               </p>
               <p className="mt-1 text-sm text-text-secondary">{t.note}</p>
-              {!isCurrent && t.key !== "team" && t.key !== "free" && (
+              {!isCurrent && checkoutTier !== null && (
                 <button
                   type="button"
-                  onClick={() =>
-                    void openUpgradeUrl(billingCycle === "monthly" ? "monthly" : "annual")
-                  }
+                  onClick={() => void openUpgradeUrl(checkoutTier, billingCycle)}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-charcoal px-3 py-1.5 text-xs font-semibold text-cream"
                 >
                   <Star className="h-3.5 w-3.5" strokeWidth={1.7} />
