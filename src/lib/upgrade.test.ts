@@ -35,6 +35,7 @@ describe("openUpgradeUrl", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllGlobals();
+    vi.stubEnv("VITE_LANDING_URL", "http://localhost:4173");
     shellOpen.mockReset();
   });
 
