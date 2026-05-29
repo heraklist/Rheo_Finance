@@ -1,5 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 
+export const LOCAL_DATA_CHANGED_EVENT = "rheo:local-data-changed";
+
 let dbPromise: Promise<Database> | null = null;
 let transactionQueue: Promise<void> = Promise.resolve();
 
@@ -93,6 +95,16 @@ export function now(): string {
   return new Date().toISOString();
 }
 
+function notifyLocalDataChanged(): void {
+  if (typeof window === "undefined") return;
+
+  // The outbox row is created inside the caller's transaction. Dispatch after the
+  // current call stack so the transaction has time to commit before sync reads it.
+  window.setTimeout(() => {
+    window.dispatchEvent(new Event(LOCAL_DATA_CHANGED_EVENT));
+  }, 250);
+}
+
 /**
  * Enqueue a sync outbox entry with deduplication.
  *
@@ -123,4 +135,6 @@ export async function enqueueOutbox(
      VALUES (?, ?, ?, ?, ?)`,
     [entityType, entityId, operation, JSON.stringify(payload), ts],
   );
+
+  notifyLocalDataChanged();
 }
