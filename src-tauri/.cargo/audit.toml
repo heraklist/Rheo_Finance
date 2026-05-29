@@ -1,0 +1,5 @@
+[advisories]
+# Temporary risk acceptance for transitive rsa advisory.
+# RUSTSEC-2023-0071 currently has no patched version in cargo-audit output.
+# Review periodically and remove once the upstream dependency path can move to a patched crate.
+ignore = ["RUSTSEC-2023-0071"]
