@@ -24,7 +24,13 @@ import { isBusinessBook, useAppStore } from "@/lib/store";
 import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatLocalIsoDate } from "@/lib/utils";
 
-const PAYMENT_METHODS: PaymentMethod[] = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά", "IRIS", "Άλλο"];
+const PAYMENT_METHODS: PaymentMethod[] = [
+  "Μετρητά",
+  "Κάρτα",
+  "Τραπεζική μεταφορά",
+  "IRIS",
+  "Άλλο",
+];
 
 type TxType = EntryType;
 
@@ -233,7 +239,11 @@ export function TransactionForm({
       return null;
     }
 
-    return { accountId: validAccountId, categoryId: validCategoryId, categories: freshCategories };
+    return {
+      accountId: validAccountId,
+      categoryId: validCategoryId,
+      categories: freshCategories,
+    };
   }
 
   async function handleSubmit() {
@@ -263,8 +273,9 @@ export function TransactionForm({
       if (!refs) return;
 
       const tag = await findOrCreateTag(tagName);
-      const fallbackDescription =
-        refs.categories.find((category) => category.id === refs.categoryId)?.name ?? "Χωρίς περιγραφή";
+      const fallbackCategory = refs.categories.find((category) => category.id === refs.categoryId);
+      const fallbackDescription = fallbackCategory?.name ?? "Χωρίς περιγραφή";
+
       await onSubmit({
         date,
         description: description.trim() || fallbackDescription,
@@ -290,7 +301,12 @@ export function TransactionForm({
   return (
     <>
       <div className="flex-1 overflow-auto p-4 pb-6 space-y-4">
-        <BookSelector books={books} bookId={bookId} showVat={showVat} onBookIdChange={setBookId} />
+        <BookSelector
+          books={books}
+          bookId={bookId}
+          showVat={showVat}
+          onBookIdChange={setBookId}
+        />
 
         <MoneyAmountField
           id="tx-amount"
