@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { computeNextDue } from "@/lib/recurring";
 import type { TransactionWithRelations } from "@/lib/types";
 import { BOOK_SLUG_BUSINESS } from "@/lib/types";
+import { todayIso } from "@/lib/utils";
 
 // === Review Queue Types ===
 
@@ -24,14 +25,6 @@ export interface ReviewGroup {
 }
 
 // === Helpers ===
-
-function todayIso(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat("el-GR", {

@@ -8,7 +8,7 @@ import type {
   RecurringTemplateWithRelations,
   Transaction,
 } from "@/lib/types";
-import { computeVat } from "@/lib/utils";
+import { compareDates, computeVat, isoDate, localDate, todayIso } from "@/lib/utils";
 
 type RecurringDbRow = Omit<RecurringTemplateWithRelations, "active" | "next_due"> & {
   active: boolean | number;
@@ -58,29 +58,6 @@ let recurringDailyCheckPromise: Promise<RecurringGenerationResult> | null = null
 
 function activeFromDb(value: boolean | number): boolean {
   return value === true || value === 1;
-}
-
-function localDate(iso: string): Date {
-  const parts = iso.slice(0, 10).split("-").map(Number);
-  const year = parts[0] ?? 1970;
-  const month = parts[1] ?? 1;
-  const day = parts[2] ?? 1;
-  return new Date(year, month - 1, day);
-}
-
-function isoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function todayIso(): string {
-  return isoDate(new Date());
-}
-
-function compareDates(a: string, b: string): number {
-  return a.localeCompare(b);
 }
 
 function daysInMonth(year: number, monthIndex: number): number {

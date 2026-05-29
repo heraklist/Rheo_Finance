@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { computeNextDue, listRecurringTemplates } from "@/lib/recurring";
 import type { CategoryType, RecurringTemplateWithRelations } from "@/lib/types";
 import { BOOK_SLUG_BUSINESS, BOOK_SLUG_PERSONAL } from "@/lib/types";
-import { MONTHS_SHORT_EL } from "@/lib/utils";
+import { addMonths, isoDate, localDate, MONTHS_SHORT_EL } from "@/lib/utils";
 
 export interface VatQuarter {
   quarter: 1 | 2 | 3 | 4;
@@ -73,28 +73,12 @@ const QUARTER_LABELS: Record<1 | 2 | 3 | 4, string> = {
   4: "Q4 Οκτ-Δεκ",
 };
 
-function isoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function localDate(iso: string): Date {
-  const parts = iso.slice(0, 10).split("-").map(Number);
-  return new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1);
-}
-
 function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function monthLabel(date: Date): string {
   return `${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-function addMonths(date: Date, months: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
 function lastDayOfMonth(date: Date): Date {

@@ -4,7 +4,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 
 import { getDb } from "@/lib/db";
 import type { CategoryType } from "@/lib/types";
-import { MONTHS_SHORT_EL, round2 } from "@/lib/utils";
+import { isoDate, localDate, MONTHS_SHORT_EL, round2 } from "@/lib/utils";
 import { createXlsxWorkbook, type WorkbookSheet } from "@/lib/xlsx";
 
 export type ExportBookScope = "business" | "personal" | "both";
@@ -71,18 +71,6 @@ function typeLabel(type: CategoryType | null): string {
   if (type === "reserve") return "Αποθεματικό";
   if (type === "transfer") return "Μεταφορά";
   return "";
-}
-
-function localDate(iso: string): Date {
-  const [year = 1970, month = 1, day = 1] = iso.slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function isoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function monthKey(date: Date): string {

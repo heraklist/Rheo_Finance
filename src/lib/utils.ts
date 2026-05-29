@@ -41,10 +41,13 @@ export const MONTHS_SHORT_EL = [
  * `new Date("2025-05-03")` is spec'd as UTC midnight, which shifts a day
  * back in UTC+ timezones (like Greece). This helper avoids that.
  */
-function parseLocalDate(iso: string): Date {
+export function localDate(iso: string): Date {
   const parts = iso.slice(0, 10).split("-").map(Number);
   return new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1);
 }
+
+/** Alias kept for internal use in this file. */
+const parseLocalDate = localDate;
 
 export function formatDateShort(iso: string): string {
   if (!iso) return "";
@@ -67,11 +70,30 @@ export function formatDateRelative(iso: string): string {
   return formatDateShort(iso);
 }
 
-export function formatLocalIsoDate(date = new Date()): string {
+/** Format a Date as "YYYY-MM-DD" using local time. */
+export function isoDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/** @deprecated Use `isoDate` instead. Kept for backward compatibility. */
+export const formatLocalIsoDate = (date = new Date()): string => isoDate(date);
+
+/** Today's date as "YYYY-MM-DD" in local time. */
+export function todayIso(): string {
+  return isoDate(new Date());
+}
+
+/** Lexicographic comparison of "YYYY-MM-DD" strings. */
+export function compareDates(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+/** Return first day of month offset by `months` from `date`. */
+export function addMonths(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
 
 /**
