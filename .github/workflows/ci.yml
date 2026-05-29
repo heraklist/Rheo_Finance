@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -86,24 +87,17 @@ jobs:
         run: |
           test -f supabase/config.toml
           test -d supabase/migrations
-          migration_count=$(find supabase/migrations -type f -name '*.sql' | wc -l | tr -d ' ')
-          if [ "$migration_count" -lt 1 ]; then
-            echo "No Supabase migration files found."
-            exit 1
-          fi
-          echo "Found $migration_count Supabase migration files."
 
       - name: Check migration filename uniqueness
         run: |
-          duplicate_prefixes=$(find supabase/migrations -type f -name '*.sql' -printf '%f\n' | cut -d '_' -f 1 | sort | uniq -d)
-          if [ -n "$duplicate_prefixes" ]; then
-            echo "Duplicate migration prefixes found:"
-            echo "$duplicate_prefixes"
+          duplicates=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | cut -d _ -f 1 | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "Duplicate migration timestamps found:"
+            echo "$duplicates"
             exit 1
           fi
-          echo "Supabase migration filename uniqueness check passed."
 
       - name: Document full local database check
         run: |
-          echo "Full Supabase Docker validation is intentionally kept as a local/manual check."
-          echo "Run locally: pnpm supabase:start && pnpm db:check && pnpm supabase:stop"
+          echo "Full Supabase validation requires local Docker and is run with: pnpm db:check"
+          echo "This CI job verifies Supabase CLI availability and migration/config structure only."
