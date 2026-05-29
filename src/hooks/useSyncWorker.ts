@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { generateDueRecurringTransactions } from "@/lib/recurring";
+import { listBooks } from "@/lib/reference";
 import { useAppStore } from "@/lib/store";
 import { getPendingCount, syncAll } from "@/lib/sync";
 import { showToast } from "@/lib/toast";
@@ -7,8 +8,16 @@ import { showToast } from "@/lib/toast";
 const SYNC_INTERVAL_MS = 30_000;
 
 export function useSyncWorker() {
-  const { user, mfaLoading, mfaRequired, setSyncState, setLastSyncedAt, setPendingCount } =
-    useAppStore();
+  const {
+    user,
+    mfaLoading,
+    mfaRequired,
+    setBooks,
+    setCurrentBookId,
+    setSyncState,
+    setLastSyncedAt,
+    setPendingCount,
+  } = useAppStore();
 
   useEffect(() => {
     if (!user || mfaLoading || mfaRequired) {
@@ -26,6 +35,24 @@ export function useSyncWorker() {
       if (!cancelled) setPendingCount(count);
     }
 
+    async function refreshBooks() {
+      const books = await listBooks();
+      if (cancelled) return;
+
+      setBooks(books);
+
+      if (books.length === 0) {
+        setCurrentBookId("");
+        return;
+      }
+
+      const currentBookId = useAppStore.getState().currentBookId;
+      if (books.some((book) => book.id === currentBookId)) return;
+
+      const business = books.find((book) => book.slug === "business");
+      setCurrentBookId((business ?? books[0]).id);
+    }
+
     async function syncOnce() {
       if (cancelled || syncInProgress) return;
 
@@ -41,6 +68,7 @@ export function useSyncWorker() {
       try {
         await syncAll();
         await generateDueRecurringTransactions();
+        await refreshBooks();
         if (cancelled) return;
 
         setSyncState("synced");
@@ -76,5 +104,14 @@ export function useSyncWorker() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [user, mfaLoading, mfaRequired, setSyncState, setLastSyncedAt, setPendingCount]);
+  }, [
+    user,
+    mfaLoading,
+    mfaRequired,
+    setBooks,
+    setCurrentBookId,
+    setSyncState,
+    setLastSyncedAt,
+    setPendingCount,
+  ]);
 }
