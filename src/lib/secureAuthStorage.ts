@@ -1,6 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { appLocalDataDir, join } from "@tauri-apps/api/path";
-import { platform } from "@tauri-apps/plugin-os";
 import { type Client, type Store, Stronghold } from "@tauri-apps/plugin-stronghold";
 
 interface AuthStorage {
@@ -24,9 +23,10 @@ const NATIVE_SECURE_STORAGE_COMMANDS = [
   "plugin:secure-auth-storage",
 ] as const;
 const LEGACY_SHARED_AUTH_STORAGE_KEYS = ["updater:github-token"];
+const NATIVE_STORAGE_PROBE_KEY = "rheo:secure-auth-storage-probe";
 
 let strongholdStatePromise: Promise<StrongholdState> | null = null;
-let tauriPlatformPromise: Promise<string | null> | null = null;
+let nativeSecureStorageAvailablePromise: Promise<boolean> | null = null;
 
 interface NativeSecureStorageValue {
   value?: string | null;
@@ -45,11 +45,7 @@ function localRemoveItem(key: string): void {
 }
 
 function canUsePlainStorage(): boolean {
-  return !isTauri() || import.meta.env.VITE_ALLOW_INSECURE_AUTH_STORAGE === "true";
-}
-
-function nativeStorageIsRequired(): boolean {
-  return isTauri() && import.meta.env.PROD;
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
 function strongholdKey(key: string): string {
@@ -58,6 +54,10 @@ function strongholdKey(key: string): string {
 
 function logNativeSecureStorageFailure(operation: string, error: unknown): void {
   console.error(`Native secure auth storage ${operation} failed.`, error);
+}
+
+function logPlainStorageFailure(operation: string, error: unknown): void {
+  console.error(`Plain auth storage ${operation} failed.`, error);
 }
 
 async function removeLegacyStrongholdPassphrase(): Promise<void> {
@@ -86,19 +86,17 @@ async function migrateKnownLegacyStrongholdItems(keys: string[]): Promise<void> 
   await removeLegacyStrongholdPassphrase();
 }
 
-async function getTauriPlatform(): Promise<string | null> {
-  if (!isTauri()) return null;
-
-  tauriPlatformPromise ??= Promise.resolve()
-    .then(() => platform())
-    .catch(() => null);
-
-  return tauriPlatformPromise;
-}
-
 async function canUseNativeSecureStorage(): Promise<boolean> {
-  const currentPlatform = await getTauriPlatform();
-  return currentPlatform === "android" || currentPlatform === "windows";
+  if (!isTauri()) return false;
+
+  nativeSecureStorageAvailablePromise ??= readNativeSecureItem(NATIVE_STORAGE_PROBE_KEY)
+    .then(() => true)
+    .catch((error: unknown) => {
+      logNativeSecureStorageFailure("probe", error);
+      return false;
+    });
+
+  return nativeSecureStorageAvailablePromise;
 }
 
 async function loadOrCreateClient(stronghold: Stronghold): Promise<Client> {
@@ -192,40 +190,78 @@ async function invokeNativeSecureStorage<T = void>(
   throw lastError;
 }
 
+async function tryMigrateKnownLegacyStrongholdItems(keys: string[]): Promise<void> {
+  try {
+    await migrateKnownLegacyStrongholdItems(keys);
+  } catch (error) {
+    logNativeSecureStorageFailure("legacy Stronghold cleanup", error);
+  }
+}
+
+function readPlainItem(key: string): string | null {
+  if (!canUsePlainStorage()) return null;
+
+  try {
+    return localGetItem(key);
+  } catch (error) {
+    logPlainStorageFailure("read", error);
+    return null;
+  }
+}
+
+function writePlainItem(key: string, value: string): void {
+  if (!canUsePlainStorage()) return;
+
+  try {
+    localSetItem(key, value);
+  } catch (error) {
+    logPlainStorageFailure("write", error);
+  }
+}
+
+function removePlainItem(key: string): void {
+  if (!canUsePlainStorage()) return;
+
+  try {
+    localRemoveItem(key);
+  } catch (error) {
+    logPlainStorageFailure("remove", error);
+  }
+}
+
 export const secureAuthStorage: AuthStorage = {
   async getItem(key) {
     if (await canUseNativeSecureStorage()) {
       try {
         const value = await readNativeSecureItem(key);
         if (value !== null) {
-          localRemoveItem(key);
-          await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
+          removePlainItem(key);
+          await tryMigrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
           return value;
         }
 
-        const legacyValue = localGetItem(key);
+        const legacyValue = readPlainItem(key);
         if (legacyValue !== null) {
           try {
             await writeNativeSecureItem(key, legacyValue);
-            try {
-              await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
-            } catch (error) {
-              logNativeSecureStorageFailure("legacy Stronghold cleanup", error);
-            }
+            await tryMigrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
             return legacyValue;
           } catch (error) {
             logNativeSecureStorageFailure("local migration", error);
-            if (nativeStorageIsRequired()) return null;
+            return legacyValue;
           }
         }
 
-        if (localGetItem(STRONGHOLD_PASSPHRASE_KEY)) {
+        if (readPlainItem(STRONGHOLD_PASSPHRASE_KEY)) {
           try {
             const strongholdValue = await readStrongholdItem(key);
             if (strongholdValue !== null) {
               try {
                 await writeNativeSecureItem(key, strongholdValue);
-                await migrateKnownLegacyStrongholdItems([...LEGACY_SHARED_AUTH_STORAGE_KEYS, key]);
+                await tryMigrateKnownLegacyStrongholdItems([
+                  ...LEGACY_SHARED_AUTH_STORAGE_KEYS,
+                  key,
+                ]);
               } catch (error) {
                 logNativeSecureStorageFailure("Stronghold migration", error);
               }
@@ -237,12 +273,10 @@ export const secureAuthStorage: AuthStorage = {
         }
       } catch (error) {
         logNativeSecureStorageFailure("read", error);
-        if (nativeStorageIsRequired()) return null;
       }
     }
 
-    if (!canUsePlainStorage()) return null;
-    return localGetItem(key);
+    return readPlainItem(key);
   },
   async setItem(key, value) {
     if (await canUseNativeSecureStorage()) {
@@ -251,36 +285,20 @@ export const secureAuthStorage: AuthStorage = {
         return;
       } catch (error) {
         logNativeSecureStorageFailure("write", error);
-        if (nativeStorageIsRequired()) {
-          throw new Error("Native auth storage write failed.");
-        }
       }
     }
 
-    if (!canUsePlainStorage()) {
-      throw new Error("Plain auth storage is disabled.");
-    }
-
-    localSetItem(key, value);
+    writePlainItem(key, value);
   },
   async removeItem(key) {
-    let nativeRemoveFailed = false;
-
     if (await canUseNativeSecureStorage()) {
       try {
         await removeNativeSecureItem(key);
       } catch (error) {
-        nativeRemoveFailed = true;
         logNativeSecureStorageFailure("remove", error);
       }
     }
 
-    if (canUsePlainStorage()) {
-      localRemoveItem(key);
-    }
-
-    if (nativeRemoveFailed && nativeStorageIsRequired()) {
-      throw new Error("Native auth storage remove failed.");
-    }
+    removePlainItem(key);
   },
 };
