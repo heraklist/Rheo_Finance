@@ -9,6 +9,13 @@ interface ForeignKeysPragmaRow {
   foreign_keys: number;
 }
 
+interface ForeignKeyViolationRow {
+  table: string;
+  rowid: number;
+  parent: string;
+  fkid: number;
+}
+
 async function enableForeignKeyChecks(db: Database): Promise<void> {
   await db.execute("PRAGMA foreign_keys = ON");
   const rows = await db.select<ForeignKeysPragmaRow[]>("PRAGMA foreign_keys");
@@ -16,6 +23,13 @@ async function enableForeignKeyChecks(db: Database): Promise<void> {
   if (Number(rows[0]?.foreign_keys ?? 0) !== 1) {
     throw new Error("SQLite foreign key enforcement could not be enabled.");
   }
+}
+
+async function assertNoForeignKeyViolations(db: Database): Promise<void> {
+  const violations = await db.select<ForeignKeyViolationRow[]>("PRAGMA foreign_key_check");
+  if (violations.length === 0) return;
+
+  throw new Error(`SQLite foreign key violations: ${JSON.stringify(violations)}`);
 }
 
 async function initializeDb(): Promise<Database> {
@@ -60,8 +74,10 @@ export async function runInTransaction<T>(operation: (db: Database) => Promise<T
   return runWithDbLock(async (db) => {
     await enableForeignKeyChecks(db);
     await db.execute("BEGIN IMMEDIATE");
+    await db.execute("PRAGMA defer_foreign_keys = ON");
     try {
       const result = await operation(db);
+      await assertNoForeignKeyViolations(db);
       await db.execute("COMMIT");
       return result;
     } catch (error) {
