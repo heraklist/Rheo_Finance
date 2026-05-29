@@ -109,7 +109,6 @@ async function pickReceiptPhotoWithBrowserInput(): Promise<ReceiptPhotoDraft | n
       resolve(value);
     };
 
-    input.addEventListener("cancel", () => finish(null));
     input.addEventListener("change", () => {
       void (async () => {
         try {
@@ -241,11 +240,12 @@ export async function getReceiptPhotoObjectUrl(
 ): Promise<string | null> {
   if (!path) return null;
 
-  const localPath = isLocalReceiptPath(path)
-    ? path
-    : transactionId
-      ? await downloadReceiptPhoto(path, transactionId)
-      : null;
+  let localPath: string | null = null;
+  if (isLocalReceiptPath(path)) {
+    localPath = path;
+  } else if (transactionId) {
+    localPath = await downloadReceiptPhoto(path, transactionId);
+  }
 
   if (!localPath) return null;
 
