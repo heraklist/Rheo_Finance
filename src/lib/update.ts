@@ -237,9 +237,19 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
       };
     }
 
+    await installUpdate(info);
+
+    if (!info.isDesktop || info.installMode === "manual") {
+      return {
+        status: "available",
+        message: `Διαθέσιμη ενημέρωση: v${info.latestVersion}. Άνοιξε η σελίδα λήψης.`,
+        info,
+      };
+    }
+
     return {
       status: "available",
-      message: `Διαθέσιμη ενημέρωση: v${info.latestVersion}.`,
+      message: `Διαθέσιμη ενημέρωση: v${info.latestVersion}. Η εγκατάσταση ξεκίνησε.`,
       info,
     };
   } catch (error) {
