@@ -1,0 +1,267 @@
+name: Security Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: security-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  osv-scanner:
+    name: OSV Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run OSV Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.0
+        with:
+          scan-args: |-
+            --recursive
+            .
+
+  pnpm-audit:
+    name: pnpm audit high-only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.1.1 --activate
+
+      - name: Create audit report directory
+        run: mkdir -p audit-reports
+
+      - name: Audit root dependencies
+        id: root_audit
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pnpm audit --audit-level high --json | tee audit-reports/root-pnpm-audit.json
+
+      - name: Audit landing dependencies
+        id: landing_audit
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pnpm --dir landing audit --audit-level high --json | tee audit-reports/landing-pnpm-audit.json
+
+      - name: Build pnpm audit summary
+        if: always()
+        env:
+          ROOT_AUDIT_OUTCOME: ${{ steps.root_audit.outcome }}
+          LANDING_AUDIT_OUTCOME: ${{ steps.landing_audit.outcome }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function readJson(file) {
+            if (!fs.existsSync(file)) return { missing: true };
+            const raw = fs.readFileSync(file, 'utf8').trim();
+            if (!raw) return {};
+            try { return JSON.parse(raw); } catch { return { raw: raw.slice(0, 4000) }; }
+          }
+
+          function summarize(label, file, outcome) {
+            const data = readJson(file);
+            const lines = [`### ${label}`, '', `Outcome: \`${outcome}\``, ''];
+            if (data.missing) return lines.concat(['Report file was not created.', '']);
+            if (data.raw) return lines.concat(['Audit output was not valid JSON:', '', '```', data.raw, '```', '']);
+
+            const counts = data.metadata?.vulnerabilities;
+            if (counts) lines.push(`Counts: \`${JSON.stringify(counts)}\``, '');
+
+            const advisories = Object.values(data.advisories || {})
+              .filter((advisory) => ['high', 'critical'].includes(String(advisory.severity || '').toLowerCase()))
+              .sort((a, b) => String(a.module_name || '').localeCompare(String(b.module_name || '')))
+              .slice(0, 30);
+
+            if (advisories.length > 0) {
+              for (const advisory of advisories) {
+                lines.push(`- **${advisory.module_name || 'unknown'}** — \`${advisory.severity || 'unknown'}\` — ${advisory.title || 'No title'}`);
+                if (advisory.github_advisory_id) lines.push(`  - Advisory: \`${advisory.github_advisory_id}\``);
+                if (advisory.vulnerable_versions) lines.push(`  - Vulnerable: \`${advisory.vulnerable_versions}\``);
+                if (advisory.patched_versions) lines.push(`  - Patched: \`${advisory.patched_versions}\``);
+                if (advisory.url) lines.push(`  - URL: ${advisory.url}`);
+                const findings = Array.isArray(advisory.findings) ? advisory.findings : [];
+                for (const finding of findings.slice(0, 3)) {
+                  lines.push(`  - Installed: \`${finding.version || 'unknown'}\``);
+                  for (const path of (finding.paths || []).slice(0, 3)) lines.push(`  - Path: \`${path}\``);
+                }
+              }
+              lines.push('');
+              return lines;
+            }
+
+            const vulnerabilities = data.vulnerabilities || {};
+            const findings = Object.entries(vulnerabilities)
+              .filter(([, vuln]) => ['high', 'critical'].includes(String(vuln.severity || '').toLowerCase()))
+              .slice(0, 20);
+
+            if (findings.length === 0) {
+              lines.push('No high/critical advisories parsed.');
+              lines.push('');
+              return lines;
+            }
+
+            for (const [name, vuln] of findings) {
+              lines.push(`- **${name}** — \`${vuln.severity || 'unknown'}\` — range: \`${vuln.range || 'n/a'}\``);
+              const via = Array.isArray(vuln.via) ? vuln.via : [];
+              for (const item of via.slice(0, 5)) {
+                if (typeof item === 'string') {
+                  lines.push(`  - via: \`${item}\``);
+                } else {
+                  lines.push(`  - ${item.title || 'No title'}${item.source ? ` — \`${item.source}\`` : ''}${item.url ? ` — ${item.url}` : ''}`);
+                }
+              }
+              if (vuln.fixAvailable) lines.push(`  - fixAvailable: \`${JSON.stringify(vuln.fixAvailable)}\``);
+            }
+            lines.push('');
+            return lines;
+          }
+
+          const lines = ['## Security Audit — pnpm findings', ''];
+          lines.push(...summarize('Root app', 'audit-reports/root-pnpm-audit.json', process.env.ROOT_AUDIT_OUTCOME || 'unknown'));
+          lines.push(...summarize('Landing app', 'audit-reports/landing-pnpm-audit.json', process.env.LANDING_AUDIT_OUTCOME || 'unknown'));
+          fs.writeFileSync('audit-reports/pnpm-summary.md', lines.join('\n'));
+          console.log(lines.join('\n'));
+          NODE
+
+      - name: Comment pnpm audit summary
+        if: always() && github.event_name == 'pull_request' && (steps.root_audit.outcome == 'failure' || steps.landing_audit.outcome == 'failure')
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('audit-reports/pnpm-summary.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      - name: Fail on pnpm audit findings
+        if: steps.root_audit.outcome == 'failure' || steps.landing_audit.outcome == 'failure'
+        run: exit 1
+
+  cargo-audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-audit-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-audit-${{ runner.os }}-
+
+      - name: Install cargo-audit
+        run: |
+          if ! command -v cargo-audit >/dev/null 2>&1; then
+            cargo install cargo-audit --locked
+          fi
+
+      - name: Create audit report directory
+        run: mkdir -p audit-reports
+
+      - name: Audit Rust dependencies
+        id: rust_audit
+        continue-on-error: true
+        working-directory: src-tauri
+        run: |
+          set -o pipefail
+          cargo audit --json | tee ../audit-reports/cargo-audit.json
+
+      - name: Build cargo audit summary
+        if: always()
+        env:
+          RUST_AUDIT_OUTCOME: ${{ steps.rust_audit.outcome }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function readJson(file) {
+            if (!fs.existsSync(file)) return { missing: true };
+            const raw = fs.readFileSync(file, 'utf8').trim();
+            if (!raw) return {};
+            try { return JSON.parse(raw); } catch { return { raw: raw.slice(0, 4000) }; }
+          }
+
+          const data = readJson('audit-reports/cargo-audit.json');
+          const lines = ['## Security Audit — cargo findings', '', `Outcome: \`${process.env.RUST_AUDIT_OUTCOME || 'unknown'}\``, ''];
+
+          if (data.missing) {
+            lines.push('Report file was not created.', '');
+          } else if (data.raw) {
+            lines.push('Audit output was not valid JSON:', '', '```', data.raw, '```', '');
+          } else {
+            const list = data.vulnerabilities?.list || [];
+            if (list.length === 0) {
+              lines.push('No cargo advisories parsed.', '');
+            } else {
+              for (const item of list.slice(0, 20)) {
+                const advisory = item.advisory || {};
+                const pkg = item.package || {};
+                lines.push(`- **${pkg.name || 'unknown'} ${pkg.version || ''}** — ${advisory.title || 'No title'}`);
+                if (advisory.id) lines.push(`  - Advisory: \`${advisory.id}\``);
+                if (Array.isArray(advisory.aliases) && advisory.aliases.length) lines.push(`  - Aliases: \`${advisory.aliases.join(', ')}\``);
+                if (advisory.url) lines.push(`  - URL: ${advisory.url}`);
+                if (advisory.patched_versions) lines.push(`  - Patched: \`${advisory.patched_versions}\``);
+              }
+              lines.push('');
+            }
+          }
+
+          fs.writeFileSync('audit-reports/cargo-summary.md', lines.join('\n'));
+          console.log(lines.join('\n'));
+          NODE
+
+      - name: Comment cargo audit summary
+        if: always() && github.event_name == 'pull_request' && steps.rust_audit.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('audit-reports/cargo-summary.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      - name: Fail on cargo audit findings
+        if: steps.rust_audit.outcome == 'failure'
+        run: exit 1

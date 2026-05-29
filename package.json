@@ -32,6 +32,10 @@
     "db:check": "pnpm supabase:reset && pnpm supabase:lint && pnpm supabase:test && pnpm supabase:types",
     "security:secrets": "gitleaks detect --source . --verbose",
     "security:semgrep": "semgrep scan --config auto .",
+    "security:pnpm-audit": "pnpm audit --audit-level high",
+    "security:pnpm-audit:landing": "pnpm --dir landing audit --audit-level high",
+    "security:cargo-audit": "cd src-tauri && cargo audit",
+    "security:audit": "pnpm security:pnpm-audit && pnpm security:pnpm-audit:landing && pnpm security:cargo-audit",
     "quality:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
