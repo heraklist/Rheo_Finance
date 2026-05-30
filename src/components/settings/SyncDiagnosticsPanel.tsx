@@ -1,8 +1,8 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  getSyncDiagnostics,
   MAX_RETRYABLE_SYNC_ATTEMPTS,
+  getSyncDiagnostics,
   type SyncDiagnostics,
 } from "@/lib/syncDiagnostics";
 import { formatDateRelative } from "@/lib/utils";
@@ -42,7 +42,16 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
   }
 
   useEffect(() => {
-    void refreshDiagnostics();
+    async function loadDiagnostics() {
+      try {
+        setDiagnostics(await getSyncDiagnostics());
+      } catch (error) {
+        console.error("Failed to load sync diagnostics:", error);
+        setMessage("Δεν φορτώθηκαν τα διαγνωστικά συγχρονισμού.");
+      }
+    }
+
+    void loadDiagnostics();
   }, [pendingCount, syncState]);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
