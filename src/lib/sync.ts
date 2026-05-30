@@ -40,6 +40,7 @@ interface OutboxEntry {
 interface PreparedRemotePush {
   remoteRow: SyncRow;
   uploadedReceipt: boolean;
+  receiptSyncError: string | null;
 }
 
 interface SyncTableConfig {
@@ -540,108 +541,79 @@ async function getRemoteRowCount(table: string, userId: string): Promise<number>
 }
 
 async function fetchAllRemoteRows(config: SyncTableConfig, userId: string): Promise<SyncRow[]> {
-  const { data, error } = await supabase
-    .from(config.table)
-    .select("*")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: true });
-
+  const { data, error } = await supabase.from(config.table).select("*").eq("user_id", userId);
   if (error) throw error;
   return (data ?? []) as SyncRow[];
 }
 
-async function adoptRemoteBaselineIfNeeded(userId: string): Promise<boolean> {
+async function adoptRemoteBaseline(userId: string): Promise<boolean> {
   if (!(await isBaselineLocalDatabase())) return false;
 
-  const remoteBookCount = await getRemoteRowCount("books", userId);
-  if (remoteBookCount === 0) return false;
+  let remoteRowCount = 0;
+  for (const entityType of PULL_ORDER) {
+    remoteRowCount += await getRemoteRowCount(SYNC_TABLES[entityType].table, userId);
+  }
+  if (remoteRowCount === 0) return false;
 
-  const remoteRowsByType = new Map<SyncEntityType, SyncRow[]>();
+  const db = await getDb();
+  const remoteRowsByEntity = new Map<SyncEntityType, SyncRow[]>();
+  let highWatermark: string | null = null;
+
   for (const entityType of PULL_ORDER) {
     const rows = await fetchAllRemoteRows(SYNC_TABLES[entityType], userId);
-    remoteRowsByType.set(entityType, rows);
-  }
-
-  await runInTransaction(async (db) => {
-    // Clear stale reference-data outbox entries — adoption replaces them
-    await db.execute(
-      `DELETE FROM sync_outbox
-       WHERE entity_type IN ('book', 'account', 'category', 'tag')`,
-    );
-    await db.execute("DELETE FROM coverage_income");
-    await db.execute("DELETE FROM coverage_expense");
-    await db.execute("DELETE FROM plan_income_item");
-    await db.execute("DELETE FROM plan_expense_item");
-    await db.execute("DELETE FROM plan");
-    await db.execute("DELETE FROM transactions");
-    await db.execute("DELETE FROM recurring_templates");
-    await db.execute("DELETE FROM categories");
-    await db.execute("DELETE FROM accounts");
-    await db.execute("DELETE FROM tags");
-    await db.execute("DELETE FROM books");
-  });
-
-  let highWatermark: string | null = null;
-  for (const entityType of PULL_ORDER) {
-    const rows = remoteRowsByType.get(entityType) ?? [];
+    remoteRowsByEntity.set(entityType, rows);
     for (const row of rows) {
-      const remoteUpdatedAt = timestampValue(row.updated_at);
-      highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
-      await applyRemoteRowToLocal(entityType, row);
+      highWatermark = laterTimestamp(highWatermark, timestampValue(row.updated_at));
     }
   }
 
-  const ts = now();
-  const db = await getDb();
-  await db.execute(
-    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-     VALUES ('current_user_id', ?, ?)`,
-    [userId, ts],
-  );
+  await runInTransaction(async (txDb) => {
+    await txDb.execute("DELETE FROM sync_outbox");
+    for (const entityType of [...PULL_ORDER].reverse()) {
+      await txDb.execute(`DELETE FROM ${SYNC_TABLES[entityType].localTable}`);
+    }
+  });
 
-  if (highWatermark !== null) {
-    await db.execute(
-      `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-       VALUES ('last_synced_at', ?, ?)`,
-      [highWatermark, ts],
-    );
+  for (const entityType of PULL_ORDER) {
+    for (const remoteRow of remoteRowsByEntity.get(entityType) ?? []) {
+      await applyRemoteRowToLocal(entityType, remoteRow);
+    }
   }
 
+  const syncedAt = highWatermark ?? now();
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('last_synced_at', ?, ?)`,
+    [syncedAt, now()],
+  );
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('remote_seeded_at', ?, ?)`,
+    [now(), now()],
+  );
+
+  console.error(`[sync] Adopted ${remoteRowCount} remote rows into empty local baseline.`);
   return true;
 }
 
-async function ensureRemoteBaseline(userId: string): Promise<void> {
-  await adoptRemoteBaselineIfNeeded(userId);
+function localUpdatedAt(row: SyncRow): string | null {
+  return timestampValue(row.local_updated_at);
 }
 
-function localUpdatedAt(row: SyncRow): string {
-  return (
-    timestampValue(row.local_updated_at) ??
-    timestampValue(row.updated_at) ??
-    timestampValue(row.created_at) ??
-    now()
-  );
-}
-
-function serverUpdatedAt(row: SyncRow): string {
-  return timestampValue(row.updated_at) ?? now();
+function serverUpdatedAt(row: SyncRow): string | null {
+  return timestampValue(row.updated_at) ?? timestampValue(row.server_updated_at);
 }
 
 function deletedAt(row: SyncRow): string | null {
   return timestampValue(row.deleted_at);
 }
 
-async function getRemoteUpdatedAt(table: string, entityId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from(table)
-    .select("updated_at")
-    .eq("id", entityId)
-    .maybeSingle();
+async function getRemoteUpdatedAt(table: string, id: string): Promise<string | null> {
+  const { data, error } = await supabase.from(table).select("updated_at").eq("id", id).maybeSingle();
 
   if (error) throw error;
-
-  const remote = data as { updated_at?: string | null } | null;
-  return remote?.updated_at ?? null;
+  const row = data as { updated_at?: string | null } | null;
+  return timestampValue(row?.updated_at ?? undefined);
 }
 
 async function getRemoteRow(config: SyncTableConfig, entityId: string): Promise<SyncRow | null> {
@@ -655,36 +627,47 @@ async function getRemoteRow(config: SyncTableConfig, entityId: string): Promise<
   return data ? (data as SyncRow) : null;
 }
 
-async function hasLocalRow(table: string, id: JsonValue | undefined): Promise<boolean> {
-  if (typeof id !== "string" || id.length === 0) return false;
+async function ensureDefaultBook(userId: string): Promise<SyncRow | null> {
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("slug", "business")
+    .maybeSingle();
 
-  const db = await getDb();
-  const rows = await db.select<Array<{ exists: number }>>(
-    `SELECT 1 AS exists FROM ${table} WHERE id = ? LIMIT 1`,
-    [id],
-  );
-  return rows.length > 0;
+  if (error) throw error;
+  return data ? (data as SyncRow) : null;
 }
 
-async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Promise<boolean> {
-  const entityId = remoteRow.id;
-  const remoteMs = timestampMs(serverUpdatedAt(remoteRow));
-
-  if (typeof entityId !== "string" || remoteMs === null) return false;
+async function ensureRemoteBaseline(userId: string): Promise<void> {
+  if (await adoptRemoteBaseline(userId)) return;
 
   const db = await getDb();
-  const localRows = await db.select<Array<{ local_updated_at: string }>>(
-    `SELECT local_updated_at FROM ${config.localTable} WHERE id = ? LIMIT 1`,
-    [entityId],
+  const alreadySeeded = await db.select<Array<{ value: string }>>(
+    "SELECT value FROM sync_metadata WHERE key = 'remote_seeded_at' LIMIT 1",
   );
-  const localMs = timestampMs(localRows[0]?.local_updated_at ?? null);
+  if (alreadySeeded.length > 0) return;
 
-  if (localMs !== null && localMs > remoteMs) {
-    console.error(`[sync] LWW: local newer for ${config.table} ${entityId}. Skipping pull.`);
-    return true;
+  const remoteBook = await ensureDefaultBook(userId);
+  const localBooks = await db.select<SyncRow[]>("SELECT * FROM books WHERE slug = 'business' LIMIT 1");
+
+  if (remoteBook) {
+    const remoteId = remoteBook.id;
+    const localBook = localBooks[0];
+
+    if (typeof remoteId === "string" && localBook && localBook.id !== remoteId) {
+      await resolveBookIdConflict(String(localBook.id), "business", userId);
+    }
+  } else if (localBooks[0]) {
+    const remoteRow = toRemoteRow("book", localBooks[0], userId);
+    await upsertRemoteRow(SYNC_TABLES.book, remoteRow);
   }
 
-  return false;
+  await db.execute(
+    `INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+     VALUES ('remote_seeded_at', ?, ?)`,
+    [now(), now()],
+  );
 }
 
 function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): SyncRow {
@@ -715,6 +698,38 @@ function toRemoteValue(column: string, value: JsonValue): JsonValue {
   return value;
 }
 
+async function hasLocalRow(table: string, id: JsonValue | undefined): Promise<boolean> {
+  if (typeof id !== "string" || id.length === 0) return false;
+
+  const db = await getDb();
+  const rows = await db.select<Array<{ present: number }>>(
+    `SELECT 1 AS present FROM ${table} WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  return rows.length > 0;
+}
+
+async function shouldSkipPull(config: SyncTableConfig, remoteRow: SyncRow): Promise<boolean> {
+  const entityId = remoteRow.id;
+  const remoteMs = timestampMs(serverUpdatedAt(remoteRow));
+
+  if (typeof entityId !== "string" || remoteMs === null) return false;
+
+  const db = await getDb();
+  const localRows = await db.select<Array<{ local_updated_at: string }>>(
+    `SELECT local_updated_at FROM ${config.localTable} WHERE id = ? LIMIT 1`,
+    [entityId],
+  );
+  const localMs = timestampMs(localRows[0]?.local_updated_at ?? null);
+
+  if (localMs !== null && localMs > remoteMs) {
+    console.error(`[sync] LWW: local newer for ${config.table} ${entityId}. Skipping pull.`);
+    return true;
+  }
+
+  return false;
+}
+
 async function prepareRemoteRowForPush(
   entityType: SyncEntityType,
   row: SyncRow,
@@ -723,20 +738,47 @@ async function prepareRemoteRowForPush(
 ): Promise<PreparedRemotePush> {
   const remoteRow = toRemoteRow(entityType, row, userId);
 
-  if (entityType !== "transaction") return { remoteRow, uploadedReceipt: false };
+  if (entityType !== "transaction") {
+    return { remoteRow, uploadedReceipt: false, receiptSyncError: null };
+  }
 
   const receiptPath = row.receipt_photo_path;
   if (typeof receiptPath === "string" && receiptPath.length > 0) {
-    remoteRow.receipt_photo_path = await uploadReceiptPhoto(userId, entityId, receiptPath);
-    return { remoteRow, uploadedReceipt: isLocalReceiptPath(receiptPath) };
+    if (!isLocalReceiptPath(receiptPath)) {
+      return { remoteRow, uploadedReceipt: false, receiptSyncError: null };
+    }
+
+    try {
+      remoteRow.receipt_photo_path = await uploadReceiptPhoto(userId, entityId, receiptPath);
+      return { remoteRow, uploadedReceipt: true, receiptSyncError: null };
+    } catch (error) {
+      const message = syncErrorMessage(error);
+      console.error(`[sync] Receipt upload failed for transaction ${entityId}:`, error);
+      remoteRow.receipt_photo_path = null;
+      return {
+        remoteRow,
+        uploadedReceipt: false,
+        receiptSyncError: `Receipt upload failed: ${message}`,
+      };
+    }
   }
 
   if (receiptPath === null) {
     remoteRow.receipt_photo_path = null;
-    await deleteRemoteReceiptPhoto(userId, entityId);
+    try {
+      await deleteRemoteReceiptPhoto(userId, entityId);
+    } catch (error) {
+      const message = syncErrorMessage(error);
+      console.error(`[sync] Receipt delete failed for transaction ${entityId}:`, error);
+      return {
+        remoteRow,
+        uploadedReceipt: false,
+        receiptSyncError: `Receipt delete failed: ${message}`,
+      };
+    }
   }
 
-  return { remoteRow, uploadedReceipt: false };
+  return { remoteRow, uploadedReceipt: false, receiptSyncError: null };
 }
 
 async function markRemotePlanChildrenDeleted(
@@ -1061,9 +1103,13 @@ async function resolveBookIdConflict(
   const ts = now();
 
   await runInTransaction(async (txDb) => {
-    // Temporarily disable FK enforcement inside this transaction
-    // (runInTransaction enables it — we need to override for the ID swap)
-    await txDb.execute("PRAGMA foreign_keys = OFF");
+    // Defer FK enforcement to COMMIT time for this ID swap. NOTE: `PRAGMA
+    // foreign_keys = OFF/ON` is a NO-OP inside an active transaction (SQLite
+    // only honors it outside a transaction), so the previous approach left
+    // enforcement ON and the child remaps below failed with
+    // "FOREIGN KEY constraint failed". `defer_foreign_keys` DOES take effect
+    // inside a transaction and automatically resets at COMMIT/ROLLBACK.
+    await txDb.execute("PRAGMA defer_foreign_keys = ON");
 
     // Remap all child tables
     for (const table of BOOK_FK_TABLES) {
@@ -1101,8 +1147,10 @@ async function resolveBookIdConflict(
       [remoteUpdatedAt, remoteUpdatedAt, remoteId],
     );
 
-    // Re-enable FK enforcement
-    await txDb.execute("PRAGMA foreign_keys = ON");
+    const violations = await txDb.select<unknown[]>("PRAGMA foreign_key_check");
+    if (violations.length > 0) {
+      throw new Error(`FK violations after book remap: ${JSON.stringify(violations)}`);
+    }
   });
 
   return true;
@@ -1212,6 +1260,7 @@ export async function pushChanges(): Promise<number> {
 
       const config = SYNC_TABLES[entry.entity_type];
       let syncedAt: string | null = null;
+      let receiptSyncError: string | null = null;
 
       if (entry.operation === "create" || entry.operation === "update") {
         const payload = parsePayload(entry.payload);
@@ -1237,6 +1286,7 @@ export async function pushChanges(): Promise<number> {
           user.id,
           entry.entity_id,
         );
+        receiptSyncError = prepared.receiptSyncError;
         try {
           syncedAt = await upsertRemoteRow(config, prepared.remoteRow);
         } catch (error) {
@@ -1293,13 +1343,15 @@ export async function pushChanges(): Promise<number> {
         }
 
         if (entry.entity_type === "transaction" && payload.receipt_photo_path) {
-          await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
+          try {
+            await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
+          } catch (error) {
+            console.error(`[sync] Receipt delete failed for transaction ${entry.entity_id}:`, error);
+          }
         }
       }
 
       await runInTransaction(async (txDb) => {
-        await txDb.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
-
         if (entry.operation !== "delete") {
           const finalSyncedAt = syncedAt ?? now();
           await txDb.execute(
@@ -1310,6 +1362,15 @@ export async function pushChanges(): Promise<number> {
              WHERE id = ?`,
             [finalSyncedAt, finalSyncedAt, entry.entity_id],
           );
+        }
+
+        if (receiptSyncError) {
+          await txDb.execute(
+            "UPDATE sync_outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?",
+            [receiptSyncError, entry.id],
+          );
+        } else {
+          await txDb.execute("DELETE FROM sync_outbox WHERE id = ?", [entry.id]);
         }
       });
 
@@ -1366,21 +1427,33 @@ export async function pullChanges(): Promise<number> {
     for (const row of data ?? []) {
       const remoteRow = row as SyncRow;
 
-      // Defense-in-depth: verify pulled row belongs to the authenticated user.
-      // This guards against Supabase RLS misconfiguration leaking other users' data.
-      if (remoteRow.user_id !== undefined && remoteRow.user_id !== user.id) {
+      try {
+        // Defense-in-depth: verify pulled row belongs to the authenticated user.
+        // This guards against Supabase RLS misconfiguration leaking other users' data.
+        if (remoteRow.user_id !== undefined && remoteRow.user_id !== user.id) {
+          console.error(
+            `[sync] Pull rejected: row ${config.table}.${String(remoteRow.id)} belongs to another user.`,
+          );
+          continue;
+        }
+
+        const remoteUpdatedAt = timestampValue(remoteRow.updated_at);
+
+        if (await shouldSkipPull(config, remoteRow)) {
+          highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
+          continue;
+        }
+
+        if (await applyRemoteRowToLocal(entityType, remoteRow)) {
+          total++;
+          highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
+        }
+      } catch (rowError) {
         console.error(
-          `[sync] Pull rejected: row ${config.table}.${String(remoteRow.id)} belongs to another user.`,
+          `[sync] Pull failed for ${config.table}.${String(remoteRow.id)}:`,
+          rowError,
         );
-        continue;
       }
-
-      const remoteUpdatedAt = timestampValue(remoteRow.updated_at);
-      highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
-
-      if (await shouldSkipPull(config, remoteRow)) continue;
-
-      if (await applyRemoteRowToLocal(entityType, remoteRow)) total++;
     }
   }
 
