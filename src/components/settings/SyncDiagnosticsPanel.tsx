@@ -7,11 +7,6 @@ import {
 } from "@/lib/syncDiagnostics";
 import { formatDateRelative } from "@/lib/utils";
 
-interface SyncDiagnosticsPanelProps {
-  pendingCount: number;
-  syncState: string;
-}
-
 function issueLabel(entityType: string, operation: string): string {
   return `${operation} ${entityType}`;
 }
@@ -22,7 +17,7 @@ function issueToneClass(attempts: number): string {
     : "border-amber-200 bg-amber-50 text-amber-950";
 }
 
-export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnosticsPanelProps) {
+export function SyncDiagnosticsPanel() {
   const [diagnostics, setDiagnostics] = useState<SyncDiagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
