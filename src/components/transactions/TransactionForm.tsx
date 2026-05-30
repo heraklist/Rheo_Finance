@@ -125,8 +125,8 @@ export function TransactionForm({
   const [receiptRemoved, setReceiptRemoved] = useState(false);
   const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
-  const saveSlowTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const saveTimeoutTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const saveSlowTimerRef = useRef<number | null>(null);
+  const saveTimeoutTimerRef = useRef<number | null>(null);
   const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
   const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
   const displayAccountName = useDisplayAccountName();
