@@ -3,7 +3,6 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MfaSettingsPanel } from "@/components/auth/MfaSettingsPanel";
-import { SyncDiagnosticsPanel } from "@/components/settings/SyncDiagnosticsPanel";
 import {
   AboutSection,
   AccountSection,
@@ -15,6 +14,7 @@ import {
   SubscriptionSection,
   SyncSection,
 } from "@/components/settings/SettingsSections";
+import { SyncDiagnosticsPanel } from "@/components/settings/SyncDiagnosticsPanel";
 import {
   APP_VERSION,
   CURRENT_YEAR,
