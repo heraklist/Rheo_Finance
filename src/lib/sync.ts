@@ -72,7 +72,15 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "created_at",
       "deleted_at",
     ],
-    localColumns: ["id", "book_id", "name", "type", "initial_balance", "is_archived", "created_at"],
+    localColumns: [
+      "id",
+      "book_id",
+      "name",
+      "type",
+      "initial_balance",
+      "is_archived",
+      "created_at",
+    ],
   },
   category: {
     table: "categories",
@@ -491,7 +499,9 @@ function laterTimestamp(current: string | null, candidate: string | null): strin
 
 async function countRows(table: string): Promise<number> {
   const db = await getDb();
-  const rows = await db.select<Array<{ count: number }>>(`SELECT COUNT(*) AS count FROM ${table}`);
+  const rows = await db.select<Array<{ count: number }>>(
+    `SELECT COUNT(*) AS count FROM ${table}`,
+  );
   return Number(rows[0]?.count ?? 0);
 }
 
@@ -649,7 +659,9 @@ async function ensureRemoteBaseline(userId: string): Promise<void> {
   if (alreadySeeded.length > 0) return;
 
   const remoteBook = await ensureDefaultBook(userId);
-  const localBooks = await db.select<SyncRow[]>("SELECT * FROM books WHERE slug = 'business' LIMIT 1");
+  const localBooks = await db.select<SyncRow[]>(
+    "SELECT * FROM books WHERE slug = 'business' LIMIT 1",
+  );
 
   if (remoteBook) {
     const remoteId = remoteBook.id;
@@ -678,7 +690,8 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
     if (column === "user_id") {
       remoteRow[column] = userId;
     } else if (column === "deleted_at") {
-      remoteRow[column] = row[column] === undefined ? null : toRemoteValue(column, row[column]);
+      remoteRow[column] =
+        row[column] === undefined ? null : toRemoteValue(column, row[column]);
     } else if (row[column] !== undefined) {
       remoteRow[column] = toRemoteValue(column, row[column]);
     }
@@ -1346,7 +1359,10 @@ export async function pushChanges(): Promise<number> {
           try {
             await deleteRemoteReceiptPhoto(user.id, entry.entity_id);
           } catch (error) {
-            console.error(`[sync] Receipt delete failed for transaction ${entry.entity_id}:`, error);
+            console.error(
+              `[sync] Receipt delete failed for transaction ${entry.entity_id}:`,
+              error,
+            );
           }
         }
       }
