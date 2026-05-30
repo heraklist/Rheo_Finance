@@ -42,9 +42,9 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
   }, []);
 
   useEffect(() => {
-    if (pendingCount >= 0 && syncState.length > 0) {
-      void refreshDiagnostics();
-    }
+    void pendingCount;
+    void syncState;
+    void refreshDiagnostics();
   }, [pendingCount, refreshDiagnostics, syncState]);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
@@ -77,7 +77,9 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
       <div className="mb-3 grid gap-2 text-xs sm:grid-cols-3">
         <div className="rounded border border-amber-200 bg-white/60 px-3 py-2">
           <div className="text-amber-800">Εκκρεμούν</div>
-          <div className="text-base font-semibold text-amber-950">{diagnostics.pendingCount}</div>
+          <div className="text-base font-semibold text-amber-950">
+            {diagnostics.pendingCount}
+          </div>
         </div>
         <div className="rounded border border-amber-200 bg-white/60 px-3 py-2">
           <div className="text-amber-800">Retryable</div>
