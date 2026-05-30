@@ -72,15 +72,7 @@ const SYNC_TABLES: Record<SyncEntityType, SyncTableConfig> = {
       "created_at",
       "deleted_at",
     ],
-    localColumns: [
-      "id",
-      "book_id",
-      "name",
-      "type",
-      "initial_balance",
-      "is_archived",
-      "created_at",
-    ],
+    localColumns: ["id", "book_id", "name", "type", "initial_balance", "is_archived", "created_at"],
   },
   category: {
     table: "categories",
@@ -499,9 +491,7 @@ function laterTimestamp(current: string | null, candidate: string | null): strin
 
 async function countRows(table: string): Promise<number> {
   const db = await getDb();
-  const rows = await db.select<Array<{ count: number }>>(
-    `SELECT COUNT(*) AS count FROM ${table}`,
-  );
+  const rows = await db.select<Array<{ count: number }>>(`SELECT COUNT(*) AS count FROM ${table}`);
   return Number(rows[0]?.count ?? 0);
 }
 
@@ -694,8 +684,7 @@ function toRemoteRow(entityType: SyncEntityType, row: SyncRow, userId: string): 
     if (column === "user_id") {
       remoteRow[column] = userId;
     } else if (column === "deleted_at") {
-      remoteRow[column] =
-        row[column] === undefined ? null : toRemoteValue(column, row[column]);
+      remoteRow[column] = row[column] === undefined ? null : toRemoteValue(column, row[column]);
     } else if (row[column] !== undefined) {
       remoteRow[column] = toRemoteValue(column, row[column]);
     }
@@ -1452,7 +1441,8 @@ export async function pullChanges(): Promise<number> {
         // This guards against Supabase RLS misconfiguration leaking other users' data.
         if (remoteRow.user_id !== undefined && remoteRow.user_id !== user.id) {
           console.error(
-            `[sync] Pull rejected: row ${config.table}.${String(remoteRow.id)} belongs to another user.`,
+            `[sync] Pull rejected: row ${config.table}.${String(remoteRow.id)} ` +
+              "belongs to another user.",
           );
           continue;
         }
