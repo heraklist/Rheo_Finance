@@ -619,7 +619,11 @@ function deletedAt(row: SyncRow): string | null {
 }
 
 async function getRemoteUpdatedAt(table: string, id: string): Promise<string | null> {
-  const { data, error } = await supabase.from(table).select("updated_at").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from(table)
+    .select("updated_at")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) throw error;
   const row = data as { updated_at?: string | null } | null;
@@ -1465,10 +1469,7 @@ export async function pullChanges(): Promise<number> {
           highWatermark = laterTimestamp(highWatermark, remoteUpdatedAt);
         }
       } catch (rowError) {
-        console.error(
-          `[sync] Pull failed for ${config.table}.${String(remoteRow.id)}:`,
-          rowError,
-        );
+        console.error(`[sync] Pull failed for ${config.table}.${String(remoteRow.id)}:`, rowError);
       }
     }
   }
