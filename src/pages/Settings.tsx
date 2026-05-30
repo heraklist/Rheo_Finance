@@ -14,6 +14,7 @@ import {
   SubscriptionSection,
   SyncSection,
 } from "@/components/settings/SettingsSections";
+import { SyncDiagnosticsPanel } from "@/components/settings/SyncDiagnosticsPanel";
 import {
   APP_VERSION,
   CURRENT_YEAR,
@@ -425,6 +426,8 @@ export function Settings() {
         onManualSync={handleManualSync}
         onResetSync={handleResetSync}
       />
+
+      <SyncDiagnosticsPanel pendingCount={pendingCount} syncState={syncState} />
 
       <BackupSection
         autoBackupEnabled={autoBackupEnabled}
