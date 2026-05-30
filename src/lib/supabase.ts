@@ -8,7 +8,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const missingSupabaseConfigMessage =
   "Missing Supabase env vars. Set VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in .env.local";
 
-type RheoSupabaseClient = SupabaseClient<Database>;
+export type RheoSupabaseClient = SupabaseClient<Database>;
 
 let supabaseClient: RheoSupabaseClient | null = null;
 
@@ -31,8 +31,10 @@ function getSupabaseClient(): RheoSupabaseClient {
   return supabaseClient;
 }
 
-export const supabase = new Proxy({} as RheoSupabaseClient, {
+export const typedSupabase = new Proxy({} as RheoSupabaseClient, {
   get(_target, property, receiver) {
     return Reflect.get(getSupabaseClient(), property, receiver);
   },
 });
+
+export const supabase = typedSupabase as SupabaseClient;
