@@ -211,7 +211,15 @@ export function TransactionForm({
 
   useEffect(() => {
     return () => {
-      clearSaveTimers();
+      if (saveSlowTimerRef.current) {
+        window.clearTimeout(saveSlowTimerRef.current);
+        saveSlowTimerRef.current = null;
+      }
+
+      if (saveTimeoutTimerRef.current) {
+        window.clearTimeout(saveTimeoutTimerRef.current);
+        saveTimeoutTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -327,7 +335,9 @@ export function TransactionForm({
       setFormError("");
     } catch (err) {
       console.error("Failed to save transaction:", err);
-      setFormError(err instanceof Error ? err.message : "Δεν αποθηκεύτηκε η συναλλαγή. Δοκίμασε ξανά.");
+      setFormError(
+        err instanceof Error ? err.message : "Δεν αποθηκεύτηκε η συναλλαγή. Δοκίμασε ξανά.",
+      );
     } finally {
       clearSaveTimers();
       setSubmitting(false);
