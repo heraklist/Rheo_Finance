@@ -1,5 +1,5 @@
 import { Camera, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BookSelector,
   DateField,
@@ -25,6 +25,10 @@ import type { Account, Category, PaymentMethod } from "@/lib/types";
 import { formatLocalIsoDate } from "@/lib/utils";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["Μετρητά", "Κάρτα", "Τραπεζική μεταφορά", "IRIS", "Άλλο"];
+const TRANSACTION_SAVE_SLOW_MS = 6_000;
+const TRANSACTION_SAVE_TIMEOUT_MS = 30_000;
+const TRANSACTION_SAVE_TIMEOUT_MESSAGE =
+  "Η αποθήκευση άργησε υπερβολικά. Έλεγξε αν η συναλλαγή αποθηκεύτηκε πριν ξαναδοκιμάσεις.";
 
 type TxType = EntryType;
 
@@ -121,12 +125,34 @@ export function TransactionForm({
   const [receiptRemoved, setReceiptRemoved] = useState(false);
   const [amountError, setAmountError] = useState("");
   const [formError, setFormError] = useState("");
+  const saveSlowTimerRef = useRef<number | null>(null);
+  const saveTimeoutTimerRef = useRef<number | null>(null);
   const existingReceiptUrl = useReceiptPhotoUrl(receiptRemoved ? null : defaults.receiptPhotoPath);
   const receiptPreviewUrl = receiptDraft?.previewUrl ?? existingReceiptUrl;
   const displayAccountName = useDisplayAccountName();
   const books = useAppStore((s) => s.books);
   const showVat = isBusinessBook(books, bookId);
   const vatLabel = type === "income" ? "ΦΠΑ (εκροών)" : "ΦΠΑ (εισροών)";
+
+  function clearSaveTimers() {
+    if (saveSlowTimerRef.current) {
+      window.clearTimeout(saveSlowTimerRef.current);
+      saveSlowTimerRef.current = null;
+    }
+
+    if (saveTimeoutTimerRef.current) {
+      window.clearTimeout(saveTimeoutTimerRef.current);
+      saveTimeoutTimerRef.current = null;
+    }
+  }
+
+  function createSaveTimeout(): Promise<never> {
+    return new Promise((_, reject) => {
+      saveTimeoutTimerRef.current = window.setTimeout(() => {
+        reject(new Error(TRANSACTION_SAVE_TIMEOUT_MESSAGE));
+      }, TRANSACTION_SAVE_TIMEOUT_MS);
+    });
+  }
 
   useEffect(() => {
     if (bookId || !preferredBookId) return;
@@ -182,6 +208,20 @@ export function TransactionForm({
       }
     };
   }, [receiptDraft?.previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (saveSlowTimerRef.current) {
+        window.clearTimeout(saveSlowTimerRef.current);
+        saveSlowTimerRef.current = null;
+      }
+
+      if (saveTimeoutTimerRef.current) {
+        window.clearTimeout(saveTimeoutTimerRef.current);
+        saveTimeoutTimerRef.current = null;
+      }
+    };
+  }, []);
 
   async function handlePickReceipt() {
     setFormError("");
@@ -262,6 +302,11 @@ export function TransactionForm({
     }
 
     setSubmitting(true);
+    clearSaveTimers();
+    saveSlowTimerRef.current = window.setTimeout(() => {
+      setFormError("Η αποθήκευση αργεί περισσότερο από το αναμενόμενο. Περίμενε λίγο ακόμη.");
+    }, TRANSACTION_SAVE_SLOW_MS);
+
     try {
       const refs = await resolveValidReferences();
       if (!refs) return;
@@ -270,24 +315,31 @@ export function TransactionForm({
       const fallbackCategory = refs.categories.find((category) => category.id === refs.categoryId);
       const fallbackDescription = fallbackCategory?.name ?? "Χωρίς περιγραφή";
 
-      await onSubmit({
-        date,
-        description: description.trim() || fallbackDescription,
-        book_id: bookId,
-        account_id: refs.accountId,
-        category_id: refs.categoryId,
-        tag_id: tag?.id ?? null,
-        payment_method: paymentMethod,
-        amount_gross: grossNum,
-        vat_rate: vatRate,
-        receipt_photo_bytes: receiptDraft?.bytes ?? null,
-        remove_receipt_photo: receiptRemoved,
-        notes: notes.trim() || null,
-      });
+      await Promise.race([
+        onSubmit({
+          date,
+          description: description.trim() || fallbackDescription,
+          book_id: bookId,
+          account_id: refs.accountId,
+          category_id: refs.categoryId,
+          tag_id: tag?.id ?? null,
+          payment_method: paymentMethod,
+          amount_gross: grossNum,
+          vat_rate: vatRate,
+          receipt_photo_bytes: receiptDraft?.bytes ?? null,
+          remove_receipt_photo: receiptRemoved,
+          notes: notes.trim() || null,
+        }),
+        createSaveTimeout(),
+      ]);
+      setFormError("");
     } catch (err) {
       console.error("Failed to save transaction:", err);
-      setFormError("Δεν αποθηκεύτηκε η συναλλαγή. Δοκίμασε ξανά.");
+      setFormError(
+        err instanceof Error ? err.message : "Δεν αποθηκεύτηκε η συναλλαγή. Δοκίμασε ξανά.",
+      );
     } finally {
+      clearSaveTimers();
       setSubmitting(false);
     }
   }
