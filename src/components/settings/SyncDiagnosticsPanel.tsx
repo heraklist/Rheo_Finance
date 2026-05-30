@@ -1,8 +1,8 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  MAX_RETRYABLE_SYNC_ATTEMPTS,
   getSyncDiagnostics,
+  MAX_RETRYABLE_SYNC_ATTEMPTS,
   type SyncDiagnostics,
 } from "@/lib/syncDiagnostics";
 import { formatDateRelative } from "@/lib/utils";
@@ -52,7 +52,7 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
     }
 
     void loadDiagnostics();
-  }, [pendingCount, syncState]);
+  }, []);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
     return null;
@@ -84,15 +84,11 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
       <div className="mb-3 grid gap-2 text-xs sm:grid-cols-3">
         <div className="rounded border border-amber-200 bg-white/60 px-3 py-2">
           <div className="text-amber-800">Εκκρεμούν</div>
-          <div className="text-base font-semibold text-amber-950">
-            {diagnostics.pendingCount}
-          </div>
+          <div className="text-base font-semibold text-amber-950">{diagnostics.pendingCount}</div>
         </div>
         <div className="rounded border border-amber-200 bg-white/60 px-3 py-2">
           <div className="text-amber-800">Retryable</div>
-          <div className="text-base font-semibold text-amber-950">
-            {diagnostics.retryableCount}
-          </div>
+          <div className="text-base font-semibold text-amber-950">{diagnostics.retryableCount}</div>
         </div>
         <div className="rounded border border-red-200 bg-white/60 px-3 py-2">
           <div className="text-red-800">Stuck ≥ {MAX_RETRYABLE_SYNC_ATTEMPTS}</div>
