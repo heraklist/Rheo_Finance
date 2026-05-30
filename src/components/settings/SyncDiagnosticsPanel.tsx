@@ -42,7 +42,9 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
   }, []);
 
   useEffect(() => {
-    void refreshDiagnostics();
+    if (pendingCount >= 0 && syncState.length > 0) {
+      void refreshDiagnostics();
+    }
   }, [pendingCount, refreshDiagnostics, syncState]);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
