@@ -7,6 +7,11 @@ import {
 } from "@/lib/syncDiagnostics";
 import { formatDateRelative } from "@/lib/utils";
 
+interface SyncDiagnosticsPanelProps {
+  pendingCount: number;
+  syncState: string;
+}
+
 function issueLabel(entityType: string, operation: string): string {
   return `${operation} ${entityType}`;
 }
@@ -17,7 +22,7 @@ function issueToneClass(attempts: number): string {
     : "border-amber-200 bg-amber-50 text-amber-950";
 }
 
-export function SyncDiagnosticsPanel() {
+export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnosticsPanelProps) {
   const [diagnostics, setDiagnostics] = useState<SyncDiagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -55,6 +60,9 @@ export function SyncDiagnosticsPanel() {
 
   return (
     <section className="rounded-md border border-amber-200 bg-amber-50 p-4">
+      <span className="sr-only">
+        Sync status: {syncState}, pending items: {pendingCount}
+      </span>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
