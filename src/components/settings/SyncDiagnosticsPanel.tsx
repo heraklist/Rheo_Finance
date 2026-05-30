@@ -1,5 +1,5 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   getSyncDiagnostics,
   MAX_RETRYABLE_SYNC_ATTEMPTS,
@@ -27,7 +27,7 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function refreshDiagnostics() {
+  const refreshDiagnostics = useCallback(async () => {
     setLoading(true);
     setMessage("");
 
@@ -39,11 +39,11 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void refreshDiagnostics();
-  }, [pendingCount, syncState]);
+  }, [pendingCount, refreshDiagnostics, syncState]);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
     return null;
@@ -79,7 +79,9 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
         </div>
         <div className="rounded border border-amber-200 bg-white/60 px-3 py-2">
           <div className="text-amber-800">Retryable</div>
-          <div className="text-base font-semibold text-amber-950">{diagnostics.retryableCount}</div>
+          <div className="text-base font-semibold text-amber-950">
+            {diagnostics.retryableCount}
+          </div>
         </div>
         <div className="rounded border border-red-200 bg-white/60 px-3 py-2">
           <div className="text-red-800">Stuck ≥ {MAX_RETRYABLE_SYNC_ATTEMPTS}</div>
@@ -89,7 +91,10 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
 
       <div className="space-y-2">
         {diagnostics.issues.map((issue) => (
-          <article key={issue.id} className={`rounded border px-3 py-2 ${issueToneClass(issue.attempts)}`}>
+          <article
+            key={issue.id}
+            className={`rounded border px-3 py-2 ${issueToneClass(issue.attempts)}`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
               <span>{issueLabel(issue.entityType, issue.operation)}</span>
               <span>{issue.attempts} attempts</span>
