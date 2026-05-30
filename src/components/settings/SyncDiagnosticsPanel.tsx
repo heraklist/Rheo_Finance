@@ -1,5 +1,5 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getSyncDiagnostics,
   MAX_RETRYABLE_SYNC_ATTEMPTS,
@@ -27,7 +27,7 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const refreshDiagnostics = useCallback(async () => {
+  async function refreshDiagnostics() {
     setLoading(true);
     setMessage("");
 
@@ -39,13 +39,11 @@ export function SyncDiagnosticsPanel({ pendingCount, syncState }: SyncDiagnostic
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
-    void pendingCount;
-    void syncState;
     void refreshDiagnostics();
-  }, [pendingCount, refreshDiagnostics, syncState]);
+  }, [pendingCount, syncState]);
 
   if (!diagnostics || diagnostics.pendingCount === 0) {
     return null;
