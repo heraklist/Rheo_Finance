@@ -24,9 +24,7 @@ describe("getSyncDiagnostics", () => {
       issues: [],
     });
 
-    expect(selectMock).toHaveBeenCalledWith(
-      expect.stringContaining("FROM sync_outbox"),
-    );
+    expect(selectMock).toHaveBeenCalledWith(expect.stringContaining("FROM sync_outbox"));
   });
 
   it("classifies retryable and stuck outbox rows", async () => {
